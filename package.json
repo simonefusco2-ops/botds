@@ -1,0 +1,21 @@
+{
+  "name": "valorant-faceit-bot",
+  "version": "1.0.0",
+  "description": "Bot Discord modulare per la gestione di un team Valorant e l'automazione della Faceit Hub (In-House League)",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "deploy-commands": "node src/deploy-commands.js"
+  },
+  "dependencies": {
+    "@discord-player/extractor": "^4.5.1",
+    "@distube/ytdl-core": "^4.16.12",
+    "axios": "^1.7.4",
+    "better-sqlite3": "^11.3.0",
+    "discord-player": "^6.7.1",
+    "discord.js": "^14.15.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}

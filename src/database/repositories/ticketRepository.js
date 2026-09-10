@@ -1,0 +1,26 @@
+const db = require('../db');
+
+const createStmt = db.prepare('INSERT INTO tickets (channel_id, guild_id, owner_id) VALUES (?, ?, ?)');
+const findByChannelStmt = db.prepare("SELECT * FROM tickets WHERE channel_id = ? AND status = 'open'");
+const findOpenByOwnerStmt = db.prepare(
+  "SELECT * FROM tickets WHERE guild_id = ? AND owner_id = ? AND status = 'open'",
+);
+const closeStmt = db.prepare("UPDATE tickets SET status = 'closed' WHERE channel_id = ?");
+
+function create(channelId, guildId, ownerId) {
+  createStmt.run(channelId, guildId, ownerId);
+}
+
+function findByChannel(channelId) {
+  return findByChannelStmt.get(channelId);
+}
+
+function findOpenByOwner(guildId, ownerId) {
+  return findOpenByOwnerStmt.get(guildId, ownerId);
+}
+
+function close(channelId) {
+  closeStmt.run(channelId);
+}
+
+module.exports = { create, findByChannel, findOpenByOwner, close };
