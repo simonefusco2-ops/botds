@@ -89,23 +89,6 @@ function buildLeaderboardEmbed(rows) {
   return embed;
 }
 
-function buildNowPlayingEmbed(track) {
-  const embed = new EmbedBuilder()
-    .setColor(COLORS.primary)
-    .setAuthor({ name: '🎶 Ora in riproduzione' })
-    .setTitle(track.title)
-    .setURL(track.url || null)
-    .addFields(
-      { name: 'Artista/Canale', value: track.author || 'Sconosciuto', inline: true },
-      { name: 'Durata', value: track.duration || 'N/D', inline: true },
-    );
-
-  if (track.thumbnail) embed.setThumbnail(track.thumbnail);
-  if (track.requestedBy) embed.setFooter({ text: `Richiesto da ${track.requestedBy.tag || track.requestedBy.username}` });
-
-  return embed;
-}
-
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 function discordTimestamp(date, style = 'f') {
@@ -271,7 +254,6 @@ module.exports = {
   buildTicketPanelEmbed,
   buildTicketControlEmbed,
   buildLeaderboardEmbed,
-  buildNowPlayingEmbed,
   buildMemberJoinEmbed,
   buildMemberLeaveEmbed,
   buildInviteLeaderboardEmbed,
