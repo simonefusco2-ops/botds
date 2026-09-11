@@ -25,6 +25,12 @@ module.exports = {
 
   tempVcCategoryId: process.env.TEMP_VC_CATEGORY_ID || null,
 
+  twitchClientId: process.env.TWITCH_CLIENT_ID || null,
+  twitchClientSecret: process.env.TWITCH_CLIENT_SECRET || null,
+  twitchAnnounceChannelId: process.env.TWITCH_ANNOUNCE_CHANNEL_ID || null,
+  twitchMention: process.env.TWITCH_MENTION || 'everyone',
+  twitchPollSeconds: parseInt(process.env.TWITCH_POLL_SECONDS || '120', 10),
+
   faceitApiKey: process.env.FACEIT_API_KEY || null,
   faceitWebhookSecret: process.env.FACEIT_WEBHOOK_SECRET || null,
   faceitWebhookPort: parseInt(process.env.FACEIT_WEBHOOK_PORT || '3000', 10),

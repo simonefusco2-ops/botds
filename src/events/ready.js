@@ -2,6 +2,7 @@ const config = require('../config');
 const logger = require('../utils/logger');
 const leaderboardManager = require('../modules/leaderboard/leaderboardManager');
 const inviteTracker = require('../modules/memberLog/inviteTracker');
+const twitchWatcher = require('../modules/twitch/twitchWatcher');
 
 module.exports = {
   name: 'ready',
@@ -15,5 +16,7 @@ module.exports = {
     await leaderboardManager.updateLeaderboardMessage(client).catch((err) => {
       logger.error('Errore aggiornamento iniziale leaderboard', err);
     });
+
+    twitchWatcher.start(client);
   },
 };

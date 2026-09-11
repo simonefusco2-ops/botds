@@ -201,8 +201,36 @@ function buildInviteLeaderboardEmbed(rows, guildName) {
   return embed;
 }
 
+function buildTwitchLiveEmbed({ stream, user }) {
+  const embed = new EmbedBuilder()
+    .setColor(0x9146ff)
+    .setAuthor({
+      name: `${stream.user_name || stream.user_login} è in diretta su Twitch!`,
+      iconURL: user?.profile_image_url,
+      url: `https://twitch.tv/${stream.user_login}`,
+    })
+    .setTitle(stream.title?.slice(0, 256) || 'Live')
+    .setURL(`https://twitch.tv/${stream.user_login}`)
+    .addFields(
+      { name: 'Gioco', value: stream.game_name || 'N/D', inline: true },
+      { name: 'Spettatori', value: `${stream.viewer_count ?? 0}`, inline: true },
+    )
+    .setFooter({ text: 'Twitch' })
+    .setTimestamp(stream.started_at ? new Date(stream.started_at) : new Date());
+
+  if (user?.profile_image_url) embed.setThumbnail(user.profile_image_url);
+
+  const preview = stream.thumbnail_url?.replace('{width}', '1280').replace('{height}', '720');
+  // Le anteprime Twitch hanno URL fisso: il parametro di cache-busting evita che
+  // Discord mostri il fotogramma di una diretta precedente.
+  if (preview) embed.setImage(`${preview}?t=${Date.now()}`);
+
+  return embed;
+}
+
 module.exports = {
   COLORS,
+  buildTwitchLiveEmbed,
   buildTicketPanelEmbed,
   buildTicketControlEmbed,
   buildLeaderboardEmbed,

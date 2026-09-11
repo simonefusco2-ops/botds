@@ -51,6 +51,15 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_member_tracking_inviter ON member_tracking(inviter_id);
+
+  CREATE TABLE IF NOT EXISTS twitch_streamers (
+    login TEXT PRIMARY KEY,
+    display_name TEXT,
+    added_by TEXT,
+    is_live INTEGER NOT NULL DEFAULT 0,
+    last_stream_id TEXT,
+    added_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 module.exports = db;
