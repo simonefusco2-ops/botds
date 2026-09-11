@@ -1,4 +1,9 @@
 const ticketManager = require('../modules/tickets/ticketManager');
+const {
+  MODAL_CREATE,
+  MODAL_EDIT,
+  handleEmbedModalSubmit,
+} = require('../modules/embedBuilder/embedBuilderService');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -9,6 +14,13 @@ module.exports = {
         const command = client.commands.get(interaction.commandName);
         if (!command) return;
         await command.execute(interaction, client);
+        return;
+      }
+
+      if (interaction.isModalSubmit()) {
+        if (interaction.customId === MODAL_CREATE || interaction.customId === MODAL_EDIT) {
+          return handleEmbedModalSubmit(interaction);
+        }
         return;
       }
 

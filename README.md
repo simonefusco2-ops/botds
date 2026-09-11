@@ -45,9 +45,12 @@ npm start
 5. **Leaderboard** — `/leaderboard-setup` inizializza l'embed persistente; viene aggiornato automaticamente (`message.edit`) a ogni match concluso.
 6. **Ruolo automatico** — impostando `AUTOROLE_ID` nel `.env`, il bot assegna automaticamente quel ruolo a ogni nuovo membro che entra nel server (il ruolo del bot deve stare più in alto di quel ruolo nella lista ruoli del server).
 
-## Personalizzare i messaggi (banner, testo, ecc.)
+## Messaggi grafici senza toccare il codice
 
-Tutto il contenuto di `/setup-channels` si edita in `config/channels.config.js`: titolo, descrizione, campi, colore, `image` (banner grande) e `thumbnail` (icona piccola). Per ottenere l'URL di un'immagine: caricala in un canale Discord qualsiasi, tasto destro sull'immagine inviata → **Copia link** → incollalo nel campo `image`/`thumbnail`. Dopo aver modificato il file serve riavviare il processo (`pm2 restart valorant-bot`) e rieseguire `/setup-channels` su Discord: se il messaggio esiste già viene aggiornato, non duplicato.
+- **`/embed`** — crea un messaggio impaginato direttamente da Discord: nel comando scegli canale, carichi l'immagine banner, la thumbnail e il colore; si apre un popup dove scrivi titolo, testo (multilinea, con markdown) e le sezioni, una per riga nel formato `Titolo | Testo` (aggiungi `| inline` per affiancarle). Le immagini caricate vengono ri-allegate al messaggio, quindi non scadono. Alla fine ricevi l'ID del messaggio.
+- **`/embed-modifica`** — passi l'ID del messaggio e riapre lo stesso popup **già precompilato** col contenuto attuale: cambi quello che vuoi e il messaggio viene aggiornato sul posto (opzionalmente con nuova immagine/colore).
+
+Alternativa per i messaggi fissi di setup: il contenuto di `/setup-channels` si edita in `config/channels.config.js` (titolo, descrizione, campi, colore, `image`, `thumbnail`), poi serve `pm2 restart` e rieseguire il comando — se il messaggio esiste già viene aggiornato, non duplicato.
 
 ## Webhook Faceit
 
