@@ -16,6 +16,7 @@ const { Player } = require('discord-player');
 const config = require('./config');
 const logger = require('./utils/logger');
 const { registerPlayerEvents } = require('./modules/music/playerEvents');
+const { loadAudioExtractors } = require('./modules/music/extractors');
 const { createWebhookServer } = require('./modules/faceit/webhookServer');
 
 const client = new Client({
@@ -38,8 +39,8 @@ for (const file of fs.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))
 }
 
 client.player = new Player(client);
-client.player.extractors.loadDefault();
 registerPlayerEvents(client);
+loadAudioExtractors(client.player).catch((err) => logger.error('Errore caricamento estrattori audio', err));
 
 const eventsPath = path.join(__dirname, 'events');
 for (const file of fs.readdirSync(eventsPath).filter((f) => f.endsWith('.js'))) {

@@ -33,11 +33,14 @@ module.exports = {
     const query = interaction.options.getString('query', true);
 
     try {
-      // QueryType.AUTO: un link viene aperto direttamente, il testo libero
-      // viene cercato (i brani Spotify vengono comunque riprodotti da YouTube).
+      // Un link va risolto dall'estrattore del suo servizio, ma il testo libero
+      // va cercato esplicitamente su YouTube: in modalità automatica lo
+      // intercetta l'estrattore Spotify, che sui titoli liberi non trova nulla.
+      const isLink = /^https?:\/\//i.test(query);
+
       const results = await client.player.search(query, {
         requestedBy: interaction.user,
-        searchEngine: QueryType.AUTO,
+        searchEngine: isLink ? QueryType.AUTO : QueryType.YOUTUBE_SEARCH,
       });
 
       if (!results.hasTracks()) {
