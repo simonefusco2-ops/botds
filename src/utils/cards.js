@@ -28,7 +28,17 @@ const {
  *
  * Un messaggio con questo formato non può contenere `content` né `embeds`.
  */
-function buildCard({ accentColor, bannerRef, thumbnailRef, title, body, sections, footnote, rows = [] }) {
+function buildCard({
+  accentColor,
+  bannerRef,
+  thumbnailRef,
+  title,
+  body,
+  sections,
+  separateSections = false,
+  footnote,
+  rows = [],
+}) {
   const container = new ContainerBuilder();
   if (accentColor) container.setAccentColor(accentColor);
 
@@ -57,12 +67,23 @@ function buildCard({ accentColor, bannerRef, thumbnailRef, title, body, sections
   }
 
   if (sections?.length) {
-    container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large));
-    container.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        sections.map((section) => `### ${section.name}\n${section.value}`).join('\n\n'),
-      ),
-    );
+    const render = (section) => new TextDisplayBuilder().setContent(`### ${section.name}\n${section.value}`);
+
+    if (separateSections) {
+      // Un divisore prima di ogni sezione: separa visivamente blocchi lunghi,
+      // come le singole voci di un regolamento.
+      for (const section of sections) {
+        container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large));
+        container.addTextDisplayComponents(render(section));
+      }
+    } else {
+      container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large));
+      container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+          sections.map((section) => `### ${section.name}\n${section.value}`).join('\n\n'),
+        ),
+      );
+    }
   }
 
   if (footnote) {
