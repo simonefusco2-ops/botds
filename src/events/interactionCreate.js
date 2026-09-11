@@ -13,6 +13,7 @@ const {
   MODAL_EDIT,
   handleEmbedModalSubmit,
 } = require('../modules/embedBuilder/embedBuilderService');
+const { CUSTOM_ID_PREFIX: ROLE_BUTTON_PREFIX, handleRoleButton } = require('../modules/welcome/roleButtons');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -50,6 +51,9 @@ module.exports = {
             return;
           case 'ticket_ping':
             await ticketManager.pingUser(interaction);
+            return;
+          case ROLE_BUTTON_PREFIX:
+            await handleRoleButton(interaction, argument);
             return;
           default:
             return;
