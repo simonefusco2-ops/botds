@@ -8,12 +8,18 @@
  * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
  */
 const { SlashCommandBuilder } = require('discord.js');
+const { QueryType } = require('discord-player');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('play')
-    .setDescription('Riproduce un brano o una playlist da YouTube o Spotify')
-    .addStringOption((opt) => opt.setName('query').setDescription('Link o nome del brano/playlist').setRequired(true)),
+    .setDescription('Riproduce un brano: scrivi il titolo oppure incolla un link YouTube/Spotify')
+    .addStringOption((opt) =>
+      opt
+        .setName('query')
+        .setDescription('Titolo della canzone, oppure link a brano o playlist')
+        .setRequired(true),
+    ),
   async execute(interaction, client) {
     const voiceChannel = interaction.member.voice.channel;
     if (!voiceChannel) {
@@ -27,7 +33,18 @@ module.exports = {
     const query = interaction.options.getString('query', true);
 
     try {
-      const { track } = await client.player.play(voiceChannel, query, {
+      // QueryType.AUTO: un link viene aperto direttamente, il testo libero
+      // viene cercato (i brani Spotify vengono comunque riprodotti da YouTube).
+      const results = await client.player.search(query, {
+        requestedBy: interaction.user,
+        searchEngine: QueryType.AUTO,
+      });
+
+      if (!results.hasTracks()) {
+        return interaction.editReply(`🔍 Nessun risultato per **${query}**. Prova con titolo e artista.`);
+      }
+
+      const { track } = await client.player.play(voiceChannel, results, {
         nodeOptions: {
           metadata: { channel: interaction.channel },
           selfDeaf: true,
@@ -38,7 +55,14 @@ module.exports = {
           leaveOnEndCooldown: 300_000,
         },
       });
-      await interaction.editReply(`🎶 Aggiunto alla coda: **${track.title}**`);
+
+      if (results.playlist) {
+        return interaction.editReply(
+          `🎶 Playlist **${results.playlist.title}** aggiunta alla coda (${results.tracks.length} brani).`,
+        );
+      }
+
+      await interaction.editReply(`🎶 Aggiunto alla coda: **${track.title}** — ${track.author}`);
     } catch (err) {
       await interaction.editReply(`❌ Errore durante la riproduzione: ${err.message}`);
     }
