@@ -44,6 +44,7 @@ npm start
 4. **Faceit Hub** — `/link <faceit_name>` collega l'account; il server Express (`FACEIT_WEBHOOK_PORT`) riceve i webhook Faceit su `POST /webhooks/faceit`, smista i team in due canali vocali temporanei e li elimina a fine match.
 5. **Leaderboard** — `/leaderboard-setup` inizializza l'embed persistente; viene aggiornato automaticamente (`message.edit`) a ogni match concluso.
 6. **Ruolo automatico** — impostando `AUTOROLE_ID` nel `.env`, il bot assegna automaticamente quel ruolo a ogni nuovo membro che entra nel server (il ruolo del bot deve stare più in alto di quel ruolo nella lista ruoli del server).
+7. **Log membri e tracking inviti** — con `MEMBER_LOG_CHANNEL_ID` impostato, ogni ingresso pubblica un embed con utente, ID, data di creazione dell'account (con avviso se ha meno di 7 giorni), invito usato, chi ha invitato e suo totale inviti, e membri totali. Ogni uscita pubblica data di ingresso, permanenza, chi lo aveva invitato e ruoli che aveva. `/inviti` mostra la classifica di chi invita più membri (o i dati di un singolo utente). Richiede il permesso **Gestisci server** per leggere gli inviti.
 
 ## Messaggi grafici senza toccare il codice
 

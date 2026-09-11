@@ -1,9 +1,16 @@
 const config = require('../config');
 const logger = require('../utils/logger');
+const memberLogger = require('../modules/memberLog/memberLogger');
 
 module.exports = {
   name: 'guildMemberAdd',
   async execute(member) {
+    // Il log va registrato prima dell'autorole: risolvere l'invito richiede
+    // di confrontare i contatori il prima possibile dopo l'ingresso.
+    await memberLogger.logJoin(member).catch((err) => {
+      logger.error(`Errore log ingresso di ${member.user.tag}`, err);
+    });
+
     if (!config.autoRoleId) return;
 
     try {

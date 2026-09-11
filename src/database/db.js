@@ -39,6 +39,18 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS member_tracking (
+    discord_id TEXT PRIMARY KEY,
+    guild_id TEXT NOT NULL,
+    username TEXT,
+    invite_code TEXT,
+    inviter_id TEXT,
+    joined_at TEXT,
+    left_at TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_member_tracking_inviter ON member_tracking(inviter_id);
 `);
 
 module.exports = db;

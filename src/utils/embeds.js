@@ -69,10 +69,146 @@ function buildNowPlayingEmbed(track) {
   return embed;
 }
 
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+function discordTimestamp(date, style = 'f') {
+  return `<t:${Math.floor(new Date(date).getTime() / 1000)}:${style}>`;
+}
+
+/** ms -> "3g 4h 12m", per la permanenza sul server. */
+function formatDuration(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return 'N/D';
+
+  const minutes = Math.floor(ms / 60000) % 60;
+  const hours = Math.floor(ms / 3600000) % 24;
+  const days = Math.floor(ms / 86400000);
+
+  const parts = [];
+  if (days) parts.push(`${days}g`);
+  if (hours) parts.push(`${hours}h`);
+  if (minutes || !parts.length) parts.push(`${minutes}m`);
+  return parts.join(' ');
+}
+
+const INVITE_SOURCE_LABELS = {
+  bot: 'Bot aggiunto tramite OAuth2',
+  unknown: 'Non determinato (vanity URL, ricerca server o invito creato prima dell\'avvio del bot)',
+};
+
+function buildMemberJoinEmbed({ member, invite, inviterStats, memberCount }) {
+  const createdAt = member.user.createdAt;
+  const isNewAccount = Date.now() - createdAt.getTime() < SEVEN_DAYS_MS;
+
+  const embed = new EmbedBuilder()
+    .setColor(COLORS.success)
+    .setAuthor({ name: '🟢 Nuovo membro', iconURL: member.user.displayAvatarURL() })
+    .setTitle(member.user.tag)
+    .setDescription(`${member} • \`${member.id}\``)
+    .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
+    .addFields(
+      {
+        name: 'Account creato',
+        value: `${discordTimestamp(createdAt, 'D')} (${discordTimestamp(createdAt, 'R')})`,
+        inline: false,
+      },
+      { name: 'Membri totali', value: `${memberCount}`, inline: true },
+    )
+    .setTimestamp();
+
+  if (invite.code) {
+    embed.addFields({ name: 'Invito usato', value: `\`${invite.code}\``, inline: true });
+  } else {
+    embed.addFields({
+      name: 'Invito usato',
+      value: INVITE_SOURCE_LABELS[invite.source] || INVITE_SOURCE_LABELS.unknown,
+      inline: false,
+    });
+  }
+
+  if (invite.inviterId) {
+    const stats = inviterStats ? ` — ${inviterStats.total} inviti (${inviterStats.stillIn} ancora nel server)` : '';
+    embed.addFields({ name: 'Invitato da', value: `<@${invite.inviterId}>${stats}`, inline: false });
+  }
+
+  if (isNewAccount) {
+    embed.addFields({
+      name: '⚠️ Attenzione',
+      value: 'Account Discord creato da meno di 7 giorni.',
+      inline: false,
+    });
+  }
+
+  return embed;
+}
+
+function buildMemberLeaveEmbed({ member, tracking, memberCount, roles }) {
+  const joinedAt = tracking?.joined_at ? new Date(tracking.joined_at) : member.joinedAt;
+
+  const embed = new EmbedBuilder()
+    .setColor(COLORS.danger)
+    .setAuthor({ name: '🔴 Membro uscito', iconURL: member.user.displayAvatarURL() })
+    .setTitle(member.user.tag)
+    .setDescription(`${member} • \`${member.id}\``)
+    .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
+    .addFields({ name: 'Membri totali', value: `${memberCount}`, inline: true })
+    .setTimestamp();
+
+  if (joinedAt) {
+    embed.addFields(
+      {
+        name: 'Era entrato',
+        value: `${discordTimestamp(joinedAt, 'D')} (${discordTimestamp(joinedAt, 'R')})`,
+        inline: false,
+      },
+      { name: 'Permanenza', value: formatDuration(Date.now() - joinedAt.getTime()), inline: true },
+    );
+  }
+
+  if (tracking?.inviter_id) {
+    const code = tracking.invite_code ? ` con \`${tracking.invite_code}\`` : '';
+    embed.addFields({ name: 'Era stato invitato da', value: `<@${tracking.inviter_id}>${code}`, inline: false });
+  }
+
+  if (roles?.length) {
+    embed.addFields({ name: 'Ruoli', value: roles.slice(0, 20).join(' ').slice(0, 1024), inline: false });
+  }
+
+  return embed;
+}
+
+function buildInviteLeaderboardEmbed(rows, guildName) {
+  const embed = new EmbedBuilder()
+    .setColor(COLORS.info)
+    .setTitle('📨 Classifica inviti')
+    .setFooter({ text: guildName })
+    .setTimestamp();
+
+  if (!rows.length) {
+    embed.setDescription('Nessun invito tracciato finora.');
+    return embed;
+  }
+
+  const medals = ['🥇', '🥈', '🥉'];
+  embed.setDescription(
+    rows
+      .map((row, i) => {
+        const rank = medals[i] || `#${i + 1}`;
+        return `${rank} <@${row.inviter_id}> — **${row.total}** inviti (${row.still_in} ancora nel server)`;
+      })
+      .join('\n'),
+  );
+
+  return embed;
+}
+
 module.exports = {
   COLORS,
   buildTicketPanelEmbed,
   buildTicketControlEmbed,
   buildLeaderboardEmbed,
   buildNowPlayingEmbed,
+  buildMemberJoinEmbed,
+  buildMemberLeaveEmbed,
+  buildInviteLeaderboardEmbed,
+  formatDuration,
 };

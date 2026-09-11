@@ -13,6 +13,8 @@ module.exports = {
   staffRoleId: process.env.STAFF_ROLE_ID || null,
   autoRoleId: process.env.AUTOROLE_ID || null,
 
+  memberLogChannelId: process.env.MEMBER_LOG_CHANNEL_ID || null,
+
   ticketCategoryId: process.env.TICKET_CATEGORY_ID || null,
   transcriptChannelId: process.env.TRANSCRIPT_CHANNEL_ID || null,
 
