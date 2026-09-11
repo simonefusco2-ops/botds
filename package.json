@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@discord-player/extractor": "^7.2.0",
+    "@snazzah/davey": "^0.1.12",
     "axios": "^1.7.4",
     "better-sqlite3": "^11.3.0",
     "bgutils-js": "^4.0.3",
