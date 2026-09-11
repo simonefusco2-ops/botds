@@ -27,9 +27,11 @@ module.exports = {
       // Ogni handler va atteso qui dentro: restituendo la promise senza await,
       // un errore sfuggirebbe al catch e l'utente non vedrebbe alcun messaggio.
       if (interaction.isButton()) {
-        switch (interaction.customId) {
+        const [action, argument] = interaction.customId.split(':');
+
+        switch (action) {
           case 'ticket_open':
-            await ticketManager.createTicket(interaction);
+            await ticketManager.createTicket(interaction, argument);
             return;
           case 'ticket_close':
             await ticketManager.closeTicket(interaction);

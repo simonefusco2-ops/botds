@@ -62,4 +62,11 @@ db.exec(`
   );
 `);
 
+// CREATE TABLE IF NOT EXISTS non modifica le tabelle già esistenti: la colonna
+// del tipo di ticket va aggiunta a mano sui database creati prima di questa funzione.
+const ticketColumns = db.prepare('PRAGMA table_info(tickets)').all();
+if (!ticketColumns.some((column) => column.name === 'type')) {
+  db.exec("ALTER TABLE tickets ADD COLUMN type TEXT NOT NULL DEFAULT 'supporto'");
+}
+
 module.exports = db;

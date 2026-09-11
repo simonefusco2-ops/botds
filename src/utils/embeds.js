@@ -5,27 +5,55 @@ const COLORS = {
   success: 0x2ecc71,
   danger: 0xe74c3c,
   info: 0x5865f2,
+  gold: 0xc9a227, // oro imperiale, usato per i pannelli ufficiali
 };
 
-function buildTicketPanelEmbed() {
+const PANEL_DEFAULT_TITLE = '⚡  CURIA  ⚡';
+
+const PANEL_DEFAULT_DESCRIPTION = [
+  '*«Quod ad omnes pertinet, ab omnibus audiatur.»*',
+  '-# Ciò che riguarda tutti, da tutti sia ascoltato.',
+  '',
+  '**Ogni richiesta trova udienza.** Scegli la materia qui sotto: verrà aperta una stanza',
+  'privata, visibile soltanto a te e allo staff.',
+].join('\n');
+
+function buildTicketPanelEmbed({ types, title, description, imageRef, guild } = {}) {
   const embed = new EmbedBuilder()
-    .setColor(COLORS.primary)
-    .setTitle('🎫 Supporto Team')
-    .setDescription(
-      'Hai bisogno di assistenza dallo staff? Clicca il bottone qui sotto per aprire un ticket privato.',
-    )
-    .setFooter({ text: 'Il team staff risponderà al più presto.' });
-  return { embed };
+    .setColor(COLORS.gold)
+    .setTitle(title || PANEL_DEFAULT_TITLE)
+    .setDescription(description || PANEL_DEFAULT_DESCRIPTION);
+
+  if (types?.length) {
+    embed.addFields({
+      name: '​',
+      value: types.map((type) => `${type.emoji}  **${type.label}**\n-# ${type.description}`).join('\n\n'),
+    });
+  }
+
+  if (imageRef) embed.setImage(imageRef);
+  if (guild?.iconURL()) embed.setThumbnail(guild.iconURL({ size: 256 }));
+
+  embed.setFooter({ text: 'Il Senato risponde a ogni convocazione' });
+
+  return embed;
 }
 
-function buildTicketControlEmbed(user) {
+function buildTicketControlEmbed(user, type) {
   const embed = new EmbedBuilder()
-    .setColor(COLORS.info)
-    .setTitle('🎫 Ticket Aperto')
-    .setDescription(`Ciao ${user}, grazie per averci contattato.\nUno staff member ti risponderà a breve.`)
-    .addFields({ name: 'Creato da', value: `${user}`, inline: true })
+    .setColor(COLORS.gold)
+    .setAuthor({ name: 'Pratica aperta', iconURL: user.displayAvatarURL() })
+    .setTitle(`${type.emoji}  ${type.label}`)
+    .setDescription(
+      `Benvenuto ${user}, la tua richiesta è stata **registrata**.\n` +
+        'Lo staff è stato convocato e ti risponderà in questa stanza.',
+    )
+    .addFields({ name: 'Cosa serve sapere', value: type.intro })
+    .setThumbnail(user.displayAvatarURL({ size: 256 }))
+    .setFooter({ text: 'I bottoni qui sotto gestiscono la pratica' })
     .setTimestamp();
-  return { embed };
+
+  return embed;
 }
 
 function buildLeaderboardEmbed(rows) {

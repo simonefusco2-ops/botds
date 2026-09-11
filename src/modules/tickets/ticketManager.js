@@ -9,7 +9,12 @@ const {
 const config = require('../../config');
 const logger = require('../../utils/logger');
 const ticketRepository = require('../../database/repositories/ticketRepository');
+const ticketTypes = require('../../../config/tickets.config');
 const { buildTicketControlEmbed } = require('../../utils/embeds');
+
+function resolveType(typeId) {
+  return ticketTypes.find((type) => type.id === typeId) || ticketTypes[0];
+}
 
 function buildControlRow() {
   return new ActionRowBuilder().addComponents(
@@ -31,17 +36,21 @@ function buildControlRow() {
   );
 }
 
-async function createTicket(interaction) {
+async function createTicket(interaction, typeId) {
   const guild = interaction.guild;
-  const existing = ticketRepository.findOpenByOwner(guild.id, interaction.user.id);
+  const type = resolveType(typeId);
+
+  const existing = ticketRepository.findOpenByOwnerAndType(guild.id, interaction.user.id, type.id);
   if (existing) {
     return interaction.reply({
-      content: `⚠️ Hai già un ticket aperto: <#${existing.channel_id}>`,
+      content: `⚠️ Hai già una pratica aperta di tipo **${type.label}**: <#${existing.channel_id}>`,
       ephemeral: true,
     });
   }
 
   await interaction.deferReply({ ephemeral: true });
+
+  const staffRoleId = type.staffRoleId || config.staffRoleId;
 
   const overwrites = [
     { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
@@ -60,31 +69,30 @@ async function createTicket(interaction) {
     },
   ];
 
-  if (config.staffRoleId) {
+  if (staffRoleId) {
     overwrites.push({
-      id: config.staffRoleId,
+      id: staffRoleId,
       allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
     });
   }
 
   const channel = await guild.channels.create({
-    name: `ticket-${interaction.user.username}`.toLowerCase().slice(0, 90),
+    name: `${type.id}-${interaction.user.username}`.toLowerCase().slice(0, 90),
     type: ChannelType.GuildText,
-    parent: config.ticketCategoryId || undefined,
+    parent: type.categoryId || config.ticketCategoryId || undefined,
     permissionOverwrites: overwrites,
-    topic: `Ticket di ${interaction.user.id}`,
+    topic: `${type.label} — richiesta di ${interaction.user.id}`,
   });
 
-  ticketRepository.create(channel.id, guild.id, interaction.user.id);
+  ticketRepository.create(channel.id, guild.id, interaction.user.id, type.id);
 
-  const { embed } = buildTicketControlEmbed(interaction.user);
   await channel.send({
-    content: `${interaction.user} ${config.staffRoleId ? `<@&${config.staffRoleId}>` : ''}`,
-    embeds: [embed],
+    content: `${interaction.user}${staffRoleId ? ` <@&${staffRoleId}>` : ''}`,
+    embeds: [buildTicketControlEmbed(interaction.user, type)],
     components: [buildControlRow()],
   });
 
-  await interaction.editReply({ content: `✅ Ticket creato: ${channel}` });
+  await interaction.editReply({ content: `✅ Pratica **${type.label}** aperta: ${channel}` });
 }
 
 async function closeTicket(interaction) {
