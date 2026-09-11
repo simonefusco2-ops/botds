@@ -1,3 +1,12 @@
+/**
+ * IVPITER — Bot Discord
+ *
+ * Autore:  Fusco
+ * Discord: calmiamoci
+ *
+ * Copyright (c) 2026 Fusco. Tutti i diritti riservati.
+ * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
+ */
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const channelsConfig = require('../../config/channels.config');
 const logger = require('../utils/logger');

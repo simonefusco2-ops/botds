@@ -1,4 +1,13 @@
 /**
+ * IVPITER — Bot Discord
+ *
+ * Autore:  Fusco
+ * Discord: calmiamoci
+ *
+ * Copyright (c) 2026 Fusco. Tutti i diritti riservati.
+ * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
+ */
+/**
  * Configurazione usata da /setup-channels: un embed per ogni canale target.
  * Gli ID dei canali vengono letti dalle variabili d'ambiente (vedi .env.example).
  */

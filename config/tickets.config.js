@@ -1,4 +1,13 @@
 /**
+ * IVPITER — Bot Discord
+ *
+ * Autore:  Fusco
+ * Discord: calmiamoci
+ *
+ * Copyright (c) 2026 Fusco. Tutti i diritti riservati.
+ * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
+ */
+/**
  * Tipi di ticket mostrati nel pannello di apertura.
  *
  * Ogni voce genera un bottone (massimo 10 tipi, 5 per riga).

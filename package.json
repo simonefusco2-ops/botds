@@ -2,6 +2,9 @@
   "name": "valorant-faceit-bot",
   "version": "1.0.0",
   "description": "Bot Discord modulare per la gestione di un team Valorant e l'automazione della Faceit Hub (In-House League)",
+  "author": "Fusco (Discord: calmiamoci)",
+  "license": "UNLICENSED",
+  "private": true,
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
