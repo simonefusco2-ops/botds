@@ -7,8 +7,20 @@ const {
   ChannelType,
 } = require('discord.js');
 const ticketTypes = require('../../config/tickets.config');
-const { buildTicketPanelEmbed } = require('../utils/embeds');
+const { COLORS } = require('../utils/embeds');
+const { buildCard } = require('../utils/cards');
 const { toReuploadable } = require('../utils/attachments');
+
+const DEFAULT_TITLE = '⚡  CURIA  ⚡';
+
+const DEFAULT_BODY = [
+  '*«Quod ad omnes pertinet, ab omnibus audiatur.»*',
+  '-# Ciò che riguarda tutti, da tutti sia ascoltato.',
+  '',
+  '## Ogni richiesta trova udienza',
+  'Scegli la materia qui sotto: verrà aperta una stanza privata,',
+  'visibile soltanto a te e allo staff.',
+].join('\n');
 
 const STYLES = {
   primary: ButtonStyle.Primary,
@@ -66,19 +78,20 @@ module.exports = {
       return interaction.editReply({ content: `❌ Errore sull'immagine: ${err.message}` });
     }
 
-    const embed = buildTicketPanelEmbed({
-      types: ticketTypes,
-      title: interaction.options.getString('titolo'),
-      description: interaction.options.getString('testo')?.replace(/\\n/g, '\n'),
-      imageRef: image?.ref,
-      guild: interaction.guild,
+    const card = buildCard({
+      accentColor: COLORS.gold,
+      bannerRef: image?.ref,
+      title: interaction.options.getString('titolo') || DEFAULT_TITLE,
+      body: interaction.options.getString('testo')?.replace(/\\n/g, '\n') || DEFAULT_BODY,
+      sections: ticketTypes.map((type) => ({
+        name: `${type.emoji}  ${type.label}`,
+        value: type.description,
+      })),
+      footnote: 'Il Senato risponde a ogni convocazione',
+      rows: buildTypeRows(),
     });
 
-    await channel.send({
-      embeds: [embed],
-      components: buildTypeRows(),
-      files: image ? [image.file] : [],
-    });
+    await channel.send({ ...card, files: image ? [image.file] : [] });
 
     await interaction.editReply({ content: `✅ Pannello pubblicato in ${channel}.` });
   },

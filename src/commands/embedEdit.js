@@ -4,7 +4,7 @@ const {
   MODAL_EDIT,
   setPending,
   buildEmbedModal,
-  stringifyFields,
+  loadCardSource,
 } = require('../modules/embedBuilder/embedBuilderService');
 
 module.exports = {
@@ -47,7 +47,7 @@ module.exports = {
       });
     }
 
-    const existing = message.embeds[0];
+    const source = loadCardSource(messageId);
 
     setPending(interaction.user.id, {
       mode: 'edit',
@@ -55,17 +55,15 @@ module.exports = {
       messageId,
       image: interaction.options.getAttachment('immagine'),
       thumbnail: interaction.options.getAttachment('thumbnail'),
-      colorKey: interaction.options.getString('colore') || 'valorant',
-      existingImageUrl: existing?.image?.url || null,
-      existingThumbnailUrl: existing?.thumbnail?.url || null,
+      colorKey: interaction.options.getString('colore') || source?.colorKey || 'valorant',
     });
 
     await interaction.showModal(
       buildEmbedModal(MODAL_EDIT, {
-        title: existing?.title || '',
-        description: existing?.description || '',
-        fields: stringifyFields(existing?.fields || []),
-        footer: existing?.footer?.text || '',
+        title: source?.title || '',
+        description: source?.description || '',
+        fields: source?.fieldsRaw || '',
+        footer: source?.footer || '',
       }),
     );
   },

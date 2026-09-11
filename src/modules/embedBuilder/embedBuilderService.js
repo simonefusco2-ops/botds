@@ -1,11 +1,7 @@
-const {
-  EmbedBuilder,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-  ActionRowBuilder,
-} = require('discord.js');
+const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 const { toReuploadable } = require('../../utils/attachments');
+const { buildCard } = require('../../utils/cards');
+const settingsRepository = require('../../database/repositories/settingsRepository');
 
 const PALETTE = {
   valorant: 0xff4655,
@@ -78,24 +74,31 @@ function stringifyFields(fields = []) {
     .join('\n');
 }
 
-function buildCustomEmbed({ title, description, fieldsRaw, footer, colorKey, guild, imageRef, thumbnailRef }) {
-  const embed = new EmbedBuilder().setColor(PALETTE[colorKey] ?? PALETTE.valorant);
-
-  if (title) embed.setTitle(title.slice(0, 256));
-  if (description) embed.setDescription(description.replace(/\\n/g, '\n').slice(0, 4096));
-
-  const fields = parseFields(fieldsRaw);
-  if (fields.length) embed.addFields(fields);
-
-  if (imageRef) embed.setImage(imageRef);
-  if (thumbnailRef) embed.setThumbnail(thumbnailRef);
-
-  embed.setFooter({
-    text: (footer || guild.name).slice(0, 2048),
-    iconURL: guild.iconURL() ?? undefined,
+function buildCustomCard({ title, description, fieldsRaw, footer, colorKey, guild, imageRef, thumbnailRef }) {
+  return buildCard({
+    accentColor: PALETTE[colorKey] ?? PALETTE.valorant,
+    bannerRef: imageRef,
+    thumbnailRef,
+    title: title?.slice(0, 256),
+    body: description?.replace(/\\n/g, '\n'),
+    sections: parseFields(fieldsRaw),
+    footnote: footer || guild.name,
   });
+}
 
-  return embed;
+/** Il contenuto sorgente viene salvato per messaggio, così /embed-modifica può ripresentarlo nel popup. */
+function saveCardSource(messageId, data) {
+  settingsRepository.set(`card_${messageId}`, JSON.stringify(data));
+}
+
+function loadCardSource(messageId) {
+  const raw = settingsRepository.get(`card_${messageId}`);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 function buildEmbedModal(customId, prefill = {}) {
@@ -175,40 +178,57 @@ async function handleEmbedModalSubmit(interaction) {
     return interaction.editReply({ content: '⚠️ Serve almeno un titolo, un testo, una sezione o un\'immagine.' });
   }
 
+  let message = null;
+  if (data.mode === 'edit') {
+    message = await channel.messages.fetch(data.messageId).catch(() => null);
+    if (!message) {
+      return interaction.editReply({ content: '❌ Messaggio da modificare non trovato.' });
+    }
+  }
+
   let image = null;
   let thumbnail = null;
   try {
     image = await toReuploadable(data.image, 'banner');
     thumbnail = await toReuploadable(data.thumbnail, 'thumb');
+
+    // In modifica senza nuova immagine: riscarichiamo e riallegiamo quelle già presenti,
+    // perché il riferimento attachment:// vale solo per i file allegati a questo invio.
+    if (data.mode === 'edit') {
+      for (const attachment of message.attachments.values()) {
+        const base = attachment.name?.startsWith('thumb') ? 'thumb' : 'banner';
+        if (base === 'banner' && !image) image = await toReuploadable(attachment, 'banner');
+        if (base === 'thumb' && !thumbnail) thumbnail = await toReuploadable(attachment, 'thumb');
+      }
+    }
   } catch (err) {
     return interaction.editReply({ content: `❌ Errore sull'immagine: ${err.message}` });
   }
 
   const files = [image?.file, thumbnail?.file].filter(Boolean);
 
-  const embed = buildCustomEmbed({
+  const card = buildCustomCard({
     title,
     description,
     fieldsRaw,
     footer,
     colorKey: data.colorKey,
     guild: interaction.guild,
-    // In modifica senza nuova immagine manteniamo quella già presente sul messaggio.
-    imageRef: image?.ref || data.existingImageUrl || null,
-    thumbnailRef: thumbnail?.ref || data.existingThumbnailUrl || null,
+    imageRef: image?.ref || null,
+    thumbnailRef: thumbnail?.ref || null,
   });
 
-  if (data.mode === 'edit') {
-    const message = await channel.messages.fetch(data.messageId).catch(() => null);
-    if (!message) {
-      return interaction.editReply({ content: '❌ Messaggio da modificare non trovato.' });
-    }
+  const source = { title, description, fieldsRaw, footer, colorKey: data.colorKey };
 
-    await message.edit(files.length ? { embeds: [embed], files } : { embeds: [embed] });
+  if (message) {
+    await message.edit({ ...card, files });
+    saveCardSource(message.id, source);
     return interaction.editReply({ content: `✅ Messaggio aggiornato in ${channel}.` });
   }
 
-  const sent = await channel.send({ embeds: [embed], files });
+  const sent = await channel.send({ ...card, files });
+  saveCardSource(sent.id, source);
+
   return interaction.editReply({
     content:
       `✅ Messaggio pubblicato in ${channel}.\n` +
@@ -223,5 +243,5 @@ module.exports = {
   setPending,
   buildEmbedModal,
   handleEmbedModalSubmit,
-  stringifyFields,
+  loadCardSource,
 };
