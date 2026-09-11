@@ -1,9 +1,11 @@
 const logger = require('../../utils/logger');
+const { buildNowPlayingEmbed } = require('../../utils/embeds');
 
 /** Registra gli eventi di discord-player (eseguiti fuori dal thread principale degli handler Discord). */
 function registerPlayerEvents(client) {
   client.player.events.on('playerStart', (queue, track) => {
-    queue.metadata?.channel?.send(`🎶 Ora in riproduzione: **${track.title}**`).catch(() => {});
+    const embed = buildNowPlayingEmbed(track);
+    queue.metadata?.channel?.send({ embeds: [embed] }).catch(() => {});
   });
 
   client.player.events.on('emptyQueue', (queue) => {

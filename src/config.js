@@ -11,6 +11,7 @@ module.exports = {
   clientId: requireEnv('CLIENT_ID'),
   guildId: requireEnv('GUILD_ID'),
   staffRoleId: process.env.STAFF_ROLE_ID || null,
+  autoRoleId: process.env.AUTOROLE_ID || null,
 
   ticketCategoryId: process.env.TICKET_CATEGORY_ID || null,
   transcriptChannelId: process.env.TRANSCRIPT_CHANNEL_ID || null,

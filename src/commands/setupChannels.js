@@ -1,11 +1,17 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const channelsConfig = require('../../config/channels.config');
 const logger = require('../utils/logger');
+const settingsRepository = require('../database/repositories/settingsRepository');
+
+/** Chiave di settings usata per ricordare il messaggio già pubblicato su un canale, ed editarlo invece di duplicarlo. */
+function settingsKey(channelId) {
+  return `setup_message_${channelId}`;
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('setup-channels')
-    .setDescription('Popola i canali del server con i messaggi informativi preimpostati')
+    .setDescription('Popola/aggiorna i canali del server con i messaggi informativi preimpostati')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
@@ -27,16 +33,33 @@ module.exports = {
         if (entry.image) embed.setImage(entry.image);
         if (entry.thumbnail) embed.setThumbnail(entry.thumbnail);
 
-        await channel.send({ embeds: [embed] });
+        // Se questo canale ha già un messaggio di setup pubblicato in precedenza, lo editiamo
+        // invece di inviarne uno nuovo, per evitare di duplicare i messaggi a ogni esecuzione.
+        const existingMessageId = settingsRepository.get(settingsKey(entry.channelId));
+        let edited = false;
+
+        if (existingMessageId) {
+          const existingMessage = await channel.messages.fetch(existingMessageId).catch(() => null);
+          if (existingMessage) {
+            await existingMessage.edit({ embeds: [embed] });
+            edited = true;
+          }
+        }
+
+        if (!edited) {
+          const sent = await channel.send({ embeds: [embed] });
+          settingsRepository.set(settingsKey(entry.channelId), sent.id);
+        }
+
         success++;
       } catch (err) {
-        logger.error(`Errore invio embed su canale ${entry.channelId}`, err);
+        logger.error(`Errore invio/aggiornamento embed su canale ${entry.channelId}`, err);
         errors.push(entry.channelId);
       }
     }
 
     await interaction.editReply({
-      content: `✅ Inviati ${success} embed di setup.${errors.length ? `\n⚠️ Errori sui canali: ${errors.join(', ')}` : ''}`,
+      content: `✅ Aggiornati ${success} embed di setup.${errors.length ? `\n⚠️ Errori sui canali: ${errors.join(', ')}` : ''}`,
     });
   },
 };

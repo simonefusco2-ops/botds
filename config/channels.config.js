@@ -8,6 +8,10 @@ module.exports = [
     title: '📜 Regolamento del Team',
     color: 0xff4655,
     description: 'Benvenuto! Prima di partecipare alle IHL leggi attentamente le regole del team.',
+    // Banner in alto: carica l'immagine in un canale Discord qualsiasi, tasto destro sull'immagine
+    // inviata -> "Copia link", e incolla l'URL qui sotto (deve finire con .png/.jpg/.gif/.webp).
+    image: null, // es. 'https://cdn.discordapp.com/attachments/xxx/yyy/banner-regole.png'
+    thumbnail: null, // piccola icona in alto a destra (es. logo del team)
     fields: [
       { name: '1. Rispetto', value: 'Rispetta compagni e avversari in ogni momento.' },
       { name: '2. Puntualità', value: 'Presentati in voice almeno 10 minuti prima del match.' },

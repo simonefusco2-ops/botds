@@ -52,4 +52,27 @@ function buildLeaderboardEmbed(rows) {
   return embed;
 }
 
-module.exports = { COLORS, buildTicketPanelEmbed, buildTicketControlEmbed, buildLeaderboardEmbed };
+function buildNowPlayingEmbed(track) {
+  const embed = new EmbedBuilder()
+    .setColor(COLORS.primary)
+    .setAuthor({ name: '🎶 Ora in riproduzione' })
+    .setTitle(track.title)
+    .setURL(track.url || null)
+    .addFields(
+      { name: 'Artista/Canale', value: track.author || 'Sconosciuto', inline: true },
+      { name: 'Durata', value: track.duration || 'N/D', inline: true },
+    );
+
+  if (track.thumbnail) embed.setThumbnail(track.thumbnail);
+  if (track.requestedBy) embed.setFooter({ text: `Richiesto da ${track.requestedBy.tag || track.requestedBy.username}` });
+
+  return embed;
+}
+
+module.exports = {
+  COLORS,
+  buildTicketPanelEmbed,
+  buildTicketControlEmbed,
+  buildLeaderboardEmbed,
+  buildNowPlayingEmbed,
+};
