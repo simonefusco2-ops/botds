@@ -9,7 +9,26 @@
  */
 const { YouTubeExtractor } = require('@discord-player/extractor');
 const { YoutubeiExtractor } = require('discord-player-youtubei');
+const { findFFmpeg } = require('@discord-player/ffmpeg');
 const logger = require('../../utils/logger');
+
+/**
+ * Senza FFmpeg il bot entra in vocale ma resta muto, senza generare errori:
+ * lo verifichiamo all'avvio perché il guasto sia visibile nei log.
+ */
+function checkFFmpeg() {
+  const ffmpeg = findFFmpeg();
+
+  if (ffmpeg?.command) {
+    logger.info(`FFmpeg trovato: ${ffmpeg.command}`);
+    return;
+  }
+
+  logger.error(
+    'FFmpeg non trovato: il bot entrerà nel canale vocale senza riprodurre audio. ' +
+      'Installa il pacchetto con "npm install ffmpeg-static" oppure ffmpeg di sistema.',
+  );
+}
 
 /**
  * L'estrattore YouTube predefinito si basa sullo scraping ed è instabile.
@@ -19,6 +38,8 @@ const logger = require('../../utils/logger');
  * perché senza un estrattore YouTube la ricerca per titolo non funzionerebbe.
  */
 async function loadAudioExtractors(player) {
+  checkFFmpeg();
+
   await player.extractors.loadDefault((extractor) => extractor !== 'YouTubeExtractor');
 
   await player.extractors.register(YoutubeiExtractor, {}).catch((err) => {
