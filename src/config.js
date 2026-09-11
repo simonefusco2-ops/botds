@@ -13,7 +13,9 @@ module.exports = {
   staffRoleId: process.env.STAFF_ROLE_ID || null,
   autoRoleId: process.env.AUTOROLE_ID || null,
 
-  memberLogChannelId: process.env.MEMBER_LOG_CHANNEL_ID || null,
+  // MEMBER_LOG_CHANNEL_ID funge da ripiego quando ingressi e uscite vanno nello stesso canale.
+  memberJoinChannelId: process.env.MEMBER_JOIN_CHANNEL_ID || process.env.MEMBER_LOG_CHANNEL_ID || null,
+  memberLeaveChannelId: process.env.MEMBER_LEAVE_CHANNEL_ID || process.env.MEMBER_LOG_CHANNEL_ID || null,
 
   ticketCategoryId: process.env.TICKET_CATEGORY_ID || null,
   transcriptChannelId: process.env.TRANSCRIPT_CHANNEL_ID || null,

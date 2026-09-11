@@ -4,9 +4,9 @@ const memberTrackingRepository = require('../../database/repositories/memberTrac
 const inviteTracker = require('./inviteTracker');
 const { buildMemberJoinEmbed, buildMemberLeaveEmbed } = require('../../utils/embeds');
 
-async function getLogChannel(guild) {
-  if (!config.memberLogChannelId) return null;
-  return guild.channels.fetch(config.memberLogChannelId).catch(() => null);
+async function getLogChannel(guild, channelId) {
+  if (!channelId) return null;
+  return guild.channels.fetch(channelId).catch(() => null);
 }
 
 async function logJoin(member) {
@@ -22,7 +22,7 @@ async function logJoin(member) {
     joinedAt,
   });
 
-  const channel = await getLogChannel(member.guild);
+  const channel = await getLogChannel(member.guild, config.memberJoinChannelId);
   if (!channel) return;
 
   const inviterStats = invite.inviterId ? memberTrackingRepository.countByInviter(invite.inviterId) : null;
@@ -43,7 +43,7 @@ async function logLeave(member) {
   const tracking = memberTrackingRepository.find(member.id);
   memberTrackingRepository.recordLeave(member.id, new Date().toISOString());
 
-  const channel = await getLogChannel(member.guild);
+  const channel = await getLogChannel(member.guild, config.memberLeaveChannelId);
   if (!channel) return;
 
   const roles = member.roles?.cache
