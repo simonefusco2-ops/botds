@@ -19,28 +19,39 @@ module.exports = {
 
       if (interaction.isModalSubmit()) {
         if (interaction.customId === MODAL_CREATE || interaction.customId === MODAL_EDIT) {
-          return handleEmbedModalSubmit(interaction);
+          await handleEmbedModalSubmit(interaction);
         }
         return;
       }
 
+      // Ogni handler va atteso qui dentro: restituendo la promise senza await,
+      // un errore sfuggirebbe al catch e l'utente non vedrebbe alcun messaggio.
       if (interaction.isButton()) {
         switch (interaction.customId) {
           case 'ticket_open':
-            return ticketManager.createTicket(interaction);
+            await ticketManager.createTicket(interaction);
+            return;
           case 'ticket_close':
-            return ticketManager.closeTicket(interaction);
+            await ticketManager.closeTicket(interaction);
+            return;
           case 'ticket_transcript':
-            return ticketManager.saveTranscript(interaction);
+            await ticketManager.saveTranscript(interaction);
+            return;
           case 'ticket_ping':
-            return ticketManager.pingUser(interaction);
+            await ticketManager.pingUser(interaction);
+            return;
           default:
             return;
         }
       }
     } catch (err) {
       logger.error('Errore gestione interazione', err);
-      const payload = { content: '⚠️ Si è verificato un errore durante l\'elaborazione della richiesta.', ephemeral: true };
+
+      const payload = {
+        content: `⚠️ Errore durante l'elaborazione: ${err.message || 'errore sconosciuto'}`,
+        ephemeral: true,
+      };
+
       if (interaction.replied || interaction.deferred) await interaction.followUp(payload).catch(() => {});
       else await interaction.reply(payload).catch(() => {});
     }
