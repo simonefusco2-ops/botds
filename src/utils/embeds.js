@@ -248,8 +248,60 @@ function buildTwitchLiveEmbed({ stream, user }) {
   return embed;
 }
 
+const SOCIAL_PLATFORMS = {
+  x: { label: 'X', emoji: '𝕏', color: 0x1d1d1f, verb: 'ha pubblicato un post' },
+  instagram: { label: 'Instagram', emoji: '📸', color: 0xe1306c, verb: 'ha pubblicato su Instagram' },
+  tiktok: { label: 'TikTok', emoji: '🎵', color: 0x00f2ea, verb: 'ha pubblicato un video' },
+  youtube: { label: 'YouTube', emoji: '▶️', color: 0xff0000, verb: 'ha pubblicato un video' },
+  altro: { label: 'Social', emoji: '🔔', color: 0xc9a227, verb: 'ha pubblicato un contenuto' },
+};
+
+/** Ripulisce il testo del feed dall'HTML e lo accorcia per l'embed. */
+function cleanFeedText(raw, limit = 600) {
+  if (!raw) return null;
+
+  const text = raw
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  if (!text) return null;
+  return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
+}
+
+function buildSocialPostEmbed({ platform, label, item, imageUrl }) {
+  const preset = SOCIAL_PLATFORMS[platform] || SOCIAL_PLATFORMS.altro;
+  const author = label || preset.label;
+
+  const embed = new EmbedBuilder()
+    .setColor(preset.color)
+    .setAuthor({ name: `${preset.emoji}  ${author} ${preset.verb}` })
+    .setFooter({ text: preset.label })
+    .setTimestamp(item.isoDate ? new Date(item.isoDate) : new Date());
+
+  const title = cleanFeedText(item.title, 250);
+  const body = cleanFeedText(item.contentSnippet || item.content, 600);
+
+  if (title) embed.setTitle(title);
+  if (item.link) embed.setURL(item.link);
+  // Con molti feed il titolo ripete il testo del post: evitiamo di stamparlo due volte.
+  if (body && body !== title) embed.setDescription(body);
+  if (imageUrl) embed.setImage(imageUrl);
+
+  return embed;
+}
+
 module.exports = {
   COLORS,
+  SOCIAL_PLATFORMS,
+  buildSocialPostEmbed,
   buildTwitchLiveEmbed,
   buildTicketPanelEmbed,
   buildTicketControlEmbed,

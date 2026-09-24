@@ -12,6 +12,7 @@ const logger = require('../utils/logger');
 const leaderboardManager = require('../modules/leaderboard/leaderboardManager');
 const inviteTracker = require('../modules/memberLog/inviteTracker');
 const twitchWatcher = require('../modules/twitch/twitchWatcher');
+const rssWatcher = require('../modules/social/rssWatcher');
 
 module.exports = {
   name: 'ready',
@@ -27,5 +28,6 @@ module.exports = {
     });
 
     twitchWatcher.start(client);
+    rssWatcher.start(client);
   },
 };

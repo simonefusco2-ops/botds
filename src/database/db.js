@@ -69,6 +69,15 @@ db.exec(`
     last_stream_id TEXT,
     added_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS social_feeds (
+    feed_url TEXT PRIMARY KEY,
+    platform TEXT NOT NULL,
+    label TEXT,
+    last_item_id TEXT,
+    added_by TEXT,
+    added_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 // CREATE TABLE IF NOT EXISTS non modifica le tabelle già esistenti: la colonna

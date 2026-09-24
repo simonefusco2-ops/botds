@@ -40,6 +40,11 @@ module.exports = {
   twitchMention: process.env.TWITCH_MENTION || 'everyone',
   twitchPollSeconds: parseInt(process.env.TWITCH_POLL_SECONDS || '120', 10),
 
+  socialAnnounceChannelId: process.env.SOCIAL_ANNOUNCE_CHANNEL_ID || null,
+  socialMention: process.env.SOCIAL_MENTION || 'everyone',
+  socialPollSeconds: parseInt(process.env.SOCIAL_POLL_SECONDS || '300', 10),
+  socialMaxPerCheck: parseInt(process.env.SOCIAL_MAX_PER_CHECK || '3', 10),
+
   faceitApiKey: process.env.FACEIT_API_KEY || null,
   faceitWebhookSecret: process.env.FACEIT_WEBHOOK_SECRET || null,
   faceitWebhookPort: parseInt(process.env.FACEIT_WEBHOOK_PORT || '3000', 10),
