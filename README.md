@@ -49,7 +49,7 @@ npm start
 
 ## In-House League
 
-`/ihl pannello` pubblica il pannello rosso/verde con cui lo staff apre e chiude le code. Alla decima persona in coda nasce una **stanza privata della partita** (`partita-<id>`, categoria in `config/ihl.config.js`): lì dentro si svolge tutto — check-in, coinflip, scelta del lato, ban delle mappe, draft e voto del vincitore — mentre il canale delle code resta libero e la coda successiva riparte subito.
+`/ihl pannello` pubblica il pannello rosso/verde con cui lo staff apre e chiude le code. Alla decima persona in coda nasce una **stanza privata della partita** (`partita-<id>`, categoria in `config/ihl.config.js`): lì dentro si svolge tutto — check-in, coinflip, scelta del lato, ban delle mappe, draft e voto del vincitore — mentre il canale delle code resta libero e la coda successiva riparte subito. La cronaca — partita avviata, risultato coi punti, annullamenti — va nel canale dello storico indicato da `historyChannelId`.
 
 Prima che la partita inizi viene creato un **vocale di ritrovo**: chi è già collegato a un vocale qualsiasi ci viene spostato dal bot, gli altri entrano da soli. Le scelte partono solo quando ci sono dentro tutti e dieci, e da lì i giocatori vengono spostati nelle vocali delle due squadre. Chi non si presenta può essere sostituito dallo staff con `/ihl sostituisci` dopo i minuti indicati da `timers.substituteAfter`. Chi è già in una partita non conclusa non può rimettersi in coda.
 

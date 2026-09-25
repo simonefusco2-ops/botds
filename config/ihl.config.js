@@ -76,6 +76,11 @@ module.exports = {
     substituteAfter: 420,
   },
 
+  // Canale dove finisce la cronaca delle partite: "partita avviata", il
+  // risultato con i punti e gli annullamenti. Lasciandolo vuoto, quei messaggi
+  // restano nel canale delle code come prima.
+  historyChannelId: '1553153529361989683',
+
   // Categoria che ospita tutte le stanze temporanee della IHL: le due vocali
   // delle squadre e il testuale del voto di ogni partita. Se la lasci vuota
   // viene usata TEMP_VC_CATEGORY_ID del .env.

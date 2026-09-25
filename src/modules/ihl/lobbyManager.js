@@ -80,16 +80,12 @@ async function resolveNames(guild, ids) {
 
 // --- rendering --------------------------------------------------------------
 
-/** La scheda nel canale del pannello: coda, poi avviso, poi risultato. */
-async function renderQueue(client, lobby, extra = {}) {
+/** La scheda della coda, nel canale del pannello. */
+async function renderQueue(client, lobby) {
   const channel = await client.channels.fetch(lobby.channel_id).catch(() => null);
   if (!channel) return;
 
-  const queueing = lobby.state === 'queue';
-  const payload = {
-    embeds: [queueing ? buildQueueEmbed(lobby) : buildNoticeEmbed(lobby, extra)],
-    components: queueing ? buildQueueComponents() : [],
-  };
+  const payload = { embeds: [buildQueueEmbed(lobby)], components: buildQueueComponents() };
 
   if (lobby.message_id) {
     const message = await channel.messages.fetch(lobby.message_id).catch(() => null);
@@ -101,6 +97,47 @@ async function renderQueue(client, lobby, extra = {}) {
 
   const sent = await channel.send(payload);
   lobbyRepository.update(lobby.id, { message_id: sent.id });
+}
+
+/**
+ * La cronaca della partita — avviata, risultato, annullata — nel canale dello
+ * storico. Senza un canale configurato resta in quello delle code, come prima.
+ */
+async function renderNotice(client, lobby, extra = {}) {
+  const channelId = ihlConfig.historyChannelId || lobby.channel_id;
+  const channel = await client.channels.fetch(channelId).catch(() => null);
+  if (!channel) {
+    logger.warn(`IHL lobby ${lobby.id}: canale dello storico ${channelId} non raggiungibile.`);
+    return;
+  }
+
+  const payload = { embeds: [buildNoticeEmbed(lobby, extra)], components: [] };
+
+  if (lobby.notice_message_id) {
+    const message = await channel.messages.fetch(lobby.notice_message_id).catch(() => null);
+    if (message) {
+      await message.edit(payload).catch(() => {});
+      return;
+    }
+  }
+
+  const sent = await channel.send(payload).catch((err) => {
+    logger.warn(`IHL lobby ${lobby.id}: cronaca non pubblicata: ${err.message}`);
+    return null;
+  });
+
+  if (sent) lobbyRepository.update(lobby.id, { notice_message_id: sent.id });
+}
+
+/** La coda è diventata partita: la sua scheda non serve più nel canale delle code. */
+async function removeQueueCard(client, lobby) {
+  if (!lobby.message_id) return;
+
+  const channel = await client.channels.fetch(lobby.channel_id).catch(() => null);
+  const message = await channel?.messages.fetch(lobby.message_id).catch(() => null);
+  await message?.delete().catch(() => {});
+
+  lobbyRepository.update(lobby.id, { message_id: null });
 }
 
 /** La scheda dentro il canale della partita, che accompagna tutte le fasi. */
@@ -283,7 +320,8 @@ async function openMatch(client, lobby) {
     checkin_at: Math.floor(Date.now() / 1000),
   });
 
-  await renderQueue(client, updated);
+  await removeQueueCard(client, updated);
+  await renderNotice(client, lobbyRepository.find(lobby.id));
 
   // Se per qualche motivo il vocale non è nato, il check-in bloccherebbe tutto.
   if (!voice) {
@@ -721,8 +759,8 @@ async function finishMatch(client, lobbyId, winner, note) {
   const updated = lobbyRepository.update(lobbyId, { state: 'closed' });
   const result = `🏆 **Vittoria Team ${winner.toUpperCase()}**` + (note ? `\n-# ${note}` : '') + `\n\n${summary}`;
 
-  // Il riepilogo resta nel canale delle code; la stanza della partita si chiude.
-  await renderQueue(client, updated, { result });
+  // Il riepilogo va nello storico; la stanza della partita si chiude.
+  await renderNotice(client, updated, { result });
   await renderMatch(client, updated, { result });
 
   scheduleCleanup(client, updated);
@@ -768,7 +806,7 @@ async function cancelLobby(client, lobbyId) {
   await cleanupMatchChannels(client, lobby, 'Partita IHL annullata');
   const updated = lobbyRepository.update(lobbyId, { state: 'closed' });
 
-  await renderQueue(client, updated, { result: '🚫 **Partita annullata dallo staff.**' });
+  await renderNotice(client, updated, { result: '🚫 **Partita annullata dallo staff.**' });
 
   if (refunded.length) await ihlLeaderboard.refresh(client);
 
@@ -826,5 +864,6 @@ module.exports = {
   cancelLobby,
   resumeLobbies,
   renderQueue,
+  renderNotice,
   renderMatch,
 };
