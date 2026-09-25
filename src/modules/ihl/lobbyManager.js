@@ -81,11 +81,45 @@ async function resolveNames(guild, ids) {
 // --- rendering --------------------------------------------------------------
 
 /**
+ * Le pubblicazioni di una stessa scheda vengono messe in fila.
+ *
+ * Senza questo, due chiamate quasi simultanee sulla stessa lobby leggono
+ * entrambe un `message_id` ancora vuoto e pubblicano entrambe: nel canale
+ * compaiono due schede con lo stesso numero di coda. Succede davvero, perché
+ * mentre si aprono le stanze di una partita (un paio di secondi) qualcuno può
+ * già entrare nella coda nuova.
+ */
+const renderLocks = new Map();
+
+function withLock(key, action) {
+  const previous = renderLocks.get(key) || Promise.resolve();
+  const current = previous.then(action, action);
+
+  // La coda degli in attesa non deve interrompersi per un errore di uno di loro.
+  const chain = current.catch(() => {});
+  renderLocks.set(key, chain);
+  chain.finally(() => {
+    if (renderLocks.get(key) === chain) renderLocks.delete(key);
+  });
+
+  return current;
+}
+
+/** Lo stato salvato adesso: l'oggetto ricevuto può essere una fotografia vecchia. */
+function fresh(lobby) {
+  return lobbyRepository.find(lobby.id) || lobby;
+}
+
+/**
  * La scheda della coda, nel canale del pannello. È l'unico messaggio che il bot
  * lascia lì oltre al pannello: l'annuncio dell'apertura viaggia insieme a lei
  * invece di occupare un messaggio suo, così la stanza resta pulita.
  */
-async function renderQueue(client, lobby, { announce = false } = {}) {
+function renderQueue(client, lobby, options = {}) {
+  return withLock(`queue:${lobby.id}`, () => publishQueue(client, fresh(lobby), options));
+}
+
+async function publishQueue(client, lobby, { announce = false } = {}) {
   const channel = await client.channels.fetch(lobby.channel_id).catch(() => null);
   if (!channel) return;
 
@@ -106,6 +140,10 @@ async function renderQueue(client, lobby, { announce = false } = {}) {
       await message.edit(payload).catch(() => {});
       return;
     }
+
+    // Ne pubblichiamo una nuova, ma se la vecchia esisteva ancora ora sono due:
+    // vale la pena saperlo dai log.
+    logger.warn(`IHL coda ${lobby.id}: scheda ${lobby.message_id} non trovata, ne pubblico un'altra.`);
   }
 
   const sent = await channel.send(payload);
@@ -116,7 +154,11 @@ async function renderQueue(client, lobby, { announce = false } = {}) {
  * La cronaca della partita — avviata, risultato, annullata — nel canale dello
  * storico. Senza un canale configurato resta in quello delle code, come prima.
  */
-async function renderNotice(client, lobby, extra = {}) {
+function renderNotice(client, lobby, extra = {}) {
+  return withLock(`notice:${lobby.id}`, () => publishNotice(client, fresh(lobby), extra));
+}
+
+async function publishNotice(client, lobby, extra = {}) {
   const channelId = ihlConfig.historyChannelId || lobby.channel_id;
   const channel = await client.channels.fetch(channelId).catch(() => null);
   if (!channel) {
@@ -154,7 +196,11 @@ async function removeQueueCard(client, lobby) {
 }
 
 /** La scheda dentro il canale della partita, che accompagna tutte le fasi. */
-async function renderMatch(client, lobby, extra = {}) {
+function renderMatch(client, lobby, extra = {}) {
+  return withLock(`match:${lobby.id}`, () => publishMatch(client, fresh(lobby), extra));
+}
+
+async function publishMatch(client, lobby, extra = {}) {
   if (!lobby.text_channel_id) return;
 
   const channel = await client.channels.fetch(lobby.text_channel_id).catch(() => null);

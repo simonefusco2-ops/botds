@@ -163,6 +163,41 @@ async function toggleQueues(client, interaction) {
 }
 
 /**
+ * Elimina ogni scheda della coda presente nel canale, guardando i messaggi veri
+ * invece di fidarsi degli ID memorizzati.
+ *
+ * Il bot ricorda un solo messaggio per coda: se quel riferimento si perde — una
+ * fetch fallita che fa ripubblicare la scheda, un riavvio a metà operazione, un
+ * messaggio cancellato a mano — la scheda vecchia resta lì per sempre e il
+ * canale finisce con due code visibili. Scorrendo i messaggi recenti le
+ * troviamo comunque, da qualunque causa arrivino.
+ *
+ * Il pannello con il bottone e le cronache delle partite non si toccano.
+ */
+async function purgeQueueMessages(client, channel) {
+  const stored = settingsRepository.get(PANEL_KEY);
+  const [, panelMessageId] = stored ? stored.split(':') : [];
+
+  const recent = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+  if (!recent) return;
+
+  for (const message of recent.values()) {
+    if (message.author?.id !== client.user.id) continue;
+    if (message.id === panelMessageId) continue;
+
+    const embed = message.embeds?.[0];
+    const isQueueCard =
+      (embed?.footer?.text || '').startsWith('Coda #') || (embed?.title || '').includes('CODA IN FORMAZIONE');
+    // Gli annunci separati non si mandano più, ma possono essere rimasti.
+    const isAnnouncement = (message.content || '').includes('LE CODE SONO APERTE');
+
+    if (!isQueueCard && !isAnnouncement) continue;
+
+    await message.delete().catch(() => {});
+  }
+}
+
+/**
  * Alla chiusura il canale torna pulito: restano solo il pannello con il bottone
  * e nient'altro. Una lobby già avviata non viene toccata, perché la partita in
  * corso deve poter arrivare al risultato anche a code chiuse.
@@ -181,14 +216,10 @@ async function clearSessionMessages(client, channel) {
   // devono poter arrivare al risultato anche a code chiuse.
   for (const lobby of lobbyRepository.listActive()) {
     if (lobby.state !== 'queue' || lobby.channel_id !== channel.id) continue;
-
-    if (lobby.message_id) {
-      const card = await channel.messages.fetch(lobby.message_id).catch(() => null);
-      await card?.delete().catch(() => {});
-    }
-
     lobbyRepository.update(lobby.id, { state: 'closed', message_id: null });
   }
+
+  await purgeQueueMessages(client, channel);
 }
 
 module.exports = {
@@ -196,6 +227,7 @@ module.exports = {
   refreshPanel,
   toggleQueues,
   clearSessionMessages,
+  purgeQueueMessages,
   isOpen,
   canManage,
   PANEL_KEY,
