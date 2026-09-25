@@ -66,6 +66,10 @@ Alternativa per i messaggi fissi di setup: il contenuto di `/setup-channels` si 
 
 Configura nella Faceit Hub l'URL `https://<tuo-host>:<FACEIT_WEBHOOK_PORT>/webhooks/faceit`. Se imposti `FACEIT_WEBHOOK_SECRET`, il bot richiede l'header `x-webhook-secret` (o `?secret=`) corrispondente per accettare la richiesta.
 
+## Regolamento HUB e ruolo IPL
+
+`/regolamento-hub` pubblica il regolamento delle HUB (testo in `config/hub.config.js`) con banner opzionale e un bottone che apre un ticket del tipo `ipl`, dove lo staff chiede link del tracker o nome Riot. Quel tipo di ticket è marcato `hidden` in `config/tickets.config.js`, quindi non compare nel pannello generale `/ticket-panel`: la richiesta parte solo dopo aver letto le regole.
+
 ## API per il sito
 
 Sulla stessa porta dei webhook gira un'API di sola lettura che espone classifica, profili e storico partite della In-House League, sempre allineata a quanto si vede su Discord: `GET /api/v1/leaderboard`, `/api/v1/players/:discordId`, `/api/v1/matches`, `/api/v1/health`.

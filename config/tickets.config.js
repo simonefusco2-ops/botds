@@ -15,6 +15,8 @@
  *  - categoryId:  categoria dedicata; se null usa TICKET_CATEGORY_ID del .env
  *  - staffRoleId: ruolo avvisato all'apertura; se null usa STAFF_ROLE_ID del .env
  *  - intro:       istruzioni mostrate dentro il ticket appena aperto
+ *  - hidden:      true per tenerlo fuori dal pannello generale /ticket-panel,
+ *                 quando si apre solo da un altro pannello (es. il regolamento HUB)
  */
 module.exports = [
   {
@@ -28,6 +30,22 @@ module.exports = [
       'Se il problema riguarda il collegamento, specifica se hai già usato `/link`.',
     categoryId: null,
     staffRoleId: null,
+  },
+  {
+    // Aperto dal bottone in fondo al regolamento HUB (/regolamento-hub), non dal
+    // pannello generale: la richiesta ha senso solo dopo aver letto le regole.
+    id: 'ipl',
+    label: 'Richiesta ruolo IPL',
+    emoji: '🎫',
+    style: 'success',
+    description: 'Accesso alle HUB dopo aver letto il regolamento',
+    intro:
+      'Per ottenere il ruolo **IPL** mandaci qui il **link del tuo tracker** ' +
+      '(tracker.gg, dak.gg o simili) **oppure** il tuo **nome Riot completo**, nel formato `Nome#TAG`.\n' +
+      'Confermaci inoltre di aver letto e accettato il **regolamento delle HUB**.',
+    categoryId: null,
+    staffRoleId: null,
+    hidden: true,
   },
   {
     id: 'tryout',

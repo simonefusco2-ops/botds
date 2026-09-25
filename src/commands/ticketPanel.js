@@ -43,9 +43,12 @@ const STYLES = {
 function buildTypeRows() {
   const rows = [];
 
-  for (let i = 0; i < ticketTypes.length; i += 5) {
+  // I tipi marcati `hidden` si aprono solo dal loro pannello dedicato.
+  const visible = ticketTypes.filter((type) => !type.hidden);
+
+  for (let i = 0; i < visible.length; i += 5) {
     const row = new ActionRowBuilder().addComponents(
-      ticketTypes.slice(i, i + 5).map((type) =>
+      visible.slice(i, i + 5).map((type) =>
         applyEmoji(
           new ButtonBuilder()
             .setCustomId(`ticket_open:${type.id}`)
