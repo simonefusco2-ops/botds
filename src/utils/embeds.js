@@ -276,6 +276,38 @@ function cleanFeedText(raw, limit = 600) {
   return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 }
 
+/**
+ * I ponti RSS chiudono spesso il testo del post con la firma dell'account,
+ * "— I V P I T E R (@ivpiteresport) Sep 25, 2026": è la stessa informazione
+ * che l'embed mostra già nell'autore e nella data, quindi la togliamo.
+ */
+function stripFeedSignature(text) {
+  if (!text) return text;
+  return text.replace(/\n*[—–-]\s*[^\n]*\(@[A-Za-z0-9_.]+\)[^\n]*$/, '').trim() || text;
+}
+
+/**
+ * Vero quando due testi sono lo stesso contenuto, uno dei due solo tagliato.
+ *
+ * Su X il titolo della voce RSS *è* il testo del post: confrontarli con `!==`
+ * non bastava, perché il titolo arriva troncato e il corpo no, così il post
+ * veniva stampato due volte di fila.
+ */
+function sameFeedText(a, b) {
+  const normalize = (text) =>
+    text
+      .replace(/[…\s.]+$/u, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+
+  const first = normalize(a);
+  const second = normalize(b);
+  if (!first || !second) return false;
+
+  return first.startsWith(second) || second.startsWith(first);
+}
+
 function buildSocialPostEmbed({ platform, label, item, imageUrl }) {
   const preset = SOCIAL_PLATFORMS[platform] || SOCIAL_PLATFORMS.altro;
   const author = label || preset.label;
@@ -287,12 +319,20 @@ function buildSocialPostEmbed({ platform, label, item, imageUrl }) {
     .setTimestamp(item.isoDate ? new Date(item.isoDate) : new Date());
 
   const title = cleanFeedText(item.title, 250);
-  const body = cleanFeedText(item.contentSnippet || item.content, 600);
+  const body = stripFeedSignature(cleanFeedText(item.contentSnippet || item.content, 900));
 
-  if (title) embed.setTitle(title);
-  if (item.link) embed.setURL(item.link);
-  // Con molti feed il titolo ripete il testo del post: evitiamo di stamparlo due volte.
-  if (body && body !== title) embed.setDescription(body);
+  if (title && body && sameFeedText(title, body)) {
+    // Stesso contenuto: lo mostriamo una volta sola, nella versione più completa.
+    // Il link resta raggiungibile dal bottone "Apri il post".
+    embed.setDescription(body.length >= title.length ? body : title);
+  } else {
+    if (title) {
+      embed.setTitle(title);
+      if (item.link) embed.setURL(item.link);
+    }
+    if (body) embed.setDescription(body);
+  }
+
   if (imageUrl) embed.setImage(imageUrl);
 
   return embed;
