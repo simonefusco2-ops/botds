@@ -53,14 +53,17 @@ function extractImage(item) {
   return match ? match[1] : null;
 }
 
-async function announce(client, feed, item) {
+/**
+ * Pubblica il post nel canale annunci. Con `mention: false` non tagga nessuno:
+ * serve alla prova manuale, che non deve svegliare tutto il server.
+ */
+async function announce(client, feed, item, { mention: withMention = true } = {}) {
   const channel = await client.channels.fetch(config.socialAnnounceChannelId).catch(() => null);
   if (!channel) {
-    logger.warn('Canale annunci social non trovato.');
-    return;
+    throw new Error(`canale annunci ${config.socialAnnounceChannelId} non raggiungibile`);
   }
 
-  const mention = buildMention();
+  const mention = withMention ? buildMention() : { content: null, allowedMentions: { parse: [] } };
   const components = [];
 
   if (item.link) {
@@ -87,7 +90,13 @@ async function announce(client, feed, item) {
 }
 
 async function checkFeed(client, feed) {
-  const parsed = await parser.parseURL(feed.feed_url);
+  let parsed;
+  try {
+    parsed = await parser.parseURL(feed.feed_url);
+  } catch (err) {
+    throw new Error(`feed non leggibile: ${err.message}`);
+  }
+
   const items = parsed.items || [];
   if (!items.length) return;
 
@@ -111,7 +120,13 @@ async function checkFeed(client, feed) {
   const fresh = (knownIndex === -1 ? items.slice(0, 1) : items.slice(0, knownIndex)).reverse();
 
   for (const item of fresh.slice(-config.socialMaxPerCheck)) {
-    await announce(client, feed, item);
+    try {
+      await announce(client, feed, item);
+    } catch (err) {
+      // Senza aggiornare last_item_id il post verrà ritentato al prossimo giro:
+      // un problema di permessi nel canale non fa perdere l'annuncio.
+      throw new Error(`annuncio non pubblicato: ${err.message}`);
+    }
     logger.info(`Annunciato nuovo post ${feed.platform}: ${item.link || itemId(item)}`);
   }
 
@@ -127,12 +142,40 @@ async function poll(client) {
       try {
         await checkFeed(client, feed);
       } catch (err) {
-        logger.warn(`Feed ${feed.platform} (${feed.feed_url}) non leggibile: ${err.message}`);
+        logger.warn(`Social ${feed.platform} (${feed.feed_url}): ${err.message}`);
       }
     }
   } finally {
     running = false;
   }
+}
+
+/**
+ * Prova manuale: pubblica l'ultimo post di ogni feed senza taggare nessuno e
+ * senza toccare lo stato, così si verifica tutta la catena (lettura del feed,
+ * permessi nel canale, embed) senza aspettare che qualcuno pubblichi davvero.
+ */
+async function testFeeds(client) {
+  const results = [];
+
+  for (const feed of socialRepository.list()) {
+    try {
+      const parsed = await parser.parseURL(feed.feed_url);
+      const item = parsed.items?.[0];
+
+      if (!item) {
+        results.push({ feed, ok: false, reason: 'il feed è valido ma non contiene nessun post' });
+        continue;
+      }
+
+      await announce(client, feed, item, { mention: false });
+      results.push({ feed, ok: true, title: item.title || item.link || itemId(item) });
+    } catch (err) {
+      results.push({ feed, ok: false, reason: err.message });
+    }
+  }
+
+  return results;
 }
 
 function start(client) {
@@ -149,4 +192,4 @@ function start(client) {
   logger.info(`Notifiche social attive: controllo ogni ${intervalMs / 1000}s.`);
 }
 
-module.exports = { start, poll, announce, isConfigured, SOCIAL_PLATFORMS };
+module.exports = { start, poll, announce, testFeeds, isConfigured, SOCIAL_PLATFORMS };

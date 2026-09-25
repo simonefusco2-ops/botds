@@ -131,7 +131,12 @@ module.exports = {
         ),
     )
     .addSubcommand((sub) => sub.setName('lista').setDescription('Mostra i feed monitorati'))
-    .addSubcommand((sub) => sub.setName('controlla').setDescription('Forza subito un controllo dei feed')),
+    .addSubcommand((sub) => sub.setName('controlla').setDescription('Forza subito un controllo dei feed'))
+    .addSubcommand((sub) =>
+      sub
+        .setName('prova')
+        .setDescription("Pubblica l'ultimo post di ogni feed per verificare che tutto funzioni"),
+    ),
   async execute(interaction, client) {
     const subcommand = interaction.options.getSubcommand();
 
@@ -161,6 +166,33 @@ module.exports = {
       return interaction.reply({
         content: '⚠️ Manca `SOCIAL_ANNOUNCE_CHANNEL_ID` nel file `.env`: senza canale annunci le notifiche non partono.',
         ephemeral: true,
+      });
+    }
+
+    if (subcommand === 'prova') {
+      await interaction.deferReply({ ephemeral: true });
+
+      const results = await rssWatcher.testFeeds(client);
+      if (!results.length) {
+        return interaction.editReply({
+          content: '📭 Nessun feed monitorato: aggiungine uno con `/social aggiungi`.',
+        });
+      }
+
+      const report = results
+        .map((result) => {
+          const preset = SOCIAL_PLATFORMS[result.feed.platform] || SOCIAL_PLATFORMS.altro;
+          const name = result.feed.label || preset.label;
+          return result.ok
+            ? `✅ **${name}** — pubblicato: ${result.title}`
+            : `❌ **${name}** — ${result.reason}`;
+        })
+        .join('\n');
+
+      return interaction.editReply({
+        content:
+          `${report}\n\n-# Prova senza tag e senza toccare lo stato: i post pubblicati qui ` +
+          'verranno comunque riannunciati se sono nuovi.',
       });
     }
 
