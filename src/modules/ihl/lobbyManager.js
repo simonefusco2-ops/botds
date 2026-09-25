@@ -229,22 +229,40 @@ async function joinQueue(client, interaction) {
     });
   }
 
+  // Non dovrebbe succedere, ma se la coda è già piena non la si gonfia oltre.
+  if (lobby.players.length >= ihlConfig.queueSize) {
+    return interaction.reply({ content: '⚠️ Questa coda è già al completo: attendi la prossima.', ephemeral: true });
+  }
+
   const players = [...lobby.players, interaction.user.id];
   ihlRepository.ensure(interaction.user.id);
-  const updated = lobbyRepository.update(lobby.id, { players });
+
+  if (players.length < ihlConfig.queueSize) {
+    const updated = lobbyRepository.update(lobby.id, { players });
+    await interaction.reply({
+      content: `✅ Sei in coda (${players.length}/${ihlConfig.queueSize}).`,
+      ephemeral: true,
+    });
+    return renderQueue(client, updated);
+  }
+
+  // Decimo giocatore. Chiudere la coda e aprirne una nuova va fatto qui, in modo
+  // sincrono, PRIMA di qualsiasi await: creare le stanze richiede un paio di
+  // secondi, e in quel tempo un altro click troverebbe la coda ancora aperta,
+  // si aggiungerebbe come undicesimo e farebbe partire una seconda volta la
+  // stessa partita. È esattamente così che nascevano due canali gemelli.
+  const updated = lobbyRepository.update(lobby.id, { players, state: 'checkin' });
+  const next = lobbyRepository.create(updated.guild_id, updated.channel_id);
 
   await interaction.reply({
-    content: `✅ Sei in coda (${players.length}/${ihlConfig.queueSize}).`,
+    content: `✅ Coda completa (${players.length}/${ihlConfig.queueSize}): sto aprendo la stanza.`,
     ephemeral: true,
   });
-
-  if (players.length < ihlConfig.queueSize) return renderQueue(client, updated);
 
   await openMatch(client, updated);
 
   // La coda riparte subito: chi arriva ora forma la lobby successiva senza
   // aspettare che la partita appena creata finisca.
-  const next = lobbyRepository.create(updated.guild_id, updated.channel_id);
   return renderQueue(client, next);
 }
 
@@ -269,6 +287,13 @@ async function leaveQueue(client, interaction) {
  * Nel canale delle code resta solo un avviso che rimanda alla stanza nuova.
  */
 async function openMatch(client, lobby) {
+  // Seconda rete di sicurezza contro le aperture doppie: se la stanza c'è già,
+  // questa partita è stata avviata da qualcun altro e non va rifatta.
+  if (lobby.text_channel_id) {
+    logger.warn(`IHL lobby ${lobby.id}: apertura ignorata, la stanza esiste già.`);
+    return lobby;
+  }
+
   const guild = await client.guilds.fetch(lobby.guild_id).catch(() => null);
   if (!guild) return null;
 

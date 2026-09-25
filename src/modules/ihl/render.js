@@ -189,9 +189,9 @@ function buildMatchEmbed(lobby, extra = {}) {
       extra.result ||
         `**Mappa:** ${lobby.chosen_map}\n` +
           `**Team A** inizia in **${lobby.side_a === 'attack' ? 'Attacco' : 'Difesa'}**\n\n` +
-          `Finita la partita votate il vincitore qui sotto: con **${votesNeeded(lobby)} voti** ` +
-          'l\'ELO viene assegnato subito.\n-# Nessuna scadenza: votate quando avete finito, ' +
-          'anche fra ore.',
+          `Finita la partita votate il vincitore qui sotto. **La prima squadra che arriva a ` +
+          `${votesNeeded(lobby)} voti vince**: l'ELO viene assegnato in quel momento, non serve ` +
+          'che votino tutti.\n-# Nessuna scadenza: votate quando avete finito, anche fra ore.',
     );
 
     embed.addFields(
@@ -202,7 +202,7 @@ function buildMatchEmbed(lobby, extra = {}) {
     if (lobby.state === 'live') {
       const pending = pendingVoters(lobby);
       embed.addFields({
-        name: `🗳️ Devono ancora votare — ${pending.length}`,
+        name: `🗳️ Non hanno ancora votato — ${pending.length}`,
         value: pending.length ? inline(pending) : '-# hanno votato tutti',
       });
     }
