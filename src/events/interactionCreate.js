@@ -14,6 +14,7 @@ const {
   handleEmbedModalSubmit,
 } = require('../modules/embedBuilder/embedBuilderService');
 const { CUSTOM_ID_PREFIX: ROLE_BUTTON_PREFIX, handleRoleButton } = require('../modules/welcome/roleButtons');
+const ihlInteractions = require('../modules/ihl/interactions');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -31,6 +32,12 @@ module.exports = {
         if (interaction.customId === MODAL_CREATE || interaction.customId === MODAL_EDIT) {
           await handleEmbedModalSubmit(interaction);
         }
+        return;
+      }
+
+      // L'In-House League usa bottoni e menu a tendina: li instradiamo insieme.
+      if (interaction.customId?.startsWith(ihlInteractions.PREFIX)) {
+        await ihlInteractions.handle(client, interaction);
         return;
       }
 

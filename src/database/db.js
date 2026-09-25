@@ -70,6 +70,53 @@ db.exec(`
     added_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS ihl_players (
+    discord_id TEXT PRIMARY KEY,
+    elo INTEGER NOT NULL,
+    wins INTEGER NOT NULL DEFAULT 0,
+    losses INTEGER NOT NULL DEFAULT 0,
+    matches INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- Una riga per giocatore per partita: alimenta lo storico personale.
+  CREATE TABLE IF NOT EXISTS ihl_matches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lobby_id INTEGER,
+    discord_id TEXT NOT NULL,
+    team TEXT NOT NULL,
+    won INTEGER NOT NULL,
+    elo_before INTEGER NOT NULL,
+    elo_after INTEGER NOT NULL,
+    map TEXT,
+    voided INTEGER NOT NULL DEFAULT 0,
+    played_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_ihl_matches_player ON ihl_matches(discord_id);
+
+  -- Lo stato della lobby è persistito: un riavvio del bot non fa perdere una
+  -- partita in corso, che resta recuperabile dal messaggio già pubblicato.
+  CREATE TABLE IF NOT EXISTS ihl_lobbies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    message_id TEXT,
+    state TEXT NOT NULL,
+    players TEXT NOT NULL DEFAULT '[]',
+    captain_a TEXT,
+    captain_b TEXT,
+    team_a TEXT NOT NULL DEFAULT '[]',
+    team_b TEXT NOT NULL DEFAULT '[]',
+    banned_maps TEXT NOT NULL DEFAULT '[]',
+    chosen_map TEXT,
+    side_a TEXT,
+    turn TEXT,
+    voice_a_id TEXT,
+    voice_b_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS social_feeds (
     feed_url TEXT PRIMARY KEY,
     platform TEXT NOT NULL,

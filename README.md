@@ -47,6 +47,14 @@ npm start
 7. **Notifiche live Twitch** — il bot controlla periodicamente (`TWITCH_POLL_SECONDS`, default 120s) gli streamer registrati con `/twitch aggiungi` e pubblica in `TWITCH_ANNOUNCE_CHANNEL_ID` un embed con titolo, gioco, spettatori, anteprima e bottone "Guarda la live", menzionando quanto impostato in `TWITCH_MENTION` (`everyone`, `here`, un ID ruolo o `nessuna`). L'annuncio è legato all'ID della diretta, quindi un riavvio del bot non genera doppioni. Sottocomandi: `aggiungi`, `rimuovi`, `lista`, `prova`.
 8. **Log membri e tracking inviti** — con `MEMBER_JOIN_CHANNEL_ID` e `MEMBER_LEAVE_CHANNEL_ID` impostati (oppure il solo `MEMBER_LOG_CHANNEL_ID` per usare un unico canale), ogni ingresso pubblica un embed con utente, ID, data di creazione dell'account (con avviso se ha meno di 7 giorni), invito usato, chi ha invitato e suo totale inviti, e membri totali. Ogni uscita pubblica data di ingresso, permanenza, chi lo aveva invitato e ruoli che aveva. `/inviti` mostra la classifica di chi invita più membri (o i dati di un singolo utente). Richiede il permesso **Gestisci server** per leggere gli inviti.
 
+## In-House League
+
+`/ihl pannello` pubblica il pannello con il bollino rosso/verde: i ruoli elencati in `config/ihl.config.js` (Developer, Owner, Staff) aprono e chiudono le code, e all'apertura il canale viene rinominato e il server avvisato. Raggiunti i 10 giocatori la lobby avanza da sola: i due ELO più alti diventano capitani, il primo sceglie il lato, i capitani bannano le mappe a turno e poi scelgono i giocatori uno per volta; allo scadere del tempo decide il bot. A squadre complete vengono create due vocali e i giocatori spostati; a fine partita capitani o staff dichiarano il vincitore, l'ELO viene ricalcolato e la classifica aggiornata.
+
+Ogni partita ha un numero: `/ihl annulla codice:<numero>` la annulla e **restituisce l'ELO** a tutti i partecipanti, sottraendo la variazione di quella partita senza intaccare quelle successive. `/ihl profilo` mostra ELO, posizione e storico; `/ihl classifica` pubblica il pannello sfogliabile che si aggiorna da solo; `/ihl elo-modifica` permette allo staff di correggere i punti.
+
+Il pool mappe in `config/ihl.config.js` va aggiornato quando Riot ruota le mappe: il sistema di ban usa esattamente quell'elenco.
+
 ## Messaggi grafici senza toccare il codice
 
 - **`/embed`** — crea un messaggio impaginato direttamente da Discord: nel comando scegli canale, carichi l'immagine banner, la thumbnail e il colore; si apre un popup dove scrivi titolo, testo (multilinea, con markdown) e le sezioni, una per riga nel formato `Titolo | Testo` (aggiungi `| inline` per affiancarle). Le immagini caricate vengono ri-allegate al messaggio, quindi non scadono. Alla fine ricevi l'ID del messaggio.

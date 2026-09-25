@@ -1,0 +1,124 @@
+/**
+ * IVPITER — Bot Discord
+ *
+ * Autore:  Fusco
+ * Discord: calmiamoci
+ *
+ * Copyright (c) 2026 Fusco. Tutti i diritti riservati.
+ * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
+ */
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const ihlConfig = require('../../../config/ihl.config');
+const logger = require('../../utils/logger');
+const settingsRepository = require('../../database/repositories/settingsRepository');
+const lobbyManager = require('./lobbyManager');
+const { COLORS } = require('../../utils/embeds');
+
+const PANEL_KEY = 'ihl_panel_message';
+const OPEN_KEY = 'ihl_queues_open';
+
+const NAMES = { open: '🟢︱code-aperte', closed: '🔴︱code-chiuse' };
+
+function isOpen() {
+  return settingsRepository.get(OPEN_KEY) === '1';
+}
+
+/** Solo i ruoli elencati in configurazione possono aprire o chiudere. */
+function canManage(member) {
+  return ihlConfig.managerRoleIds.some((roleId) => member.roles.cache.has(roleId));
+}
+
+function buildPanel(open) {
+  const embed = new EmbedBuilder()
+    .setColor(open ? COLORS.success : COLORS.danger)
+    .setTitle(open ? '🟢  CODE APERTE' : '🔴  CODE CHIUSE')
+    .setDescription(
+      open
+        ? 'Le code sono **aperte**: entra in vocale e premi il bottone per metterti in lista.\n' +
+            `Al raggiungimento di **${ihlConfig.queueSize} giocatori** partono capitani, ban delle mappe e draft.`
+        : 'Le code sono **chiuse**. Lo staff le aprirà a breve: resta sintonizzato.',
+    )
+    .setFooter({ text: 'In-House League · IVPITER' })
+    .setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('ihl_toggle')
+      .setLabel(open ? 'Chiudi le code' : 'Apri le code')
+      .setEmoji(open ? '🔒' : '🔓')
+      .setStyle(open ? ButtonStyle.Danger : ButtonStyle.Success),
+  );
+
+  return { embeds: [embed], components: [row] };
+}
+
+async function publishPanel(interaction) {
+  const channel = interaction.options.getChannel('canale') || interaction.channel;
+  const payload = buildPanel(isOpen());
+
+  const stored = settingsRepository.get(PANEL_KEY);
+  const [storedChannelId, storedMessageId] = stored ? stored.split(':') : [];
+
+  if (storedMessageId && storedChannelId === channel.id) {
+    const existing = await channel.messages.fetch(storedMessageId).catch(() => null);
+    if (existing) {
+      await existing.edit(payload);
+      return interaction.reply({ content: `✅ Pannello code aggiornato in ${channel}.`, ephemeral: true });
+    }
+  }
+
+  const sent = await channel.send(payload);
+  settingsRepository.set(PANEL_KEY, `${channel.id}:${sent.id}`);
+  return interaction.reply({ content: `✅ Pannello code pubblicato in ${channel}.`, ephemeral: true });
+}
+
+async function refreshPanel(client) {
+  const stored = settingsRepository.get(PANEL_KEY);
+  if (!stored) return;
+
+  const [channelId, messageId] = stored.split(':');
+  const channel = await client.channels.fetch(channelId).catch(() => null);
+  const message = await channel?.messages.fetch(messageId).catch(() => null);
+  await message?.edit(buildPanel(isOpen())).catch(() => {});
+}
+
+async function toggleQueues(client, interaction) {
+  if (!canManage(interaction.member)) {
+    return interaction.reply({
+      content: '⛔ Solo Developer, Owner e Staff possono aprire o chiudere le code.',
+      ephemeral: true,
+    });
+  }
+
+  const opening = !isOpen();
+  settingsRepository.set(OPEN_KEY, opening ? '1' : '0');
+
+  await interaction.deferUpdate();
+  await refreshPanel(client);
+
+  const channel = interaction.channel;
+  await channel
+    .setName(opening ? NAMES.open : NAMES.closed)
+    .catch((err) => logger.warn(`IHL: rinomina canale non riuscita: ${err.message}`));
+
+  if (!opening) {
+    await channel.send({ content: '🔒 **Code chiuse.** Grazie a tutti, ci vediamo alla prossima sessione.' });
+    return;
+  }
+
+  await channel.send({
+    content:
+      '@everyone\n' +
+      '🟢 **LE CODE SONO APERTE!**\n' +
+      'Entrate in un canale vocale se volete codare: il bot vi sposterà automaticamente ' +
+      'nelle vocali delle due squadre quando il draft sarà completo.\n' +
+      `Premete **Entra in coda** qui sotto — si parte a **${ihlConfig.queueSize} giocatori**.`,
+    allowedMentions: { parse: ['everyone'] },
+  });
+
+  // La scheda della coda vive sotto l'annuncio, così è sempre l'ultimo messaggio utile.
+  const lobby = lobbyManager.getOrCreateLobby(interaction.guildId, channel.id);
+  await lobbyManager.renderLobby(client, lobby);
+}
+
+module.exports = { publishPanel, refreshPanel, toggleQueues, isOpen, canManage, PANEL_KEY, OPEN_KEY };
