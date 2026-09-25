@@ -49,5 +49,13 @@ module.exports = {
   faceitWebhookSecret: process.env.FACEIT_WEBHOOK_SECRET || null,
   faceitWebhookPort: parseInt(process.env.FACEIT_WEBHOOK_PORT || '3000', 10),
 
+  // API di sola lettura per il sito: gira sulla stessa porta dei webhook Faceit.
+  // Senza API_TOKEN è aperta (i dati sono gli stessi già pubblici su Discord).
+  apiEnabled: process.env.API_ENABLED !== 'false',
+  apiToken: process.env.API_TOKEN || null,
+  apiAllowedOrigin: process.env.API_ALLOWED_ORIGIN || '*',
+  apiCacheSeconds: parseInt(process.env.API_CACHE_SECONDS || '30', 10),
+  apiRateLimit: parseInt(process.env.API_RATE_LIMIT || '120', 10),
+
   databasePath: process.env.DATABASE_PATH || './data/bot.db',
 };

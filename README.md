@@ -65,3 +65,9 @@ Alternativa per i messaggi fissi di setup: il contenuto di `/setup-channels` si 
 ## Webhook Faceit
 
 Configura nella Faceit Hub l'URL `https://<tuo-host>:<FACEIT_WEBHOOK_PORT>/webhooks/faceit`. Se imposti `FACEIT_WEBHOOK_SECRET`, il bot richiede l'header `x-webhook-secret` (o `?secret=`) corrispondente per accettare la richiesta.
+
+## API per il sito
+
+Sulla stessa porta dei webhook gira un'API di sola lettura che espone classifica, profili e storico partite della In-House League, sempre allineata a quanto si vede su Discord: `GET /api/v1/leaderboard`, `/api/v1/players/:discordId`, `/api/v1/matches`, `/api/v1/health`.
+
+La documentazione completa da consegnare a chi sviluppa il sito è in [`docs/INTEGRAZIONE-SITO.md`](docs/INTEGRAZIONE-SITO.md): endpoint, esempi di risposta, schema del database, funzionamento dell'ELO e configurazione del reverse proxy.

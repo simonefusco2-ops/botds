@@ -56,6 +56,25 @@ function top(limit = ihlConfig.leaderboardSize) {
 }
 
 const pageStmt = db.prepare('SELECT * FROM ihl_players ORDER BY elo DESC, wins DESC LIMIT ? OFFSET ?');
+
+// Il nome visualizzato non è nella tabella dei giocatori: lo recuperiamo da
+// member_tracking, che lo registra all'ingresso nel server. Serve al sito, che
+// non può mostrare soltanto degli ID numerici.
+const pageWithNamesStmt = db.prepare(`
+  SELECT p.*, t.username
+  FROM ihl_players p
+  LEFT JOIN member_tracking t ON t.discord_id = p.discord_id
+  ORDER BY p.elo DESC, p.wins DESC
+  LIMIT ? OFFSET ?
+`);
+const findWithNameStmt = db.prepare(`
+  SELECT p.*, t.username
+  FROM ihl_players p
+  LEFT JOIN member_tracking t ON t.discord_id = p.discord_id
+  WHERE p.discord_id = ?
+`);
+const recentMatchesStmt = db.prepare('SELECT * FROM ihl_matches ORDER BY id DESC LIMIT ?');
+const lastUpdateStmt = db.prepare('SELECT MAX(updated_at) AS updated_at FROM ihl_players');
 const countStmt = db.prepare('SELECT COUNT(*) AS total FROM ihl_players');
 const rankStmt = db.prepare('SELECT COUNT(*) + 1 AS rank FROM ihl_players WHERE elo > ?');
 
@@ -79,6 +98,25 @@ function page(limit, offset) {
 
 function count() {
   return countStmt.get().total;
+}
+
+/** Pagina della classifica con il nome visualizzato: usata dall'API del sito. */
+function pageWithNames(limit, offset) {
+  return pageWithNamesStmt.all(limit, offset);
+}
+
+function findWithName(discordId) {
+  return findWithNameStmt.get(discordId) || null;
+}
+
+/** Ultime righe registrate, una per giocatore per partita. */
+function recentMatches(limit) {
+  return recentMatchesStmt.all(limit);
+}
+
+/** Quando è stato assegnato l'ultimo punto: diventa l'`updated_at` dell'API. */
+function lastUpdate() {
+  return lastUpdateStmt.get().updated_at || null;
 }
 
 /** Posizione in classifica di un ELO: quanti lo superano, più uno. */
@@ -149,6 +187,10 @@ module.exports = {
   count,
   rankOf,
   find,
+  pageWithNames,
+  findWithName,
+  recentMatches,
+  lastUpdate,
   setElo,
   recordMatch,
   history,

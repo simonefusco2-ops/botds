@@ -12,6 +12,7 @@ const config = require('../../config');
 const logger = require('../../utils/logger');
 const voiceRouter = require('./voiceRouter');
 const leaderboardManager = require('../leaderboard/leaderboardManager');
+const { mountPublicApi } = require('../api/publicApi');
 
 const CONFIGURING_EVENTS = ['match_status_configuring', 'match_status_ready'];
 const FINISHED_EVENTS = ['match_status_finished'];
@@ -24,6 +25,9 @@ const FINISHED_EVENTS = ['match_status_finished'];
 function createWebhookServer(client) {
   const app = express();
   app.use(express.json());
+
+  // Sullo stesso server vive l'API di sola lettura che alimenta il sito.
+  if (config.apiEnabled) mountPublicApi(app);
 
   app.post('/webhooks/faceit', (req, res) => {
     if (config.faceitWebhookSecret) {
