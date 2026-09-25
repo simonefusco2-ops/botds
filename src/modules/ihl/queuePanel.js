@@ -11,11 +11,13 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 const ihlConfig = require('../../../config/ihl.config');
 const logger = require('../../utils/logger');
 const settingsRepository = require('../../database/repositories/settingsRepository');
+const lobbyRepository = require('../../database/repositories/lobbyRepository');
 const lobbyManager = require('./lobbyManager');
 const { COLORS } = require('../../utils/embeds');
 
 const PANEL_KEY = 'ihl_panel_message';
 const OPEN_KEY = 'ihl_queues_open';
+const ANNOUNCE_KEY = 'ihl_announce_message';
 
 const NAMES = { open: '🟢︱code-aperte', closed: '🔴︱code-chiuse' };
 
@@ -102,11 +104,11 @@ async function toggleQueues(client, interaction) {
     .catch((err) => logger.warn(`IHL: rinomina canale non riuscita: ${err.message}`));
 
   if (!opening) {
-    await channel.send({ content: '🔒 **Code chiuse.** Grazie a tutti, ci vediamo alla prossima sessione.' });
+    await clearSessionMessages(client, channel);
     return;
   }
 
-  await channel.send({
+  const announcement = await channel.send({
     content:
       '@everyone\n' +
       '🟢 **LE CODE SONO APERTE!**\n' +
@@ -116,9 +118,35 @@ async function toggleQueues(client, interaction) {
     allowedMentions: { parse: ['everyone'] },
   });
 
+  settingsRepository.set(ANNOUNCE_KEY, announcement.id);
+
   // La scheda della coda vive sotto l'annuncio, così è sempre l'ultimo messaggio utile.
   const lobby = lobbyManager.getOrCreateLobby(interaction.guildId, channel.id);
   await lobbyManager.renderLobby(client, lobby);
+}
+
+/**
+ * Alla chiusura il canale torna pulito: restano solo il pannello con il bottone
+ * e nient'altro. Una lobby già avviata non viene toccata, perché la partita in
+ * corso deve poter arrivare al risultato anche a code chiuse.
+ */
+async function clearSessionMessages(client, channel) {
+  const announcementId = settingsRepository.get(ANNOUNCE_KEY);
+  if (announcementId) {
+    const announcement = await channel.messages.fetch(announcementId).catch(() => null);
+    await announcement?.delete().catch(() => {});
+    settingsRepository.set(ANNOUNCE_KEY, '');
+  }
+
+  const lobby = lobbyRepository.findOpenInChannel(channel.id);
+  if (!lobby || lobby.state !== 'queue') return;
+
+  if (lobby.message_id) {
+    const card = await channel.messages.fetch(lobby.message_id).catch(() => null);
+    await card?.delete().catch(() => {});
+  }
+
+  lobbyRepository.update(lobby.id, { state: 'closed', message_id: null });
 }
 
 module.exports = { publishPanel, refreshPanel, toggleQueues, isOpen, canManage, PANEL_KEY, OPEN_KEY };
