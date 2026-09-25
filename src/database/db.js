@@ -116,6 +116,7 @@ db.exec(`
     voice_a_id TEXT,
     voice_b_id TEXT,
     checkin_voice_id TEXT,
+    first_pick TEXT,
     checkin_at INTEGER,
     match_message_id TEXT,
     text_channel_id TEXT,
@@ -154,7 +155,7 @@ if (!lobbyColumns.includes('votes')) {
 if (!lobbyColumns.includes('vote_deadline')) {
   db.exec('ALTER TABLE ihl_lobbies ADD COLUMN vote_deadline INTEGER');
 }
-for (const column of ['checkin_voice_id TEXT', 'checkin_at INTEGER', 'match_message_id TEXT']) {
+for (const column of ['checkin_voice_id TEXT', 'checkin_at INTEGER', 'match_message_id TEXT', 'first_pick TEXT']) {
   const [name, type] = column.split(' ');
   if (!lobbyColumns.includes(name)) db.exec(`ALTER TABLE ihl_lobbies ADD COLUMN ${name} ${type}`);
 }

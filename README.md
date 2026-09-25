@@ -53,7 +53,7 @@ npm start
 
 Prima che la partita inizi viene creato un **vocale di ritrovo**: chi è già collegato a un vocale qualsiasi ci viene spostato dal bot, gli altri entrano da soli. Le scelte partono solo quando ci sono dentro tutti e dieci, e da lì i giocatori vengono spostati nelle vocali delle due squadre. Chi non si presenta può essere sostituito dallo staff con `/ihl sostituisci` dopo i minuti indicati da `timers.substituteAfter`. Chi è già in una partita non conclusa non può rimettersi in coda.
 
-I capitani sono i due ELO più alti, ma **chi apre le scelte lo decide un sorteggio**. Il voto del vincitore non ha scadenza: l'ELO viene assegnato appena una squadra raggiunge la maggioranza dei voti. Altri comandi: `/ihl profilo`, `/ihl classifica`, `/ihl partite`, `/ihl risultato`, `/ihl elo-modifica`, `/ihl annulla`.
+I capitani sono i due ELO più alti, ma **chi apre le scelte lo decide un sorteggio**. L'ordine delle fasi è lato, draft e infine ban delle mappe, che parte da tutte quelle in rotazione. Il voto del vincitore non ha scadenza: l'ELO viene assegnato appena una squadra raggiunge la maggioranza dei voti. Altri comandi: `/ihl profilo`, `/ihl classifica`, `/ihl partite`, `/ihl risultato`, `/ihl elo-modifica`, `/ihl annulla`.
 
 ## Messaggi grafici senza toccare il codice
 

@@ -169,8 +169,8 @@ function buildMatchEmbed(lobby, extra = {}) {
   if (lobby.state === 'ban') {
     const left = remainingMaps(lobby);
     embed.setDescription(
-      `Turno di <@${lobby.turn}>: banna una mappa.\n\n` +
-        `**Ancora in gioco:** ${left.map((m) => `${m.emoji} ${m.name}`).join(' · ')}\n` +
+      `Squadre fatte. Turno di <@${lobby.turn}>: banna una mappa.\n\n` +
+        `**Ancora in gioco:** ${left.map((m) => m.name).join(' · ')}\n` +
         (lobby.banned_maps.length ? `-# Bannate: ${lobby.banned_maps.join(', ')}` : ''),
     );
   }
@@ -250,7 +250,6 @@ function buildMatchComponents(lobby) {
             new ButtonBuilder()
               .setCustomId(`ihl_ban:${lobby.id}:${map.name}`)
               .setLabel(map.name)
-              .setEmoji(map.emoji)
               .setStyle(ButtonStyle.Secondary),
           ),
         ),

@@ -11,10 +11,11 @@
 /**
  * Parametri della In-House League.
  *
- * MAPPE: `maps` è l'archivio completo con le relative emoji, `activeMaps` dice
- * quali sono in rotazione e `mapPoolSize` quante ne entrano nel veto di ogni
- * partita, estratte a caso fra le attive. Con 4 mappe i ban sono 3: due al
- * capitano che non ha scelto il lato e uno all'altro.
+ * MAPPE: `maps` è l'archivio completo, `activeMaps` dice quali sono in rotazione
+ * e `mapPoolSize` quante ne entrano nel veto di ogni partita. Lasciandolo a null
+ * il veto parte da tutte le attive; con un numero ne vengono estratte a caso
+ * quante indicato. I ban sono sempre uno meno delle mappe in gioco, alternati
+ * fra i due capitani.
  */
 module.exports = {
   // Ruoli abilitati ad aprire e chiudere le code.
@@ -39,8 +40,8 @@ module.exports = {
   // Per rimetterne una in gioco basta aggiungerne il nome, purché sia in `maps`.
   activeMaps: ['Ascent', 'Haven', 'Abyss', 'Summit', 'Lotus', 'Split', 'Sunset'],
 
-  // Quante mappe entrano nel veto di ogni partita, estratte a caso fra le attive.
-  mapPoolSize: 4,
+  // Quante mappe entrano nel veto: null = tutte quelle attive (nessuna estrazione).
+  mapPoolSize: null,
 
   maps: [
     { name: 'Abyss', emoji: '🌌' },

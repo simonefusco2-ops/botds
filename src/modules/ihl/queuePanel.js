@@ -27,6 +27,32 @@ function channelName(open) {
   return names.smallCaps ? toSmallCaps(raw) : raw;
 }
 
+/**
+ * Rinomina il canale senza aspettarla.
+ *
+ * Discord consente **due rinomine ogni dieci minuti per canale**: oltre quel
+ * limite discord.js non fallisce, mette la richiesta in coda e resta in attesa
+ * per minuti. Aspettandola, annuncio e scheda della coda partivano solo dopo —
+ * cioè, all'atto pratico, non arrivavano. Il nome è un dettaglio estetico:
+ * si aggiorna quando Discord lo permette, intanto il resto va avanti.
+ */
+function renameChannel(channel, open) {
+  const name = channelName(open);
+
+  // Niente richiesta se il nome è già quello: il limite non si spreca.
+  if (channel.name === name) return;
+
+  channel
+    .setName(name)
+    .then(() => logger.info(`IHL: canale rinominato in ${name}.`))
+    .catch((err) =>
+      logger.warn(
+        `IHL: rinomina canale non riuscita (${err.message}). ` +
+          'Discord ne consente due ogni dieci minuti: il nome si aggiornerà al prossimo cambio.',
+      ),
+    );
+}
+
 function isOpen() {
   return settingsRepository.get(OPEN_KEY) === '1';
 }
@@ -105,9 +131,7 @@ async function toggleQueues(client, interaction) {
   await refreshPanel(client);
 
   const channel = interaction.channel;
-  await channel
-    .setName(channelName(opening))
-    .catch((err) => logger.warn(`IHL: rinomina canale non riuscita: ${err.message}`));
+  renameChannel(channel, opening);
 
   if (!opening) {
     await clearSessionMessages(client, channel);
