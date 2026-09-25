@@ -11,13 +11,10 @@
 /**
  * Parametri della In-House League.
  *
- * MAPPE: `maps` contiene l'archivio completo, anche le mappe fuori rotazione.
- * A ogni partita il bot ne estrae a caso `mapPoolSize`, e i capitani bannano
- * soltanto fra quelle: così non si bannano dodici mappe a ogni lobby e ogni
- * serata ha un ventaglio diverso.
- *
- * Conviene tenere `mapPoolSize` dispari: i ban sono uno in meno del pool e si
- * alternano, quindi con 7 mappe ogni capitano ne banna esattamente 3.
+ * MAPPE: `maps` è l'archivio completo con le relative emoji, `activeMaps` dice
+ * quali sono in rotazione e `mapPoolSize` quante ne entrano nel veto di ogni
+ * partita, estratte a caso fra le attive. Con 4 mappe i ban sono 3: due al
+ * capitano che non ha scelto il lato e uno all'altro.
  */
 module.exports = {
   // Ruoli abilitati ad aprire e chiudere le code.
@@ -29,8 +26,21 @@ module.exports = {
 
   queueSize: 10,
 
-  // Quante mappe entrano nel veto di ogni partita, estratte a caso dall'archivio.
-  mapPoolSize: 7,
+  // Nomi del canale delle code. Le lettere vengono convertite in maiuscoletto
+  // (ᴄᴏᴅᴇ ᴀᴘᴇʀᴛᴇ) perché Discord non le forza in minuscolo come farebbe con le
+  // lettere normali; metti smallCaps a false per usarli così come sono scritti.
+  queueChannelNames: {
+    open: '🟢︱code-aperte',
+    closed: '🔴︱code-chiuse',
+    smallCaps: true,
+  },
+
+  // Mappe attualmente in rotazione: solo da queste vengono estratte quelle del veto.
+  // Per rimetterne una in gioco basta aggiungerne il nome, purché sia in `maps`.
+  activeMaps: ['Ascent', 'Haven', 'Abyss', 'Summit', 'Lotus', 'Split', 'Sunset'],
+
+  // Quante mappe entrano nel veto di ogni partita, estratte a caso fra le attive.
+  mapPoolSize: 4,
 
   maps: [
     { name: 'Abyss', emoji: '🌌' },

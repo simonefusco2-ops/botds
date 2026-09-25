@@ -130,10 +130,12 @@ async function startLobby(client, lobby) {
 
   const [captainA, captainB] = ranked;
 
-  // Pool estratto a caso dall'archivio: ogni partita ha un veto diverso e più corto.
-  const mapPool = [...ihlConfig.maps]
+  // Pool estratto a caso fra le mappe in rotazione: ogni partita ha un veto
+  // diverso e abbastanza corto da non annoiare.
+  const active = ihlConfig.maps.filter((map) => ihlConfig.activeMaps.includes(map.name));
+  const mapPool = [...active]
     .sort(() => Math.random() - 0.5)
-    .slice(0, Math.min(ihlConfig.mapPoolSize, ihlConfig.maps.length))
+    .slice(0, Math.min(ihlConfig.mapPoolSize, active.length))
     .map((map) => map.name);
 
   const updated = lobbyRepository.update(lobby.id, {

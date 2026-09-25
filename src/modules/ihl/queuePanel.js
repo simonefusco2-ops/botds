@@ -14,12 +14,18 @@ const settingsRepository = require('../../database/repositories/settingsReposito
 const lobbyRepository = require('../../database/repositories/lobbyRepository');
 const lobbyManager = require('./lobbyManager');
 const { COLORS } = require('../../utils/embeds');
+const { toSmallCaps } = require('../../utils/smallCaps');
 
 const PANEL_KEY = 'ihl_panel_message';
 const OPEN_KEY = 'ihl_queues_open';
 const ANNOUNCE_KEY = 'ihl_announce_message';
 
-const NAMES = { open: '🟢︱code-aperte', closed: '🔴︱code-chiuse' };
+/** Nome del canale secondo lo stato, in maiuscoletto se richiesto dalla configurazione. */
+function channelName(open) {
+  const names = ihlConfig.queueChannelNames;
+  const raw = open ? names.open : names.closed;
+  return names.smallCaps ? toSmallCaps(raw) : raw;
+}
 
 function isOpen() {
   return settingsRepository.get(OPEN_KEY) === '1';
@@ -100,7 +106,7 @@ async function toggleQueues(client, interaction) {
 
   const channel = interaction.channel;
   await channel
-    .setName(opening ? NAMES.open : NAMES.closed)
+    .setName(channelName(opening))
     .catch((err) => logger.warn(`IHL: rinomina canale non riuscita: ${err.message}`));
 
   if (!opening) {
