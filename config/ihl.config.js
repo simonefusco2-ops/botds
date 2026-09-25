@@ -71,9 +71,12 @@ module.exports = {
     pick: 60,
   },
 
+  // Categoria che ospita tutte le stanze temporanee della IHL: le due vocali
+  // delle squadre e il testuale del voto di ogni partita. Se la lasci vuota
+  // viene usata TEMP_VC_CATEGORY_ID del .env.
+  categoryId: '1547745773452533814',
+
   voice: {
-    // Categoria dei vocali di partita; se vuoto usa TEMP_VC_CATEGORY_ID del .env.
-    categoryId: null,
     teamAName: '🔴 Team A',
     teamBName: '🔵 Team B',
   },

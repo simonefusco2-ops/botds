@@ -82,6 +82,9 @@ module.exports = {
             .setName('canale')
             .setDescription('Canale della classifica (default: questo canale)')
             .addChannelTypes(ChannelType.GuildText),
+        )
+        .addAttachmentOption((opt) =>
+          opt.setName('immagine').setDescription('Banner mostrato in cima alla classifica'),
         ),
     )
     .addSubcommand((sub) =>
@@ -158,9 +161,22 @@ module.exports = {
 
     if (subcommand === 'classifica') {
       const channel = interaction.options.getChannel('canale') || interaction.channel;
+      const image = interaction.options.getAttachment('immagine');
+
       await interaction.deferReply({ ephemeral: true });
-      await ihlLeaderboard.publish(client, channel);
-      return interaction.editReply({ content: `✅ Classifica pubblicata in ${channel}: si aggiorna da sola.` });
+
+      try {
+        await ihlLeaderboard.publish(client, channel, image);
+      } catch (err) {
+        return interaction.editReply({ content: `❌ Errore sull'immagine: ${err.message}` });
+      }
+
+      return interaction.editReply({
+        content:
+          `✅ Classifica pubblicata in ${channel}: si aggiorna da sola a fine partita` +
+          (image ? ' e il banner resta al suo posto.' : '.') +
+          '\n-# Rilanciando il comando viene aggiornata, non duplicata. Senza `immagine` il banner già caricato resta.',
+      });
     }
 
     if (subcommand === 'pannello') return queuePanel.publishPanel(interaction);

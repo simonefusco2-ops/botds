@@ -34,6 +34,15 @@ function get(discordId) {
   return getStmt.get(discordId) || ensure(discordId);
 }
 
+/**
+ * Come get, ma non crea la riga se manca: serve quando si consulta la posizione
+ * di qualcuno, perché chi non ha mai giocato non deve comparire in classifica
+ * solo per aver premuto un bottone.
+ */
+function find(discordId) {
+  return getStmt.get(discordId) || null;
+}
+
 function getMany(discordIds) {
   return discordIds.map((id) => get(id));
 }
@@ -139,6 +148,7 @@ module.exports = {
   page,
   count,
   rankOf,
+  find,
   setElo,
   recordMatch,
   history,

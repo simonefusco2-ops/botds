@@ -44,7 +44,12 @@ async function handle(client, interaction) {
   if (action === 'ihl_toggle') return queuePanel.toggleQueues(client, interaction);
 
   // La classifica è sfogliabile da chiunque: nessun controllo di turno o ruolo.
-  if (action === 'ihl_lb') return ihlLeaderboard.turnPage(interaction, Number(rest[0]) || 0);
+  // Dal pannello pubblico si apre una copia privata; dentro quella si sfoglia.
+  if (action === 'ihl_lb') {
+    return ihlLeaderboard.turnPage(interaction, Number(rest[0]) || 0, rest[1] || ihlLeaderboard.PUBLIC);
+  }
+
+  if (action === 'ihl_lb_me') return ihlLeaderboard.showOwnPosition(interaction);
 
   if (action === 'ihl_join') {
     if (!queuePanel.isOpen()) {

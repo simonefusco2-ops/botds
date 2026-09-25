@@ -7,76 +7,119 @@
  * Copyright (c) 2026 Fusco. Tutti i diritti riservati.
  * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
  */
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const ihlConfig = require('../../../config/ihl.config');
 const logger = require('../../utils/logger');
 const ihlRepository = require('../../database/repositories/ihlRepository');
 const settingsRepository = require('../../database/repositories/settingsRepository');
 const { COLORS } = require('../../utils/embeds');
+const { buildCard } = require('../../utils/cards');
+const { toReuploadable } = require('../../utils/attachments');
 
 const SETTINGS_KEY = 'ihl_leaderboard_message';
+const BANNER_KEY = 'ihl_leaderboard_banner';
+const BANNER_BASE = 'ihl-classifica';
 const PAGE_SIZE = 10;
+
+// Da dove arriva il click: il pannello pubblico apre sempre una copia privata,
+// così nessuno può cambiare pagina al messaggio che vedono tutti.
+const PUBLIC = 'public';
+const PERSONAL = 'self';
+
+const MEDALS = ['🥇', '🥈', '🥉'];
 
 function totalPages() {
   return Math.max(1, Math.ceil(ihlRepository.count() / PAGE_SIZE));
 }
 
-function buildEmbed(page = 0) {
-  const pages = totalPages();
-  const current = Math.min(Math.max(page, 0), pages - 1);
-  const rows = ihlRepository.page(PAGE_SIZE, current * PAGE_SIZE);
-
-  const embed = new EmbedBuilder()
-    .setColor(COLORS.gold)
-    .setTitle('🏆  CLASSIFICA IN-HOUSE LEAGUE')
-    .setFooter({ text: `Pagina ${current + 1}/${pages} · ${ihlRepository.count()} giocatori · aggiornata a fine partita` })
-    .setTimestamp();
-
-  if (!rows.length) {
-    embed.setDescription('Nessuna partita disputata. La prima coda scrive la storia.');
-    return { embed, page: current, pages };
-  }
-
-  const medals = ['🥇', '🥈', '🥉'];
-  embed.setDescription(
-    rows
-      .map((row, index) => {
-        const position = current * PAGE_SIZE + index;
-        const rank = position < 3 ? medals[position] : `\`#${String(position + 1).padStart(2, '0')}\``;
-        const winrate = row.matches ? Math.round((row.wins / row.matches) * 100) : 0;
-        return `${rank} <@${row.discord_id}> — **${row.elo}** elo\n-# ${row.wins}V · ${row.losses}S · ${winrate}% winrate`;
-      })
-      .join('\n'),
-  );
-
-  return { embed, page: current, pages };
+/** Il riferimento all'immagine caricata con /ihl classifica, se ce n'è una. */
+function storedBannerRef() {
+  const name = settingsRepository.get(BANNER_KEY);
+  return name ? `attachment://${name}` : null;
 }
 
-function buildComponents(page, pages) {
+function buildList(current) {
+  const rows = ihlRepository.page(PAGE_SIZE, current * PAGE_SIZE);
+  if (!rows.length) return 'Nessuna partita disputata. La prima coda scrive la storia.';
+
+  return rows
+    .map((row, index) => {
+      const position = current * PAGE_SIZE + index;
+      const rank = position < 3 ? MEDALS[position] : `\`#${String(position + 1).padStart(2, '0')}\``;
+      const winrate = row.matches ? Math.round((row.wins / row.matches) * 100) : 0;
+      return `${rank}  <@${row.discord_id}>  ·  **${row.elo}** elo\n-# ${row.wins}V · ${row.losses}S · ${winrate}% winrate`;
+    })
+    .join('\n');
+}
+
+function buildComponents(page, pages, scope) {
   return [
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`ihl_lb:${page - 1}`)
+        .setCustomId(`ihl_lb:${page - 1}:${scope}`)
         .setEmoji('◀️')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page <= 0),
       new ButtonBuilder()
-        .setCustomId(`ihl_lb:${page + 1}`)
+        .setCustomId(`ihl_lb:${page + 1}:${scope}`)
         .setEmoji('▶️')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page >= pages - 1),
-      new ButtonBuilder().setCustomId(`ihl_lb:${page}`).setLabel('Aggiorna').setEmoji('🔄').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`ihl_lb:${page}:${scope}`)
+        .setLabel('Aggiorna')
+        .setEmoji('🔄')
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId('ihl_lb_me')
+        .setLabel('Vedi tu dove sei')
+        .setEmoji('📍')
+        .setStyle(ButtonStyle.Primary),
     ),
   ];
 }
 
-function buildPayload(page = 0) {
-  const { embed, page: current, pages } = buildEmbed(page);
-  return { embeds: [embed], components: buildComponents(current, pages) };
+/**
+ * La scheda della classifica in formato Components V2, come gli altri pannelli:
+ * banner in cima, titolo grande e piè di pagina piccolo.
+ */
+function buildPayload({ page = 0, scope = PUBLIC, bannerRef = storedBannerRef() } = {}) {
+  const pages = totalPages();
+  const current = Math.min(Math.max(page, 0), pages - 1);
+  const players = ihlRepository.count();
+
+  const card = buildCard({
+    accentColor: COLORS.gold,
+    bannerRef,
+    title: '🏆  CLASSIFICA IN-HOUSE LEAGUE',
+    body: buildList(current),
+    footnote:
+      `Pagina ${current + 1}/${pages} · ${players} giocator${players === 1 ? 'e' : 'i'} · ` +
+      (scope === PERSONAL
+        ? 'stai sfogliando la tua copia privata'
+        : 'si aggiorna da sola alla fine di ogni partita'),
+    rows: buildComponents(current, pages, scope),
+  });
+
+  return { ...card, page: current, pages };
 }
 
-/** Crea il messaggio della classifica o aggiorna quello esistente. */
-async function publish(client, channel) {
-  const payload = buildPayload(0);
+/** Il payload da inviare a Discord, senza i campi di servizio. */
+function toMessage({ page, pages, ...payload }) {
+  return payload;
+}
+
+/**
+ * Pubblica la classifica o aggiorna quella esistente. L'immagine viene
+ * ricaricata insieme al messaggio: gli URL degli allegati delle slash command
+ * scadono, quello del messaggio no.
+ */
+async function publish(client, channel, attachment) {
+  const banner = await toReuploadable(attachment, BANNER_BASE);
+  if (banner) settingsRepository.set(BANNER_KEY, banner.file.name);
+
+  const bannerRef = banner?.ref || storedBannerRef();
+  const payload = toMessage(buildPayload({ bannerRef }));
 
   const stored = settingsRepository.get(SETTINGS_KEY);
   const [storedChannelId, storedMessageId] = stored ? stored.split(':') : [];
@@ -84,16 +127,19 @@ async function publish(client, channel) {
   if (storedMessageId && storedChannelId === channel.id) {
     const existing = await channel.messages.fetch(storedMessageId).catch(() => null);
     if (existing) {
-      await existing.edit(payload);
+      // Senza `files` Discord tiene l'allegato che il messaggio ha già: l'immagine
+      // resta al suo posto a ogni aggiornamento, senza ricaricarla ogni volta.
+      await existing.edit(banner ? { ...payload, files: [banner.file] } : payload);
       return existing;
     }
   }
 
-  const sent = await channel.send(payload);
+  const sent = await channel.send(banner ? { ...payload, files: [banner.file] } : payload);
   settingsRepository.set(SETTINGS_KEY, `${channel.id}:${sent.id}`);
   return sent;
 }
 
+/** Riallinea il pannello pubblico: chiamata alla fine di ogni partita. */
 async function refresh(client) {
   const stored = settingsRepository.get(SETTINGS_KEY);
   if (!stored) return;
@@ -101,15 +147,85 @@ async function refresh(client) {
   const [channelId, messageId] = stored.split(':');
   const channel = await client.channels.fetch(channelId).catch(() => null);
   const message = await channel?.messages.fetch(messageId).catch(() => null);
+  if (!message) return;
 
-  await message?.edit(buildPayload(0)).catch((err) => {
-    logger.warn(`Classifica IHL non aggiornata: ${err.message}`);
+  const payload = toMessage(buildPayload());
+
+  try {
+    await message.edit(payload);
+    return;
+  } catch (err) {
+    logger.warn(`Classifica IHL: aggiornamento senza allegato rifiutato (${err.message}), riprovo ricaricandolo.`);
+  }
+
+  // Ripiego: se Discord non ha accettato il riferimento all'allegato esistente,
+  // lo riscarichiamo dal messaggio e lo rimandiamo insieme alla scheda.
+  const previous = message.attachments.first();
+  const banner = previous ? await toReuploadable(previous, BANNER_BASE).catch(() => null) : null;
+
+  await message
+    .edit(banner ? { ...toMessage(buildPayload({ bannerRef: banner.ref })), files: [banner.file] } : payload)
+    .catch((err) => logger.warn(`Classifica IHL non aggiornata: ${err.message}`));
+}
+
+/**
+ * Cambio pagina. Dal pannello pubblico apre una copia privata, così la
+ * classifica che vedono tutti resta sempre alla prima pagina e aggiornata;
+ * dentro la copia privata si sfoglia aggiornando quella.
+ */
+async function turnPage(interaction, page, scope = PUBLIC) {
+  // La copia privata non porta l'immagine: l'allegato vive sul messaggio pubblico.
+  const payload = toMessage(buildPayload({ page, scope: PERSONAL, bannerRef: null }));
+
+  if (scope === PERSONAL) {
+    // Il messaggio è già privato: il flag va ripetuto, altrimenti Discord
+    // rifiuta l'aggiornamento di una risposta effimera.
+    await interaction.update({ ...payload, flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
+    return;
+  }
+
+  await interaction.reply({
+    ...payload,
+    flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
   });
 }
 
-/** Cambio pagina dai bottoni: aggiorna il messaggio esistente senza crearne altri. */
-async function turnPage(interaction, page) {
-  await interaction.update(buildPayload(page));
+/** Posizione e ELO di chi ha premuto, visibile solo a lui. */
+async function showOwnPosition(interaction) {
+  const player = ihlRepository.find(interaction.user.id);
+
+  if (!player) {
+    await interaction.reply({
+      content:
+        '📍 Non sei ancora in classifica: entra in coda e gioca la tua prima partita, ' +
+        `poi parti da **${ihlConfig.elo.starting}** elo.`,
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const rank = ihlRepository.rankOf(player.elo);
+  const players = ihlRepository.count();
+  const winrate = player.matches ? Math.round((player.wins / player.matches) * 100) : 0;
+  const page = Math.floor((rank - 1) / PAGE_SIZE) + 1;
+  const medal = rank <= 3 ? `${MEDALS[rank - 1]} ` : '';
+
+  await interaction.reply({
+    content:
+      `📍 ${medal}Sei **#${rank}** su **${players}** con **${player.elo}** elo.\n` +
+      `-# ${player.wins}V · ${player.losses}S · ${player.matches} partite · ${winrate}% winrate — pagina ${page} della classifica.`,
+    flags: MessageFlags.Ephemeral,
+  });
 }
 
-module.exports = { publish, refresh, turnPage, buildPayload, SETTINGS_KEY, PAGE_SIZE };
+module.exports = {
+  publish,
+  refresh,
+  turnPage,
+  showOwnPosition,
+  buildPayload,
+  PUBLIC,
+  PERSONAL,
+  SETTINGS_KEY,
+  PAGE_SIZE,
+};

@@ -302,7 +302,7 @@ async function setupVoiceChannels(client, lobby) {
   const guild = await client.guilds.fetch(lobby.guild_id).catch(() => null);
   if (!guild) return;
 
-  const parent = ihlConfig.voice.categoryId || config.tempVcCategoryId || undefined;
+  const parent = ihlConfig.categoryId || config.tempVcCategoryId || undefined;
   const created = {};
 
   for (const [key, name, team] of [
@@ -355,7 +355,7 @@ async function createMatchChannel(client, lobby) {
   const guild = await client.guilds.fetch(lobby.guild_id).catch(() => null);
   if (!guild) return;
 
-  const parent = ihlConfig.voice.categoryId || config.tempVcCategoryId || undefined;
+  const parent = ihlConfig.categoryId || config.tempVcCategoryId || undefined;
 
   const channel = await guild.channels
     .create({
