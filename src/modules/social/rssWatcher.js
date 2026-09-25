@@ -39,6 +39,27 @@ function itemId(item) {
   return item.guid || item.id || item.link || item.title || null;
 }
 
+/**
+ * Le voci dal post più recente al più vecchio.
+ *
+ * Non tutti i generatori di feed le mettono in quest'ordine: alcuni ponti RSS
+ * le elencano dalla più vecchia. Fidandosi dell'ordine del documento, con un
+ * feed così il post nuovo finirebbe in fondo e il bot non lo vedrebbe mai.
+ * Se le date non ci sono o non sono leggibili teniamo l'ordine originale,
+ * che resta l'ipotesi più sensata.
+ */
+function sortNewestFirst(items) {
+  const dated = items.map((item, index) => ({
+    item,
+    index,
+    time: Date.parse(item.isoDate || item.pubDate || item.date || ''),
+  }));
+
+  if (dated.some((entry) => Number.isNaN(entry.time))) return items;
+
+  return dated.sort((a, b) => b.time - a.time || a.index - b.index).map((entry) => entry.item);
+}
+
 /** L'immagine del post arriva da campi diversi secondo il generatore del feed. */
 function extractImage(item) {
   const candidate =
@@ -97,7 +118,7 @@ async function checkFeed(client, feed) {
     throw new Error(`feed non leggibile: ${err.message}`);
   }
 
-  const items = parsed.items || [];
+  const items = sortNewestFirst(parsed.items || []);
   if (!items.length) return;
 
   const latest = items[0];
@@ -161,7 +182,7 @@ async function testFeeds(client) {
   for (const feed of socialRepository.list()) {
     try {
       const parsed = await parser.parseURL(feed.feed_url);
-      const item = parsed.items?.[0];
+      const [item] = sortNewestFirst(parsed.items || []);
 
       if (!item) {
         results.push({ feed, ok: false, reason: 'il feed è valido ma non contiene nessun post' });
@@ -192,4 +213,4 @@ function start(client) {
   logger.info(`Notifiche social attive: controllo ogni ${intervalMs / 1000}s.`);
 }
 
-module.exports = { start, poll, announce, testFeeds, isConfigured, SOCIAL_PLATFORMS };
+module.exports = { start, poll, announce, testFeeds, sortNewestFirst, itemId, isConfigured, SOCIAL_PLATFORMS };
