@@ -346,6 +346,8 @@ async function openMatch(client, lobby) {
   const parent = ihlConfig.categoryId || config.tempVcCategoryId || undefined;
   const allow = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
 
+  // Le stanze della partita sono visibili a tutto il server: così si vede che
+  // il Discord è vivo. Scrivere e collegarsi restano però riservati a chi gioca.
   const text = await guild.channels
     .create({
       name: `${ihlConfig.matchChannel.prefix}${lobby.id}`,
@@ -353,7 +355,11 @@ async function openMatch(client, lobby) {
       parent,
       topic: `Partita IHL #${lobby.id}`,
       permissionOverwrites: [
-        { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+        {
+          id: guild.roles.everyone.id,
+          allow: [PermissionFlagsBits.ViewChannel],
+          deny: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.AddReactions],
+        },
         { id: client.user.id, allow: [...allow, PermissionFlagsBits.ManageChannels] },
         ...ihlConfig.managerRoleIds.map((id) => ({ id, allow })),
         ...lobby.players.map((id) => ({ id, allow })),
@@ -372,7 +378,11 @@ async function openMatch(client, lobby) {
       type: ChannelType.GuildVoice,
       parent,
       permissionOverwrites: [
-        { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.Connect] },
+        {
+          id: guild.roles.everyone.id,
+          allow: [PermissionFlagsBits.ViewChannel],
+          deny: [PermissionFlagsBits.Connect],
+        },
         {
           id: client.user.id,
           allow: [
@@ -752,7 +762,12 @@ async function setupVoiceChannels(client, lobby) {
         type: ChannelType.GuildVoice,
         parent,
         permissionOverwrites: [
-          { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.Connect] },
+          // Visibile a tutti, ma ci si collega solo se si gioca quella partita.
+          {
+            id: guild.roles.everyone.id,
+            allow: [PermissionFlagsBits.ViewChannel],
+            deny: [PermissionFlagsBits.Connect],
+          },
           {
             id: client.user.id,
             allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.MoveMembers],
