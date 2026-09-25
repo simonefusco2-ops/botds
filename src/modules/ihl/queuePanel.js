@@ -7,7 +7,7 @@
  * Copyright (c) 2026 Fusco. Tutti i diritti riservati.
  * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
  */
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const ihlConfig = require('../../../config/ihl.config');
 const logger = require('../../utils/logger');
 const settingsRepository = require('../../database/repositories/settingsRepository');
@@ -40,15 +40,31 @@ function renameChannel(channel, open) {
   const name = channelName(open);
 
   // Niente richiesta se il nome è già quello: il limite non si spreca.
-  if (channel.name === name) return;
+  if (channel.name === name) {
+    logger.info(`IHL: canale già chiamato "${name}", rinomina non necessaria.`);
+    return;
+  }
+
+  // Senza "Gestire i canali" su questo canale la richiesta partirebbe per
+  // essere rifiutata: meglio dirlo chiaramente nei log.
+  const me = channel.guild?.members?.me;
+  if (me && !channel.permissionsFor(me)?.has(PermissionFlagsBits.ManageChannels)) {
+    logger.warn(
+      `IHL: rinomina impossibile, al bot manca il permesso "Gestire i canali" su #${channel.name}.`,
+    );
+    return;
+  }
+
+  const started = Date.now();
+  logger.info(`IHL: richiesta rinomina "${channel.name}" → "${name}".`);
 
   channel
     .setName(name)
-    .then(() => logger.info(`IHL: canale rinominato in ${name}.`))
+    .then(() => logger.info(`IHL: canale rinominato in "${name}" dopo ${Math.round((Date.now() - started) / 1000)}s.`))
     .catch((err) =>
       logger.warn(
-        `IHL: rinomina canale non riuscita (${err.message}). ` +
-          'Discord ne consente due ogni dieci minuti: il nome si aggiornerà al prossimo cambio.',
+        `IHL: rinomina non riuscita dopo ${Math.round((Date.now() - started) / 1000)}s: ${err.message}. ` +
+          'Discord ne consente due ogni dieci minuti per canale.',
       ),
     );
 }
