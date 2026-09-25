@@ -94,7 +94,7 @@ async function handle(client, interaction) {
 
     return interaction.reply({
       content: outcome.tie
-        ? '🗳️ Voto registrato. Hanno votato tutti senza maggioranza: serve lo staff con `/ihl risultato`.'
+        ? '🗳️ Voto registrato, ma siete in parità: se non cambia nessuno servirà lo staff con `/ihl risultato`.'
         : `🗳️ Voto registrato per il **Team ${rest[1].toUpperCase()}**. Puoi cambiarlo ripremendo l'altro bottone.`,
       ephemeral: true,
     });

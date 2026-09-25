@@ -117,6 +117,7 @@ db.exec(`
     voice_b_id TEXT,
     text_channel_id TEXT,
     votes TEXT NOT NULL DEFAULT '{}',
+    vote_deadline INTEGER,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -146,6 +147,9 @@ if (!lobbyColumns.includes('text_channel_id')) {
 }
 if (!lobbyColumns.includes('votes')) {
   db.exec("ALTER TABLE ihl_lobbies ADD COLUMN votes TEXT NOT NULL DEFAULT '{}'");
+}
+if (!lobbyColumns.includes('vote_deadline')) {
+  db.exec('ALTER TABLE ihl_lobbies ADD COLUMN vote_deadline INTEGER');
 }
 
 module.exports = db;

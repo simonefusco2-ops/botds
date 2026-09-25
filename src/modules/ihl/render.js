@@ -185,18 +185,29 @@ function countVotes(lobby) {
   return { a: votes.filter((v) => v === 'a').length, b: votes.filter((v) => v === 'b').length };
 }
 
+/** Chi deve ancora esprimersi: è la lista che il bot ritagga a metà tempo. */
+function pendingVoters(lobby) {
+  const votes = lobby.votes || {};
+  return lobby.players.filter((id) => !votes[id]);
+}
+
 /** Scheda di voto pubblicata nel canale privato della partita. */
 function buildVoteEmbed(lobby, extra = {}) {
   const { a, b } = countVotes(lobby);
   const needed = Math.floor(lobby.players.length / 2) + 1;
+
+  const deadline = lobby.vote_deadline
+    ? `\nAllo scadere del tempo (<t:${lobby.vote_deadline}:R>) vince chi ha più voti.`
+    : '';
 
   const embed = new EmbedBuilder()
     .setColor(extra.result ? COLORS.success : COLORS.gold)
     .setTitle(`🎮  PARTITA #${lobby.id}  ·  ${lobby.chosen_map}`)
     .setDescription(
       extra.result ||
-        `Al termine votate chi ha vinto. Servono **${needed} voti** per chiudere.\n` +
-          `-# Team A inizia in ${lobby.side_a === 'attack' ? 'Attacco' : 'Difesa'}.`,
+        `Al termine votate chi ha vinto: con **${needed} voti** la partita si chiude subito.` +
+          deadline +
+          `\n-# Team A inizia in ${lobby.side_a === 'attack' ? 'Attacco' : 'Difesa'}.`,
     )
     .addFields(
       { name: `🔴 Team A — ${a} voti`, value: mentions(lobby.team_a), inline: true },
@@ -204,6 +215,15 @@ function buildVoteEmbed(lobby, extra = {}) {
     )
     .setFooter({ text: `Lobby #${lobby.id}` })
     .setTimestamp();
+
+  // Finché la partita è aperta si vede a occhio chi sta tenendo tutti in attesa.
+  if (!extra.result) {
+    const pending = pendingVoters(lobby);
+    embed.addFields({
+      name: `🗳️ Devono ancora votare — ${pending.length}`,
+      value: pending.length ? pending.map((id) => `<@${id}>`).join(' ') : '-# hanno votato tutti',
+    });
+  }
 
   return embed;
 }
@@ -233,6 +253,7 @@ module.exports = {
   buildVoteEmbed,
   buildVoteComponents,
   countVotes,
+  pendingVoters,
   remainingMaps,
   mentions,
 };

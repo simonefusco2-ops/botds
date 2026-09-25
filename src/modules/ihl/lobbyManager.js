@@ -21,26 +21,41 @@ const {
   buildVoteEmbed,
   buildVoteComponents,
   countVotes,
+  pendingVoters,
   remainingMaps,
 } = require('./render');
 
-/** Timer della fase corrente per lobby: alla scadenza decide il bot. */
+/**
+ * Timer in attesa, per chiave. La fase corrente usa il numero della lobby; la
+ * votazione ha le sue due chiavi, perché scadenza e promemoria convivono con
+ * la partita già in corso.
+ */
 const timers = new Map();
 
-function clearTimer(lobbyId) {
-  const timer = timers.get(lobbyId);
+const voteKey = (lobbyId) => `${lobbyId}:vote`;
+const remindKey = (lobbyId) => `${lobbyId}:remind`;
+
+function clearTimer(key) {
+  const timer = timers.get(key);
   if (timer) clearTimeout(timer);
-  timers.delete(lobbyId);
+  timers.delete(key);
 }
 
-function scheduleTimeout(client, lobbyId, seconds, action) {
+/** Spegne tutto quello che era in attesa per una lobby, fasi e votazione. */
+function clearLobbyTimers(lobbyId) {
   clearTimer(lobbyId);
+  clearTimer(voteKey(lobbyId));
+  clearTimer(remindKey(lobbyId));
+}
+
+function scheduleTimeout(client, key, seconds, action) {
+  clearTimer(key);
   const timer = setTimeout(() => {
-    timers.delete(lobbyId);
-    action().catch((err) => logger.error(`IHL lobby ${lobbyId}: errore allo scadere del tempo`, err));
-  }, seconds * 1000);
+    timers.delete(key);
+    action().catch((err) => logger.error(`IHL ${key}: errore allo scadere del tempo`, err));
+  }, Math.max(0, seconds) * 1000);
   timer.unref?.();
-  timers.set(lobbyId, timer);
+  timers.set(key, timer);
 }
 
 function pickRandom(list) {
@@ -375,16 +390,99 @@ async function createMatchChannel(client, lobby) {
 
   if (!channel) return;
 
-  lobbyRepository.update(lobby.id, { text_channel_id: channel.id });
+  const { voteTimeout, voteReminder } = ihlConfig.matchChannel;
+  const deadline = Math.floor(Date.now() / 1000) + voteTimeout;
 
-  await channel.send({
-    content: lobby.players.map((id) => `<@${id}>`).join(' '),
-    embeds: [buildVoteEmbed(lobby)],
-    components: buildVoteComponents(lobby),
+  const updated = lobbyRepository.update(lobby.id, {
+    text_channel_id: channel.id,
+    vote_deadline: deadline,
   });
+
+  // Tutti taggati all'apertura: il voto è un obbligo, non un optional.
+  await channel.send({
+    content:
+      `${lobby.players.map((id) => `<@${id}>`).join(' ')}\n` +
+      `🗳️ **Votate chi ha vinto** appena la partita è finita.\n` +
+      `-# Con ${Math.floor(lobby.players.length / 2) + 1} voti si chiude subito; ` +
+      `<t:${deadline}:R> chiude comunque la squadra con più voti.`,
+    embeds: [buildVoteEmbed(updated)],
+    components: buildVoteComponents(updated),
+    allowedMentions: { users: lobby.players },
+  });
+
+  armVoteTimers(client, lobby.id, voteReminder, voteTimeout);
 
   // La scheda nel canale delle code ora può rimandare alla stanza della partita.
   await renderLobby(client, lobbyRepository.find(lobby.id));
+}
+
+/** Promemoria a metà tempo e chiusura allo scadere. */
+function armVoteTimers(client, lobbyId, remindIn, closeIn) {
+  if (remindIn > 0 && remindIn < closeIn) {
+    scheduleTimeout(client, remindKey(lobbyId), remindIn, () => remindPendingVoters(client, lobbyId));
+  }
+  scheduleTimeout(client, voteKey(lobbyId), closeIn, () => settleByMajority(client, lobbyId));
+}
+
+/** Ritagga chi non ha ancora votato, così nessuno "si dimentica". */
+async function remindPendingVoters(client, lobbyId) {
+  const lobby = lobbyRepository.find(lobbyId);
+  if (!lobby || lobby.state !== 'live' || !lobby.text_channel_id) return;
+
+  const pending = pendingVoters(lobby);
+  if (!pending.length) return;
+
+  const channel = await client.channels.fetch(lobby.text_channel_id).catch(() => null);
+  if (!channel) return;
+
+  await channel
+    .send({
+      content:
+        `${pending.map((id) => `<@${id}>`).join(' ')}\n` +
+        `⏰ **Manca il vostro voto.** <t:${lobby.vote_deadline}:R> chiude comunque ` +
+        'la squadra con più voti: se non votate, decidono gli altri per voi.',
+      allowedMentions: { users: pending },
+    })
+    .catch(() => {});
+
+  await renderVoteCard(client, lobby);
+}
+
+/**
+ * Scaduto il tempo vince chi ha più voti, anche senza maggioranza assoluta.
+ * Solo un vero pareggio (compreso lo 0-0) non è decidibile: lì serve lo staff.
+ */
+async function settleByMajority(client, lobbyId) {
+  const lobby = lobbyRepository.find(lobbyId);
+  if (!lobby || lobby.state !== 'live') return;
+
+  const { a, b } = countVotes(lobby);
+
+  if (a !== b) {
+    const total = a + b;
+    logger.info(`IHL lobby ${lobbyId}: tempo scaduto, vince Team ${a > b ? 'A' : 'B'} (${a}-${b}).`);
+    await finishMatch(
+      client,
+      lobbyId,
+      a > b ? 'a' : 'b',
+      `Chiusa allo scadere del tempo con ${total} vot${total === 1 ? 'o' : 'i'} su ` +
+        `${lobby.players.length}: maggioranza ${a}-${b}.`,
+    );
+    return;
+  }
+
+  const channel = await client.channels.fetch(lobby.text_channel_id).catch(() => null);
+  await channel
+    ?.send({
+      content:
+        `${ihlConfig.managerRoleIds.map((id) => `<@&${id}>`).join(' ')}\n` +
+        `⚖️ **Tempo scaduto in parità (${a}-${b}).** Serve lo staff: ` +
+        `\`/ihl risultato codice:${lobby.id}\`.`,
+      allowedMentions: { roles: ihlConfig.managerRoleIds },
+    })
+    .catch(() => {});
+
+  logger.warn(`IHL lobby ${lobbyId}: voto in parità (${a}-${b}), in attesa dello staff.`);
 }
 
 /** Aggiorna la scheda di voto nel canale della partita. */
@@ -434,11 +532,11 @@ async function castVote(client, lobbyId, userId, choice) {
 
 // --- Fase 6: risultato ------------------------------------------------------
 
-async function finishMatch(client, lobbyId, winner) {
+async function finishMatch(client, lobbyId, winner, note) {
   const lobby = lobbyRepository.find(lobbyId);
   if (!lobby || lobby.state !== 'live') return null;
 
-  clearTimer(lobbyId);
+  clearLobbyTimers(lobbyId);
 
   const changes = eloService.applyMatchResult(lobby.team_a, lobby.team_b, winner);
 
@@ -463,7 +561,10 @@ async function finishMatch(client, lobbyId, winner) {
 
   const updated = lobbyRepository.update(lobbyId, { state: 'closed' });
 
-  const result = `🏆 **Vittoria Team ${winner.toUpperCase()}**\n\n${summary}`;
+  const result =
+    `🏆 **Vittoria Team ${winner.toUpperCase()}**` +
+    (note ? `\n-# ${note}` : '') +
+    `\n\n${summary}`;
 
   await renderLobby(client, updated, { result });
 
@@ -509,7 +610,7 @@ async function cancelLobby(client, lobbyId) {
   const lobby = lobbyRepository.find(lobbyId);
   if (!lobby) return null;
 
-  clearTimer(lobbyId);
+  clearLobbyTimers(lobbyId);
 
   const refunded = ihlRepository.voidMatch(lobbyId);
 
@@ -521,6 +622,51 @@ async function cancelLobby(client, lobbyId) {
   return { lobby, refunded };
 }
 
+/**
+ * I timer vivono in memoria: dopo un riavvio del bot vanno riarmati, altrimenti
+ * una lobby resterebbe appesa per sempre a una fase che nessuno chiude. Le
+ * votazioni già scadute vengono risolte subito con la maggioranza dei voti.
+ */
+async function resumeLobbies(client) {
+  const active = lobbyRepository.listActive().filter((lobby) => lobby.state !== 'queue');
+  if (!active.length) return;
+
+  const now = Math.floor(Date.now() / 1000);
+
+  for (const lobby of active) {
+    if (lobby.state === 'side') {
+      scheduleTimeout(client, lobby.id, ihlConfig.timers.sideChoice, () =>
+        chooseSide(client, lobby.id, pickRandom(['attack', 'defense']), true),
+      );
+      continue;
+    }
+
+    if (lobby.state === 'ban') {
+      scheduleTimeout(client, lobby.id, ihlConfig.timers.mapBan, () => autoBan(client, lobby.id));
+      continue;
+    }
+
+    if (lobby.state === 'draft') {
+      scheduleTimeout(client, lobby.id, ihlConfig.timers.pick, () => autoPick(client, lobby.id));
+      continue;
+    }
+
+    if (lobby.state !== 'live') continue;
+
+    const remaining = lobby.vote_deadline ? lobby.vote_deadline - now : ihlConfig.matchChannel.voteTimeout;
+    if (remaining <= 0) {
+      await settleByMajority(client, lobby.id);
+      continue;
+    }
+
+    // Il promemoria va mandato quando resta lo stesso tempo di una partita nuova.
+    const lead = ihlConfig.matchChannel.voteTimeout - ihlConfig.matchChannel.voteReminder;
+    armVoteTimers(client, lobby.id, remaining - lead, remaining);
+  }
+
+  logger.info(`IHL: ${active.length} partite riprese dopo il riavvio.`);
+}
+
 module.exports = {
   getOrCreateLobby,
   joinQueue,
@@ -530,6 +676,7 @@ module.exports = {
   banMap,
   pickPlayer,
   castVote,
+  resumeLobbies,
   finishMatch,
   cancelLobby,
   renderLobby,

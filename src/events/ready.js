@@ -13,6 +13,7 @@ const leaderboardManager = require('../modules/leaderboard/leaderboardManager');
 const inviteTracker = require('../modules/memberLog/inviteTracker');
 const twitchWatcher = require('../modules/twitch/twitchWatcher');
 const rssWatcher = require('../modules/social/rssWatcher');
+const ihlLobbyManager = require('../modules/ihl/lobbyManager');
 
 module.exports = {
   name: 'ready',
@@ -25,6 +26,11 @@ module.exports = {
 
     await leaderboardManager.updateLeaderboardMessage(client).catch((err) => {
       logger.error('Errore aggiornamento iniziale leaderboard', err);
+    });
+
+    // I timer della IHL vivono in memoria: dopo un riavvio vanno riarmati.
+    await ihlLobbyManager.resumeLobbies(client).catch((err) => {
+      logger.error('Errore nel ripristino delle partite IHL', err);
     });
 
     twitchWatcher.start(client);

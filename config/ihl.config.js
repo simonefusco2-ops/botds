@@ -84,6 +84,12 @@ module.exports = {
   matchChannel: {
     prefix: 'partita-',
     deleteAfter: 20,
+
+    // Tempo per votare il vincitore. Allo scadere vince chi ha più voti, anche
+    // se non si è arrivati alla maggioranza assoluta; a metà tempo il bot
+    // ritagga chi non ha ancora votato.
+    voteTimeout: 300,
+    voteReminder: 150,
   },
 
   leaderboardSize: 10,
