@@ -44,8 +44,31 @@ function createWebhookServer(client) {
     });
   });
 
-  app.listen(config.faceitWebhookPort, () => {
+  const server = app.listen(config.faceitWebhookPort, () => {
     logger.info(`Server webhook Faceit in ascolto sulla porta ${config.faceitWebhookPort}`);
+  });
+
+  /**
+   * La porta occupata significa quasi sempre che il bot è già in esecuzione.
+   *
+   * Due processi con lo stesso token ricevono entrambi gli stessi eventi da
+   * Discord ed eseguono entrambi le azioni: due canali per la stessa partita,
+   * due schede della coda, giocatori contati due volte. Prima questo errore
+   * veniva solo registrato e il secondo processo restava vivo a fare danni:
+   * ora si ferma subito e lo dice chiaramente.
+   */
+  server.on('error', (err) => {
+    if (err.code !== 'EADDRINUSE') {
+      logger.error('Server webhook Faceit: errore', err);
+      return;
+    }
+
+    logger.error(
+      `La porta ${config.faceitWebhookPort} è già occupata: un'altra istanza del bot è già in ` +
+        'esecuzione. Questo processo si ferma per non duplicare code e partite. ' +
+        'Controlla con "pm2 list" e "ps aux | grep node" che non ce ne siano due.',
+    );
+    process.exit(1);
   });
 
   return app;

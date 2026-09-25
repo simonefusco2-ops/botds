@@ -154,8 +154,10 @@ async function toggleQueues(client, interaction) {
     return;
   }
 
-  // Un messaggio solo: l'annuncio con il tag viaggia sulla scheda della coda,
-  // così nel canale restano il pannello e nient'altro.
+  // Si riparte sempre da una coda sola: eventuali schede rimaste da prima
+  // vengono chiuse ed eliminate, così nel canale non ne convivono due.
+  await clearSessionMessages(client, channel);
+
   const lobby = lobbyManager.getOrCreateLobby(interaction.guildId, channel.id);
   await lobbyManager.renderQueue(client, lobby, { announce: true });
 }
@@ -174,14 +176,16 @@ async function clearSessionMessages(client, channel) {
     settingsRepository.set(ANNOUNCE_KEY, '');
   }
 
-  // Sparisce la coda ancora in raccolta; le partite avviate conservano il loro
-  // avviso, perché devono poter arrivare al risultato anche a code chiuse, e il
-  // riepilogo che ne prende il posto è la storia di cosa è successo.
-  for (const lobby of lobbyRepository.listWithMessage(channel.id)) {
-    if (lobby.state !== 'queue') continue;
+  // Spariscono tutte le code ancora in raccolta, anche quelle rimaste indietro:
+  // nel canale non deve restarne nemmeno una. Le partite avviate non si toccano,
+  // devono poter arrivare al risultato anche a code chiuse.
+  for (const lobby of lobbyRepository.listActive()) {
+    if (lobby.state !== 'queue' || lobby.channel_id !== channel.id) continue;
 
-    const card = await channel.messages.fetch(lobby.message_id).catch(() => null);
-    await card?.delete().catch(() => {});
+    if (lobby.message_id) {
+      const card = await channel.messages.fetch(lobby.message_id).catch(() => null);
+      await card?.delete().catch(() => {});
+    }
 
     lobbyRepository.update(lobby.id, { state: 'closed', message_id: null });
   }
