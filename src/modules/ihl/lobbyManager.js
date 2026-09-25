@@ -80,12 +80,25 @@ async function resolveNames(guild, ids) {
 
 // --- rendering --------------------------------------------------------------
 
-/** La scheda della coda, nel canale del pannello. */
-async function renderQueue(client, lobby) {
+/**
+ * La scheda della coda, nel canale del pannello. È l'unico messaggio che il bot
+ * lascia lì oltre al pannello: l'annuncio dell'apertura viaggia insieme a lei
+ * invece di occupare un messaggio suo, così la stanza resta pulita.
+ */
+async function renderQueue(client, lobby, { announce = false } = {}) {
   const channel = await client.channels.fetch(lobby.channel_id).catch(() => null);
   if (!channel) return;
 
   const payload = { embeds: [buildQueueEmbed(lobby)], components: buildQueueComponents() };
+
+  if (announce) {
+    payload.content =
+      '@everyone\n' +
+      '🟢 **LE CODE SONO APERTE!**\n' +
+      'Entrate in un vocale e premete **Entra in coda**: a ' +
+      `**${ihlConfig.queueSize} giocatori** si apre la stanza della partita.`;
+    payload.allowedMentions = { parse: ['everyone'] };
+  }
 
   if (lobby.message_id) {
     const message = await channel.messages.fetch(lobby.message_id).catch(() => null);

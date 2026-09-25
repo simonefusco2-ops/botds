@@ -154,21 +154,10 @@ async function toggleQueues(client, interaction) {
     return;
   }
 
-  const announcement = await channel.send({
-    content:
-      '@everyone\n' +
-      '🟢 **LE CODE SONO APERTE!**\n' +
-      'Entrate in un canale vocale se volete codare: il bot vi sposterà automaticamente ' +
-      'nelle vocali delle due squadre quando il draft sarà completo.\n' +
-      `Premete **Entra in coda** qui sotto — si parte a **${ihlConfig.queueSize} giocatori**.`,
-    allowedMentions: { parse: ['everyone'] },
-  });
-
-  settingsRepository.set(ANNOUNCE_KEY, announcement.id);
-
-  // La scheda della coda vive sotto l'annuncio, così è sempre l'ultimo messaggio utile.
+  // Un messaggio solo: l'annuncio con il tag viaggia sulla scheda della coda,
+  // così nel canale restano il pannello e nient'altro.
   const lobby = lobbyManager.getOrCreateLobby(interaction.guildId, channel.id);
-  await lobbyManager.renderQueue(client, lobby);
+  await lobbyManager.renderQueue(client, lobby, { announce: true });
 }
 
 /**
@@ -177,6 +166,7 @@ async function toggleQueues(client, interaction) {
  * corso deve poter arrivare al risultato anche a code chiuse.
  */
 async function clearSessionMessages(client, channel) {
+  // Gli annunci separati non si mandano più, ma uno vecchio può essere ancora lì.
   const announcementId = settingsRepository.get(ANNOUNCE_KEY);
   if (announcementId) {
     const announcement = await channel.messages.fetch(announcementId).catch(() => null);
