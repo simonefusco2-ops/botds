@@ -47,6 +47,35 @@ function inline(ids) {
   return ids.length ? ids.map((id) => `<@${id}>`).join(' ') : '-# nessuno';
 }
 
+/**
+ * La squadra con il capitano in evidenza.
+ *
+ * I capitani stavano in due campi loro: con quelli, i campi in linea diventavano
+ * quattro e Discord ne mette tre per riga, spezzando le due squadre su righe
+ * diverse. Mettendo la corona dentro la squadra i campi restano due e finiscono
+ * affiancati.
+ */
+function teamField(lobby, side) {
+  const team = side === 'a' ? lobby.team_a : lobby.team_b;
+  const captain = side === 'a' ? lobby.captain_a : lobby.captain_b;
+  const label = side === 'a' ? '🔴 Team A' : '🔵 Team B';
+
+  const value = team.length
+    ? team.map((id) => (id === captain ? `👑 <@${id}>` : `<@${id}>`)).join('\n')
+    : '-# nessuno';
+
+  return { name: label, value, inline: true };
+}
+
+/** L'elenco delle mappe del veto, con il bollino rosso su quelle già bannate. */
+function mapList(lobby) {
+  const pool = lobby.map_pool?.length ? lobby.map_pool : ihlConfig.maps.map((map) => map.name);
+
+  return pool
+    .map((name) => (lobby.banned_maps.includes(name) ? `🔴 ~~${name}~~` : `**${name}**`))
+    .join(' · ');
+}
+
 /** Le mappe ancora in gioco fra quelle estratte per questa partita. */
 function remainingMaps(lobby) {
   const pool = lobby.map_pool?.length
@@ -152,34 +181,35 @@ function buildMatchEmbed(lobby, extra = {}) {
     return embed;
   }
 
-  if (lobby.captain_a) {
-    embed.addFields(
-      { name: '🔴 Capitano A', value: `<@${lobby.captain_a}>`, inline: true },
-      { name: '🔵 Capitano B', value: `<@${lobby.captain_b}>`, inline: true },
-    );
-  }
-
   if (lobby.state === 'side') {
     embed.setDescription(
-      `🪙 **Lancio della moneta:** tocca a <@${lobby.turn}> scegliere da che lato iniziare.\n` +
+      `👑 Capitani: <@${lobby.captain_a}> e <@${lobby.captain_b}>\n\n` +
+        `🪙 **Lancio della moneta:** tocca a <@${lobby.turn}> scegliere da che lato iniziare.\n` +
         '-# Alla scadenza del tempo decide il bot.',
     );
+    return embed;
   }
 
   if (lobby.state === 'ban') {
     const left = remainingMaps(lobby);
     embed.setDescription(
-      `Squadre fatte. Turno di <@${lobby.turn}>: banna una mappa.\n\n` +
-        `**Ancora in gioco:** ${left.map((m) => m.name).join(' · ')}\n` +
-        (lobby.banned_maps.length ? `-# Bannate: ${lobby.banned_maps.join(', ')}` : ''),
+      `Squadre fatte. Turno di <@${lobby.turn}>: **banna una mappa**.\n\n` +
+        `${mapList(lobby)}\n` +
+        `-# 🔴 già bannate · restano ${left.length} mappe`,
     );
   }
 
   if (lobby.state === 'draft') {
     const picked = [...lobby.team_a, ...lobby.team_b];
     const available = lobby.players.filter((id) => !picked.includes(id));
-    embed.setDescription(`Turno di <@${lobby.turn}>: scegli un giocatore.`);
-    embed.addFields({ name: 'Disponibili', value: mentions(available) });
+
+    embed.setDescription(`Turno di <@${lobby.turn}>: **scegli un giocatore**.`);
+    embed.addFields(teamField(lobby, 'a'), teamField(lobby, 'b'), {
+      name: `🎯 Ancora da scegliere — ${available.length}`,
+      value: inline(available),
+    });
+
+    return embed;
   }
 
   if (lobby.state === 'live' || lobby.state === 'closed') {
@@ -195,8 +225,8 @@ function buildMatchEmbed(lobby, extra = {}) {
     );
 
     embed.addFields(
-      { name: `🔴 Team A — ${a} voti`, value: mentions(lobby.team_a), inline: true },
-      { name: `🔵 Team B — ${b} voti`, value: mentions(lobby.team_b), inline: true },
+      { ...teamField(lobby, 'a'), name: `🔴 Team A — ${a} voti` },
+      { ...teamField(lobby, 'b'), name: `🔵 Team B — ${b} voti` },
     );
 
     if (lobby.state === 'live') {
@@ -210,13 +240,7 @@ function buildMatchEmbed(lobby, extra = {}) {
     return embed;
   }
 
-  if (lobby.state !== 'side') {
-    embed.addFields(
-      { name: '🔴 Team A', value: mentions(lobby.team_a), inline: true },
-      { name: '🔵 Team B', value: mentions(lobby.team_b), inline: true },
-    );
-  }
-
+  embed.addFields(teamField(lobby, 'a'), teamField(lobby, 'b'));
   return embed;
 }
 
@@ -241,20 +265,26 @@ function buildMatchComponents(lobby) {
   }
 
   if (lobby.state === 'ban') {
-    const left = remainingMaps(lobby);
+    // Le mappe bannate restano al loro posto, rosse e spente: si vede a colpo
+    // d'occhio cosa è già stato tolto senza che i bottoni ballino a ogni ban.
+    const pool = lobby.map_pool?.length ? lobby.map_pool : ihlConfig.maps.map((map) => map.name);
     const rows = [];
-    for (let i = 0; i < left.length; i += 5) {
+
+    for (let i = 0; i < pool.length; i += 5) {
       rows.push(
         new ActionRowBuilder().addComponents(
-          left.slice(i, i + 5).map((map) =>
-            new ButtonBuilder()
-              .setCustomId(`ihl_ban:${lobby.id}:${map.name}`)
-              .setLabel(map.name)
-              .setStyle(ButtonStyle.Secondary),
-          ),
+          pool.slice(i, i + 5).map((name) => {
+            const banned = lobby.banned_maps.includes(name);
+            return new ButtonBuilder()
+              .setCustomId(`ihl_ban:${lobby.id}:${name}`)
+              .setLabel(name)
+              .setStyle(banned ? ButtonStyle.Danger : ButtonStyle.Secondary)
+              .setDisabled(banned);
+          }),
         ),
       );
     }
+
     return rows;
   }
 
@@ -308,6 +338,8 @@ module.exports = {
   buildMatchComponents,
   countVotes,
   votesNeeded,
+  teamField,
+  mapList,
   pendingVoters,
   remainingMaps,
   mentions,
