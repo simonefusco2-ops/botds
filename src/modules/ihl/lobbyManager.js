@@ -130,6 +130,12 @@ async function startLobby(client, lobby) {
 
   const [captainA, captainB] = ranked;
 
+  // Pool estratto a caso dall'archivio: ogni partita ha un veto diverso e più corto.
+  const mapPool = [...ihlConfig.maps]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, Math.min(ihlConfig.mapPoolSize, ihlConfig.maps.length))
+    .map((map) => map.name);
+
   const updated = lobbyRepository.update(lobby.id, {
     state: 'side',
     captain_a: captainA,
@@ -137,6 +143,7 @@ async function startLobby(client, lobby) {
     team_a: [captainA],
     team_b: [captainB],
     turn: captainA,
+    map_pool: mapPool,
   });
 
   scheduleTimeout(client, lobby.id, ihlConfig.timers.sideChoice, () =>
@@ -175,7 +182,7 @@ async function banMap(client, lobbyId, mapName, automatic = false) {
   clearTimer(lobbyId);
 
   const banned = [...lobby.banned_maps, mapName];
-  const left = ihlConfig.maps.filter((map) => !banned.includes(map.name));
+  const left = remainingMaps({ ...lobby, banned_maps: banned });
 
   if (automatic) logger.info(`IHL lobby ${lobbyId}: ban automatico di ${mapName}.`);
 

@@ -30,8 +30,13 @@ function mentions(ids) {
   return ids.length ? ids.map((id) => `<@${id}>`).join('\n') : '-# nessuno';
 }
 
+/** Le mappe ancora in gioco fra quelle estratte per questa partita. */
 function remainingMaps(lobby) {
-  return ihlConfig.maps.filter((map) => !lobby.banned_maps.includes(map.name));
+  const pool = lobby.map_pool?.length
+    ? ihlConfig.maps.filter((map) => lobby.map_pool.includes(map.name))
+    : ihlConfig.maps;
+
+  return pool.filter((map) => !lobby.banned_maps.includes(map.name));
 }
 
 function buildLobbyEmbed(lobby, extra = {}) {

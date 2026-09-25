@@ -19,7 +19,7 @@ const findOpenStmt = db.prepare(
 const listActiveStmt = db.prepare("SELECT * FROM ihl_lobbies WHERE state != 'closed'");
 const deleteStmt = db.prepare('DELETE FROM ihl_lobbies WHERE id = ?');
 
-const JSON_FIELDS = ['players', 'team_a', 'team_b', 'banned_maps'];
+const JSON_FIELDS = ['players', 'team_a', 'team_b', 'banned_maps', 'map_pool'];
 
 /** Le liste sono salvate come JSON: qui vengono riportate ad array. */
 function hydrate(row) {

@@ -11,9 +11,13 @@
 /**
  * Parametri della In-House League.
  *
- * MAPPE: il pool competitivo di Valorant cambia a ogni atto. Tieni in `maps`
- * soltanto le mappe attualmente in rotazione: il sistema di ban usa esattamente
- * questo elenco, quindi va aggiornato quando Riot ruota il pool.
+ * MAPPE: `maps` contiene l'archivio completo, anche le mappe fuori rotazione.
+ * A ogni partita il bot ne estrae a caso `mapPoolSize`, e i capitani bannano
+ * soltanto fra quelle: così non si bannano dodici mappe a ogni lobby e ogni
+ * serata ha un ventaglio diverso.
+ *
+ * Conviene tenere `mapPoolSize` dispari: i ban sono uno in meno del pool e si
+ * alternano, quindi con 7 mappe ogni capitano ne banna esattamente 3.
  */
 module.exports = {
   // Ruoli abilitati ad aprire e chiudere le code.
@@ -25,13 +29,22 @@ module.exports = {
 
   queueSize: 10,
 
+  // Quante mappe entrano nel veto di ogni partita, estratte a caso dall'archivio.
+  mapPoolSize: 7,
+
   maps: [
+    { name: 'Abyss', emoji: '🌌' },
     { name: 'Ascent', emoji: '🏛️' },
     { name: 'Bind', emoji: '🏜️' },
+    { name: 'Breeze', emoji: '🏝️' },
+    { name: 'Corrode', emoji: '🧪' },
+    { name: 'Fracture', emoji: '⛓️' },
     { name: 'Haven', emoji: '🛕' },
     { name: 'Icebox', emoji: '❄️' },
     { name: 'Lotus', emoji: '🪷' },
+    { name: 'Pearl', emoji: '🌊' },
     { name: 'Split', emoji: '🗼' },
+    { name: 'Summit', emoji: '🏔️' },
     { name: 'Sunset', emoji: '🌇' },
   ],
 

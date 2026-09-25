@@ -108,6 +108,7 @@ db.exec(`
     captain_b TEXT,
     team_a TEXT NOT NULL DEFAULT '[]',
     team_b TEXT NOT NULL DEFAULT '[]',
+    map_pool TEXT NOT NULL DEFAULT '[]',
     banned_maps TEXT NOT NULL DEFAULT '[]',
     chosen_map TEXT,
     side_a TEXT,
@@ -132,6 +133,11 @@ db.exec(`
 const ticketColumns = db.prepare('PRAGMA table_info(tickets)').all();
 if (!ticketColumns.some((column) => column.name === 'type')) {
   db.exec("ALTER TABLE tickets ADD COLUMN type TEXT NOT NULL DEFAULT 'supporto'");
+}
+
+const lobbyColumns = db.prepare('PRAGMA table_info(ihl_lobbies)').all();
+if (!lobbyColumns.some((column) => column.name === 'map_pool')) {
+  db.exec("ALTER TABLE ihl_lobbies ADD COLUMN map_pool TEXT NOT NULL DEFAULT '[]'");
 }
 
 module.exports = db;
