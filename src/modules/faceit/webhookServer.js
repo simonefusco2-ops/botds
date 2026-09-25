@@ -11,7 +11,6 @@ const express = require('express');
 const config = require('../../config');
 const logger = require('../../utils/logger');
 const voiceRouter = require('./voiceRouter');
-const leaderboardManager = require('../leaderboard/leaderboardManager');
 const { mountPublicApi } = require('../api/publicApi');
 
 const CONFIGURING_EVENTS = ['match_status_configuring', 'match_status_ready'];
@@ -69,8 +68,6 @@ async function handleEvent(client, body) {
   }
 
   if (FINISHED_EVENTS.includes(eventType)) {
-    leaderboardManager.processMatchResult(payload);
-    await leaderboardManager.updateLeaderboardMessage(client);
     await voiceRouter.handleMatchFinished(client, payload);
     return;
   }

@@ -65,29 +65,6 @@ function buildTicketControlEmbed(user, type) {
   return embed;
 }
 
-function buildLeaderboardEmbed(rows) {
-  const embed = new EmbedBuilder()
-    .setColor(COLORS.primary)
-    .setTitle('🏆 Classifica In-House League')
-    .setTimestamp();
-
-  if (!rows.length) {
-    embed.setDescription('Nessun dato disponibile. Gioca una partita Faceit per entrare in classifica!');
-    return embed;
-  }
-
-  const medals = ['🥇', '🥈', '🥉'];
-  const description = rows
-    .map((row, i) => {
-      const rank = medals[i] || `#${i + 1}`;
-      const winrate = row.matches_played > 0 ? ((row.wins / row.matches_played) * 100).toFixed(1) : '0.0';
-      return `${rank} <@${row.discord_id}> — **${row.wins}** vittorie / ${row.matches_played} partite (${winrate}%)`;
-    })
-    .join('\n');
-
-  embed.setDescription(description);
-  return embed;
-}
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -345,7 +322,6 @@ module.exports = {
   buildTwitchLiveEmbed,
   buildTicketPanelEmbed,
   buildTicketControlEmbed,
-  buildLeaderboardEmbed,
   buildMemberJoinEmbed,
   buildMemberLeaveEmbed,
   buildInviteLeaderboardEmbed,

@@ -69,6 +69,10 @@ module.exports = {
     sideChoice: 60,
     mapBan: 60,
     pick: 60,
+
+    // Dopo quanto, da quando si apre il check-in, lo staff può sostituire chi
+    // non è ancora entrato nel vocale di ritrovo.
+    substituteAfter: 420,
   },
 
   // Categoria che ospita tutte le stanze temporanee della IHL: le due vocali
@@ -79,6 +83,10 @@ module.exports = {
   voice: {
     teamAName: '🔴 Team A',
     teamBName: '🔵 Team B',
+
+    // Vocale di ritrovo: la partita parte solo quando ci sono entrati tutti e
+    // dieci, e da lì vengono spostati nelle due vocali delle squadre.
+    checkinName: '🎧 Check-in',
   },
 
   // Canale testuale privato della singola partita: ci entrano solo i dieci

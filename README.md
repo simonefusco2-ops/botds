@@ -49,11 +49,11 @@ npm start
 
 ## In-House League
 
-`/ihl pannello` pubblica il pannello con il bollino rosso/verde: i ruoli elencati in `config/ihl.config.js` (Developer, Owner, Staff) aprono e chiudono le code, e all'apertura il canale viene rinominato e il server avvisato. Raggiunti i 10 giocatori la lobby avanza da sola: i due ELO più alti diventano capitani, il primo sceglie il lato, i capitani bannano le mappe a turno e poi scelgono i giocatori uno per volta; allo scadere del tempo decide il bot. A squadre complete vengono create due vocali e i giocatori spostati; a fine partita capitani o staff dichiarano il vincitore, l'ELO viene ricalcolato e la classifica aggiornata.
+`/ihl pannello` pubblica il pannello rosso/verde con cui lo staff apre e chiude le code. Alla decima persona in coda nasce una **stanza privata della partita** (`partita-<id>`, categoria in `config/ihl.config.js`): lì dentro si svolge tutto — check-in, coinflip, scelta del lato, ban delle mappe, draft e voto del vincitore — mentre il canale delle code resta libero e la coda successiva riparte subito.
 
-Ogni partita ha un numero: `/ihl annulla codice:<numero>` la annulla e **restituisce l'ELO** a tutti i partecipanti, sottraendo la variazione di quella partita senza intaccare quelle successive. `/ihl profilo` mostra ELO, posizione e storico; `/ihl classifica` pubblica il pannello sfogliabile che si aggiorna da solo; `/ihl elo-modifica` permette allo staff di correggere i punti.
+Prima che la partita inizi viene creato un **vocale di ritrovo**: le scelte partono solo quando ci sono entrati tutti e dieci, e da lì i giocatori vengono spostati nelle vocali delle due squadre. Chi non si presenta può essere sostituito dallo staff con `/ihl sostituisci` dopo i minuti indicati da `timers.substituteAfter`. Chi è già in una partita non conclusa non può rimettersi in coda.
 
-Il pool mappe in `config/ihl.config.js` va aggiornato quando Riot ruota le mappe: il sistema di ban usa esattamente quell'elenco.
+I capitani sono i due ELO più alti, ma **chi apre le scelte lo decide un sorteggio**. Il voto del vincitore non ha scadenza: l'ELO viene assegnato appena una squadra raggiunge la maggioranza dei voti. Altri comandi: `/ihl profilo`, `/ihl classifica`, `/ihl partite`, `/ihl risultato`, `/ihl elo-modifica`, `/ihl annulla`.
 
 ## Messaggi grafici senza toccare il codice
 

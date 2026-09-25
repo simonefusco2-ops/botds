@@ -20,6 +20,9 @@ const findOpenStmt = db.prepare(
   "SELECT * FROM ihl_lobbies WHERE channel_id = ? AND state != 'closed' ORDER BY id DESC LIMIT 1",
 );
 const listActiveStmt = db.prepare("SELECT * FROM ihl_lobbies WHERE state != 'closed'");
+const findByCheckinVoiceStmt = db.prepare(
+  "SELECT * FROM ihl_lobbies WHERE checkin_voice_id = ? AND state = 'checkin' LIMIT 1",
+);
 const listWithMessageStmt = db.prepare(
   'SELECT * FROM ihl_lobbies WHERE channel_id = ? AND message_id IS NOT NULL ORDER BY id',
 );
@@ -71,6 +74,11 @@ function listActive() {
   return listActiveStmt.all().map(hydrate);
 }
 
+/** La partita in attesa di check-in su quel vocale di ritrovo, se c'è. */
+function findByCheckinVoice(channelId) {
+  return hydrate(findByCheckinVoiceStmt.get(channelId));
+}
+
 /** Lobby che hanno ancora una scheda pubblicata nel canale, da ripulire alla chiusura. */
 function listWithMessage(channelId) {
   return listWithMessageStmt.all(channelId).map(hydrate);
@@ -101,6 +109,7 @@ module.exports = {
   find,
   findOpenInChannel,
   findQueueInChannel,
+  findByCheckinVoice,
   listActive,
   listWithMessage,
   update,

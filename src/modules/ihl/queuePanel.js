@@ -128,7 +128,7 @@ async function toggleQueues(client, interaction) {
 
   // La scheda della coda vive sotto l'annuncio, così è sempre l'ultimo messaggio utile.
   const lobby = lobbyManager.getOrCreateLobby(interaction.guildId, channel.id);
-  await lobbyManager.renderLobby(client, lobby);
+  await lobbyManager.renderQueue(client, lobby);
 }
 
 /**
@@ -144,11 +144,11 @@ async function clearSessionMessages(client, channel) {
     settingsRepository.set(ANNOUNCE_KEY, '');
   }
 
-  // Spariscono la coda in raccolta e le schede delle partite già concluse; una
-  // partita ancora in corso mantiene la sua, perché deve poter arrivare al voto
-  // del risultato anche a code chiuse.
+  // Sparisce la coda ancora in raccolta; le partite avviate conservano il loro
+  // avviso, perché devono poter arrivare al risultato anche a code chiuse, e il
+  // riepilogo che ne prende il posto è la storia di cosa è successo.
   for (const lobby of lobbyRepository.listWithMessage(channel.id)) {
-    if (lobby.state !== 'queue' && lobby.state !== 'closed') continue;
+    if (lobby.state !== 'queue') continue;
 
     const card = await channel.messages.fetch(lobby.message_id).catch(() => null);
     await card?.delete().catch(() => {});

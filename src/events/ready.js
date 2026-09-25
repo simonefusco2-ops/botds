@@ -9,7 +9,6 @@
  */
 const config = require('../config');
 const logger = require('../utils/logger');
-const leaderboardManager = require('../modules/leaderboard/leaderboardManager');
 const inviteTracker = require('../modules/memberLog/inviteTracker');
 const twitchWatcher = require('../modules/twitch/twitchWatcher');
 const rssWatcher = require('../modules/social/rssWatcher');
@@ -23,10 +22,6 @@ module.exports = {
 
     const guild = await client.guilds.fetch(config.guildId).catch(() => null);
     if (guild) await inviteTracker.primeCache(guild);
-
-    await leaderboardManager.updateLeaderboardMessage(client).catch((err) => {
-      logger.error('Errore aggiornamento iniziale leaderboard', err);
-    });
 
     // I timer della IHL vivono in memoria: dopo un riavvio vanno riarmati.
     await ihlLobbyManager.resumeLobbies(client).catch((err) => {

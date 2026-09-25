@@ -16,10 +16,11 @@ const ihlLeaderboard = require('../modules/ihl/leaderboard');
 const lobbyManager = require('../modules/ihl/lobbyManager');
 const { COLORS } = require('../utils/embeds');
 
-const STAFF_ONLY = ['pannello', 'classifica', 'annulla', 'elo-modifica', 'risultato'];
+const STAFF_ONLY = ['pannello', 'classifica', 'annulla', 'elo-modifica', 'risultato', 'sostituisci'];
 
 const STATE_LABELS = {
   queue: 'in coda',
+  checkin: 'check-in nel vocale',
   side: 'scelta del lato',
   ban: 'ban delle mappe',
   draft: 'draft',
@@ -134,6 +135,16 @@ module.exports = {
     )
     .addSubcommand((sub) =>
       sub
+        .setName('sostituisci')
+        .setDescription('Rimpiazza chi non si presenta al check-in (staff)')
+        .addIntegerOption((opt) =>
+          opt.setName('codice').setDescription('Numero della partita').setRequired(true),
+        )
+        .addUserOption((opt) => opt.setName('esce').setDescription('Chi non si è presentato').setRequired(true))
+        .addUserOption((opt) => opt.setName('entra').setDescription('Chi prende il suo posto').setRequired(true)),
+    )
+    .addSubcommand((sub) =>
+      sub
         .setName('annulla')
         .setDescription('Annulla una partita e rimuove le vocali (staff)')
         .addIntegerOption((opt) =>
@@ -195,7 +206,8 @@ module.exports = {
           entry.state === 'queue'
             ? `${entry.players.length}/${ihlConfig.queueSize} giocatori`
             : entry.chosen_map || 'mappa da definire';
-        return `\`#${entry.id}\` · ${state} · ${extra}`;
+        const room = entry.text_channel_id ? ` · <#${entry.text_channel_id}>` : '';
+        return `\`#${entry.id}\` · ${state} · ${extra}${room}`;
       });
 
       return interaction.reply({
@@ -207,6 +219,21 @@ module.exports = {
             .setFooter({ text: 'Usa il codice con /ihl risultato o /ihl annulla' }),
         ],
         ephemeral: true,
+      });
+    }
+
+    if (subcommand === 'sostituisci') {
+      const code = interaction.options.getInteger('codice', true);
+      const out = interaction.options.getUser('esce', true);
+      const replacement = interaction.options.getUser('entra', true);
+
+      await interaction.deferReply({ ephemeral: true });
+
+      const outcome = await lobbyManager.substitutePlayer(client, code, out.id, replacement.id);
+      if (outcome.error) return interaction.editReply({ content: `⚠️ ${outcome.error}` });
+
+      return interaction.editReply({
+        content: `✅ Nella partita **#${code}** ${replacement} prende il posto di ${out}.`,
       });
     }
 

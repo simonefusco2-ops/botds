@@ -29,9 +29,6 @@ module.exports = {
   ticketCategoryId: process.env.TICKET_CATEGORY_ID || null,
   transcriptChannelId: process.env.TRANSCRIPT_CHANNEL_ID || null,
 
-  leaderboardChannelId: process.env.LEADERBOARD_CHANNEL_ID || null,
-  leaderboardTopN: parseInt(process.env.LEADERBOARD_TOP_N || '10', 10),
-
   tempVcCategoryId: process.env.TEMP_VC_CATEGORY_ID || null,
 
   twitchClientId: process.env.TWITCH_CLIENT_ID || null,
