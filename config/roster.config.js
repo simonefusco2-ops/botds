@@ -78,7 +78,7 @@ module.exports = {
         {
           nickname: 'Kaiser',
           realName: 'Nazareno Michele Frasca',
-          role: 'Player',
+          role: 'Duelist',
           emoji: '⚔️',
           bio:
             'Conosciuto anche come Nade, è un talento emergente della scena italiana. Nel 2024 ha vestito la ' +
