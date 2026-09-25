@@ -144,15 +144,26 @@ async function clearSessionMessages(client, channel) {
     settingsRepository.set(ANNOUNCE_KEY, '');
   }
 
-  const lobby = lobbyRepository.findOpenInChannel(channel.id);
-  if (!lobby || lobby.state !== 'queue') return;
+  // Spariscono la coda in raccolta e le schede delle partite già concluse; una
+  // partita ancora in corso mantiene la sua, perché deve poter arrivare al voto
+  // del risultato anche a code chiuse.
+  for (const lobby of lobbyRepository.listWithMessage(channel.id)) {
+    if (lobby.state !== 'queue' && lobby.state !== 'closed') continue;
 
-  if (lobby.message_id) {
     const card = await channel.messages.fetch(lobby.message_id).catch(() => null);
     await card?.delete().catch(() => {});
-  }
 
-  lobbyRepository.update(lobby.id, { state: 'closed', message_id: null });
+    lobbyRepository.update(lobby.id, { state: 'closed', message_id: null });
+  }
 }
 
-module.exports = { publishPanel, refreshPanel, toggleQueues, isOpen, canManage, PANEL_KEY, OPEN_KEY };
+module.exports = {
+  publishPanel,
+  refreshPanel,
+  toggleQueues,
+  clearSessionMessages,
+  isOpen,
+  canManage,
+  PANEL_KEY,
+  OPEN_KEY,
+};

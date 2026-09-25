@@ -14,8 +14,13 @@ const ihlLeaderboard = require('./leaderboard');
 
 const PREFIX = 'ihl_';
 
-function currentLobby(interaction) {
-  return lobbyRepository.findOpenInChannel(interaction.channelId);
+/**
+ * Con più partite contemporanee nello stesso canale il numero della lobby
+ * viaggia dentro l'identificatore del bottone: `ihl_ban:12:Ascent`. Il canale
+ * da solo non basta più a capire a quale partita si riferisce il click.
+ */
+function lobbyFrom(id) {
+  return lobbyRepository.find(Number(id));
 }
 
 /** Verifica che tocchi davvero a chi ha premuto, prima di modificare la lobby. */
@@ -34,12 +39,12 @@ async function requireTurn(interaction, lobby, state) {
 }
 
 async function handle(client, interaction) {
-  const [action, argument] = interaction.customId.split(':');
+  const [action, ...rest] = interaction.customId.split(':');
 
   if (action === 'ihl_toggle') return queuePanel.toggleQueues(client, interaction);
 
   // La classifica è sfogliabile da chiunque: nessun controllo di turno o ruolo.
-  if (action === 'ihl_lb') return ihlLeaderboard.turnPage(interaction, Number(argument) || 0);
+  if (action === 'ihl_lb') return ihlLeaderboard.turnPage(interaction, Number(rest[0]) || 0);
 
   if (action === 'ihl_join') {
     if (!queuePanel.isOpen()) {
@@ -51,46 +56,48 @@ async function handle(client, interaction) {
   if (action === 'ihl_leave') return lobbyManager.leaveQueue(client, interaction);
 
   if (action === 'ihl_side') {
-    const lobby = currentLobby(interaction);
+    const lobby = lobbyFrom(rest[0]);
     if (!(await requireTurn(interaction, lobby, 'side'))) return;
 
     await interaction.deferUpdate();
-    return lobbyManager.chooseSide(client, lobby.id, argument);
+    return lobbyManager.chooseSide(client, lobby.id, rest[1]);
   }
 
   if (action === 'ihl_ban') {
-    const lobby = currentLobby(interaction);
+    const lobby = lobbyFrom(rest[0]);
     if (!(await requireTurn(interaction, lobby, 'ban'))) return;
 
     await interaction.deferUpdate();
-    return lobbyManager.banMap(client, lobby.id, argument);
+    return lobbyManager.banMap(client, lobby.id, rest.slice(1).join(':'));
   }
 
   if (action === 'ihl_pick') {
-    const lobby = currentLobby(interaction);
+    const lobby = lobbyFrom(rest[0]);
     if (!(await requireTurn(interaction, lobby, 'draft'))) return;
 
     await interaction.deferUpdate();
     return lobbyManager.pickPlayer(client, lobby.id, interaction.values[0]);
   }
 
-  if (action === 'ihl_winner') {
-    const lobby = currentLobby(interaction);
-    if (!lobby || lobby.state !== 'live') {
-      return interaction.reply({ content: '⚠️ Nessuna partita in corso da chiudere.', ephemeral: true });
+  // Voto del vincitore nel canale privato della partita: vince la maggioranza
+  // dei partecipanti, quindi 6 voti su 10.
+  if (action === 'ihl_vote') {
+    const outcome = await lobbyManager.castVote(client, Number(rest[0]), interaction.user.id, rest[1]);
+
+    if (outcome.error) {
+      return interaction.reply({ content: `⚠️ ${outcome.error}`, ephemeral: true });
     }
 
-    // Il risultato lo dichiarano i capitani o lo staff.
-    const isCaptain = [lobby.captain_a, lobby.captain_b].includes(interaction.user.id);
-    if (!isCaptain && !queuePanel.canManage(interaction.member)) {
-      return interaction.reply({
-        content: '⛔ Solo i capitani o lo staff possono dichiarare il vincitore.',
-        ephemeral: true,
-      });
+    if (outcome.settled) {
+      return interaction.reply({ content: '✅ Maggioranza raggiunta: risultato registrato.', ephemeral: true });
     }
 
-    await interaction.deferUpdate();
-    return lobbyManager.finishMatch(client, lobby.id, argument);
+    return interaction.reply({
+      content: outcome.tie
+        ? '🗳️ Voto registrato. Hanno votato tutti senza maggioranza: serve lo staff con `/ihl risultato`.'
+        : `🗳️ Voto registrato per il **Team ${rest[1].toUpperCase()}**. Puoi cambiarlo ripremendo l'altro bottone.`,
+      ephemeral: true,
+    });
   }
 
   return undefined;

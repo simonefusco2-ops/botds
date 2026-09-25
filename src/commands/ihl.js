@@ -11,11 +11,20 @@ const { SlashCommandBuilder, EmbedBuilder, ChannelType } = require('discord.js')
 const ihlRepository = require('../database/repositories/ihlRepository');
 const lobbyRepository = require('../database/repositories/lobbyRepository');
 const queuePanel = require('../modules/ihl/queuePanel');
+const ihlConfig = require('../../config/ihl.config');
 const ihlLeaderboard = require('../modules/ihl/leaderboard');
 const lobbyManager = require('../modules/ihl/lobbyManager');
 const { COLORS } = require('../utils/embeds');
 
-const STAFF_ONLY = ['pannello', 'classifica', 'annulla', 'elo-modifica'];
+const STAFF_ONLY = ['pannello', 'classifica', 'annulla', 'elo-modifica', 'risultato'];
+
+const STATE_LABELS = {
+  queue: 'in coda',
+  side: 'scelta del lato',
+  ban: 'ban delle mappe',
+  draft: 'draft',
+  live: 'in corso',
+};
 
 function buildProfileEmbed(user, player, history) {
   const winrate = player.matches ? Math.round((player.wins / player.matches) * 100) : 0;
@@ -102,6 +111,26 @@ module.exports = {
     )
     .addSubcommand((sub) =>
       sub
+        .setName('partite')
+        .setDescription('Elenca le partite e le code attive con il loro codice'),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('risultato')
+        .setDescription('Dichiara il vincitore di una partita, utile se il voto finisce in parità (staff)')
+        .addIntegerOption((opt) =>
+          opt.setName('codice').setDescription('Numero della partita').setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName('squadra')
+            .setDescription('Squadra vincitrice')
+            .setRequired(true)
+            .addChoices({ name: '🔴 Team A', value: 'a' }, { name: '🔵 Team B', value: 'b' }),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
         .setName('annulla')
         .setDescription('Annulla una partita e rimuove le vocali (staff)')
         .addIntegerOption((opt) =>
@@ -136,6 +165,54 @@ module.exports = {
 
     if (subcommand === 'pannello') return queuePanel.publishPanel(interaction);
 
+    // Con più code e partite in parallelo serve un modo per leggere i codici.
+    if (subcommand === 'partite') {
+      const active = lobbyRepository.listActive();
+
+      if (!active.length) {
+        return interaction.reply({ content: '-# Nessuna coda o partita attiva.', ephemeral: true });
+      }
+
+      const lines = active.map((entry) => {
+        const state = STATE_LABELS[entry.state] || entry.state;
+        const extra =
+          entry.state === 'queue'
+            ? `${entry.players.length}/${ihlConfig.queueSize} giocatori`
+            : entry.chosen_map || 'mappa da definire';
+        return `\`#${entry.id}\` · ${state} · ${extra}`;
+      });
+
+      return interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(COLORS.gold)
+            .setTitle('🎮  PARTITE E CODE ATTIVE')
+            .setDescription(lines.join('\n'))
+            .setFooter({ text: 'Usa il codice con /ihl risultato o /ihl annulla' }),
+        ],
+        ephemeral: true,
+      });
+    }
+
+    if (subcommand === 'risultato') {
+      const code = interaction.options.getInteger('codice', true);
+      const winner = interaction.options.getString('squadra', true);
+      const lobby = lobbyRepository.find(code);
+
+      if (!lobby || lobby.state !== 'live') {
+        return interaction.reply({
+          content: `⚠️ La partita \`#${code}\` non è in corso: non c'è nulla da chiudere.`,
+          ephemeral: true,
+        });
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+      await lobbyManager.finishMatch(client, lobby.id, winner);
+      return interaction.editReply({
+        content: `✅ Partita **#${lobby.id}** chiusa con vittoria **Team ${winner.toUpperCase()}**.`,
+      });
+    }
+
     if (subcommand === 'elo-modifica') {
       const target = interaction.options.getUser('giocatore', true);
       const value = interaction.options.getInteger('valore', true);
@@ -157,11 +234,21 @@ module.exports = {
 
     // annulla
     const code = interaction.options.getInteger('codice');
-    const lobby = code ? lobbyRepository.find(code) : lobbyRepository.findOpenInChannel(interaction.channelId);
+
+    // Senza codice prendiamo l'ultima partita avviata in questo canale: la coda
+    // ancora in raccolta non è una partita da annullare.
+    const lobby = code
+      ? lobbyRepository.find(code)
+      : lobbyRepository
+          .listActive()
+          .filter((entry) => entry.channel_id === interaction.channelId && entry.state !== 'queue')
+          .pop();
 
     if (!lobby) {
       return interaction.reply({
-        content: code ? `⚠️ Nessuna lobby con codice \`${code}\`.` : '⚠️ Nessuna lobby attiva in questo canale.',
+        content: code
+          ? `⚠️ Nessuna partita con codice \`${code}\`.`
+          : '⚠️ Nessuna partita avviata in questo canale: indica il codice con `/ihl partite`.',
         ephemeral: true,
       });
     }

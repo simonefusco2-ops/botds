@@ -15,7 +15,14 @@ const lobbyRepository = require('../../database/repositories/lobbyRepository');
 const ihlRepository = require('../../database/repositories/ihlRepository');
 const eloService = require('./eloService');
 const ihlLeaderboard = require('./leaderboard');
-const { buildLobbyEmbed, buildLobbyComponents, remainingMaps } = require('./render');
+const {
+  buildLobbyEmbed,
+  buildLobbyComponents,
+  buildVoteEmbed,
+  buildVoteComponents,
+  countVotes,
+  remainingMaps,
+} = require('./render');
 
 /** Timer della fase corrente per lobby: alla scadenza decide il bot. */
 const timers = new Map();
@@ -77,8 +84,12 @@ async function renderLobby(client, lobby, extra = {}) {
 
 // --- Fase 1: coda -----------------------------------------------------------
 
+/**
+ * La lobby in raccolta nel canale, creandola se non c'è. Le partite già avviate
+ * non contano: restano attive in parallelo mentre la coda continua a riempirsi.
+ */
 function getOrCreateLobby(guildId, channelId) {
-  return lobbyRepository.findOpenInChannel(channelId) || lobbyRepository.create(guildId, channelId);
+  return lobbyRepository.findQueueInChannel(channelId) || lobbyRepository.create(guildId, channelId);
 }
 
 async function joinQueue(client, interaction) {
@@ -101,14 +112,20 @@ async function joinQueue(client, interaction) {
     ephemeral: true,
   });
 
-  if (players.length >= ihlConfig.queueSize) return startLobby(client, updated);
-  return renderLobby(client, updated);
+  if (players.length < ihlConfig.queueSize) return renderLobby(client, updated);
+
+  await startLobby(client, updated);
+
+  // La coda riparte subito: chi arriva ora forma la lobby successiva senza
+  // aspettare che la partita appena creata finisca.
+  const next = lobbyRepository.create(updated.guild_id, updated.channel_id);
+  return renderLobby(client, next);
 }
 
 async function leaveQueue(client, interaction) {
-  const lobby = lobbyRepository.findOpenInChannel(interaction.channelId);
+  const lobby = lobbyRepository.findQueueInChannel(interaction.channelId);
 
-  if (!lobby || lobby.state !== 'queue' || !lobby.players.includes(interaction.user.id)) {
+  if (!lobby || !lobby.players.includes(interaction.user.id)) {
     return interaction.reply({ content: '⚠️ Non risulti in coda.', ephemeral: true });
   }
 
@@ -310,6 +327,109 @@ async function setupVoiceChannels(client, lobby) {
   }
 
   if (Object.keys(created).length) lobbyRepository.update(lobby.id, created);
+
+  await createMatchChannel(client, lobbyRepository.find(lobby.id));
+}
+
+/**
+ * Canale testuale privato della singola partita: ci entrano solo i dieci
+ * giocatori e lo staff, e serve a votare il vincitore. Viene eliminato a
+ * votazione conclusa, così il server non si riempie di canali morti.
+ */
+async function createMatchChannel(client, lobby) {
+  const guild = await client.guilds.fetch(lobby.guild_id).catch(() => null);
+  if (!guild) return;
+
+  const parent = ihlConfig.voice.categoryId || config.tempVcCategoryId || undefined;
+
+  const channel = await guild.channels
+    .create({
+      name: `${ihlConfig.matchChannel.prefix}${lobby.id}`,
+      type: ChannelType.GuildText,
+      parent,
+      topic: `Partita IHL #${lobby.id} — ${lobby.chosen_map}`,
+      permissionOverwrites: [
+        { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+        {
+          id: client.user.id,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ManageChannels,
+          ],
+        },
+        ...ihlConfig.managerRoleIds.map((id) => ({
+          id,
+          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+        })),
+        ...lobby.players.map((id) => ({
+          id,
+          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+        })),
+      ],
+    })
+    .catch((err) => {
+      logger.error(`IHL lobby ${lobby.id}: creazione canale partita fallita`, err);
+      return null;
+    });
+
+  if (!channel) return;
+
+  lobbyRepository.update(lobby.id, { text_channel_id: channel.id });
+
+  await channel.send({
+    content: lobby.players.map((id) => `<@${id}>`).join(' '),
+    embeds: [buildVoteEmbed(lobby)],
+    components: buildVoteComponents(lobby),
+  });
+
+  // La scheda nel canale delle code ora può rimandare alla stanza della partita.
+  await renderLobby(client, lobbyRepository.find(lobby.id));
+}
+
+/** Aggiorna la scheda di voto nel canale della partita. */
+async function renderVoteCard(client, lobby, extra = {}) {
+  if (!lobby.text_channel_id) return;
+
+  const channel = await client.channels.fetch(lobby.text_channel_id).catch(() => null);
+  if (!channel) return;
+
+  const messages = await channel.messages.fetch({ limit: 10 }).catch(() => null);
+  const card = messages?.find((message) => message.author.id === client.user.id && message.embeds.length);
+  if (!card) return;
+
+  await card
+    .edit({
+      embeds: [buildVoteEmbed(lobby, extra)],
+      components: extra.result ? [] : buildVoteComponents(lobby),
+    })
+    .catch(() => {});
+}
+
+/**
+ * Registra il voto di un giocatore e chiude la partita appena una delle due
+ * squadre raggiunge la maggioranza assoluta dei partecipanti.
+ */
+async function castVote(client, lobbyId, userId, choice) {
+  const lobby = lobbyRepository.find(lobbyId);
+  if (!lobby || lobby.state !== 'live') return { error: 'La partita non è più in corso.' };
+  if (!lobby.players.includes(userId)) return { error: 'Non fai parte di questa partita.' };
+
+  const votes = { ...lobby.votes, [userId]: choice };
+  const updated = lobbyRepository.update(lobbyId, { votes });
+
+  const { a, b } = countVotes(updated);
+  const needed = Math.floor(updated.players.length / 2) + 1;
+
+  if (a >= needed || b >= needed) {
+    await finishMatch(client, lobbyId, a >= needed ? 'a' : 'b');
+    return { settled: true };
+  }
+
+  await renderVoteCard(client, updated);
+
+  const allVoted = Object.keys(votes).length >= updated.players.length;
+  return { settled: false, tie: allVoted };
 }
 
 // --- Fase 6: risultato ------------------------------------------------------
@@ -343,23 +463,41 @@ async function finishMatch(client, lobbyId, winner) {
 
   const updated = lobbyRepository.update(lobbyId, { state: 'closed' });
 
-  await renderLobby(client, updated, {
-    result: `🏆 **Vittoria Team ${winner.toUpperCase()}**\n\n${summary}`,
-  });
+  const result = `🏆 **Vittoria Team ${winner.toUpperCase()}**\n\n${summary}`;
 
-  await cleanupVoiceChannels(client, updated);
+  await renderLobby(client, updated, { result });
+
+  // L'esito resta nel canale delle code; il testuale della partita mostra il
+  // riepilogo e poi si chiude da solo, come previsto a votazione conclusa.
+  await renderVoteCard(client, updated, { result });
+  scheduleCleanup(client, updated);
   await ihlLeaderboard.refresh(client);
   return updated;
 }
 
-async function cleanupVoiceChannels(client, lobby) {
+/**
+ * Chiude le stanze della partita: le due vocali e il testuale del voto. Il
+ * testuale sparisce a votazione conclusa, come richiesto, quindi lo cancelliamo
+ * insieme al resto una volta assegnato l'ELO.
+ */
+function scheduleCleanup(client, lobby) {
+  const delay = Math.max(0, ihlConfig.matchChannel.deleteAfter) * 1000;
+  const timer = setTimeout(() => {
+    cleanupMatchChannels(client, lobby).catch((err) =>
+      logger.error(`IHL lobby ${lobby.id}: pulizia stanze fallita`, err),
+    );
+  }, delay);
+  timer.unref?.();
+}
+
+async function cleanupMatchChannels(client, lobby, reason = 'Partita IHL conclusa') {
   const guild = await client.guilds.fetch(lobby.guild_id).catch(() => null);
   if (!guild) return;
 
-  for (const channelId of [lobby.voice_a_id, lobby.voice_b_id]) {
+  for (const channelId of [lobby.voice_a_id, lobby.voice_b_id, lobby.text_channel_id]) {
     if (!channelId) continue;
     const channel = await guild.channels.fetch(channelId).catch(() => null);
-    await channel?.delete('Partita IHL conclusa').catch(() => {});
+    await channel?.delete(reason).catch(() => {});
   }
 }
 
@@ -375,7 +513,7 @@ async function cancelLobby(client, lobbyId) {
 
   const refunded = ihlRepository.voidMatch(lobbyId);
 
-  await cleanupVoiceChannels(client, lobby);
+  await cleanupMatchChannels(client, lobby, 'Partita IHL annullata');
   lobbyRepository.update(lobbyId, { state: 'closed' });
 
   if (refunded.length) await ihlLeaderboard.refresh(client);
@@ -391,6 +529,7 @@ module.exports = {
   chooseSide,
   banMap,
   pickPlayer,
+  castVote,
   finishMatch,
   cancelLobby,
   renderLobby,

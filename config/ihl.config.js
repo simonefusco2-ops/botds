@@ -78,5 +78,13 @@ module.exports = {
     teamBName: '🔵 Team B',
   },
 
+  // Canale testuale privato della singola partita: ci entrano solo i dieci
+  // giocatori e lo staff, si vota il vincitore e viene eliminato dopo
+  // `deleteAfter` secondi dalla chiusura della votazione.
+  matchChannel: {
+    prefix: 'partita-',
+    deleteAfter: 20,
+  },
+
   leaderboardSize: 10,
 };

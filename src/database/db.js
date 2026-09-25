@@ -115,6 +115,8 @@ db.exec(`
     turn TEXT,
     voice_a_id TEXT,
     voice_b_id TEXT,
+    text_channel_id TEXT,
+    votes TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -135,9 +137,15 @@ if (!ticketColumns.some((column) => column.name === 'type')) {
   db.exec("ALTER TABLE tickets ADD COLUMN type TEXT NOT NULL DEFAULT 'supporto'");
 }
 
-const lobbyColumns = db.prepare('PRAGMA table_info(ihl_lobbies)').all();
-if (!lobbyColumns.some((column) => column.name === 'map_pool')) {
+const lobbyColumns = db.prepare('PRAGMA table_info(ihl_lobbies)').all().map((column) => column.name);
+if (!lobbyColumns.includes('map_pool')) {
   db.exec("ALTER TABLE ihl_lobbies ADD COLUMN map_pool TEXT NOT NULL DEFAULT '[]'");
+}
+if (!lobbyColumns.includes('text_channel_id')) {
+  db.exec('ALTER TABLE ihl_lobbies ADD COLUMN text_channel_id TEXT');
+}
+if (!lobbyColumns.includes('votes')) {
+  db.exec("ALTER TABLE ihl_lobbies ADD COLUMN votes TEXT NOT NULL DEFAULT '{}'");
 }
 
 module.exports = db;

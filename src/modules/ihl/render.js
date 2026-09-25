@@ -84,9 +84,16 @@ function buildLobbyEmbed(lobby, extra = {}) {
   }
 
   if (lobby.state === 'live' || lobby.state === 'closed') {
+    // Il voto del vincitore vive nel canale privato della partita: qui lo linkiamo.
+    const room =
+      lobby.state === 'live' && lobby.text_channel_id
+        ? `\n-# Votate il vincitore in <#${lobby.text_channel_id}>.`
+        : '';
+
     embed.setDescription(
       `**Mappa:** ${lobby.chosen_map}\n` +
         `**Team A** inizia in **${lobby.side_a === 'attack' ? 'Attacco' : 'Difesa'}**` +
+        room +
         (extra.result ? `\n\n${extra.result}` : ''),
     );
   }
@@ -111,11 +118,21 @@ function buildLobbyComponents(lobby) {
     ];
   }
 
+  // Con più partite contemporanee il numero della lobby viaggia nell'identificatore
+  // del bottone: il canale da solo non basta più a capire a quale si riferisce.
   if (lobby.state === 'side') {
     return [
       new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('ihl_side:attack').setLabel('Attacco').setEmoji('⚔️').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId('ihl_side:defense').setLabel('Difesa').setEmoji('🛡️').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`ihl_side:${lobby.id}:attack`)
+          .setLabel('Attacco')
+          .setEmoji('⚔️')
+          .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId(`ihl_side:${lobby.id}:defense`)
+          .setLabel('Difesa')
+          .setEmoji('🛡️')
+          .setStyle(ButtonStyle.Primary),
       ),
     ];
   }
@@ -128,7 +145,7 @@ function buildLobbyComponents(lobby) {
         new ActionRowBuilder().addComponents(
           left.slice(i, i + 5).map((map) =>
             new ButtonBuilder()
-              .setCustomId(`ihl_ban:${map.name}`)
+              .setCustomId(`ihl_ban:${lobby.id}:${map.name}`)
               .setLabel(map.name)
               .setEmoji(map.emoji)
               .setStyle(ButtonStyle.Secondary),
@@ -147,7 +164,7 @@ function buildLobbyComponents(lobby) {
     return [
       new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
-          .setCustomId('ihl_pick')
+          .setCustomId(`ihl_pick:${lobby.id}`)
           .setPlaceholder('Scegli un giocatore')
           .addOptions(
             available.slice(0, 25).map((id) => ({
@@ -159,16 +176,63 @@ function buildLobbyComponents(lobby) {
     ];
   }
 
-  if (lobby.state === 'live') {
-    return [
-      new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('ihl_winner:a').setLabel('Ha vinto Team A').setEmoji('🔴').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId('ihl_winner:b').setLabel('Ha vinto Team B').setEmoji('🔵').setStyle(ButtonStyle.Primary),
-      ),
-    ];
-  }
-
+  // In partita si vota nel canale dedicato, non qui: la scheda in coda resta informativa.
   return [];
 }
 
-module.exports = { buildLobbyEmbed, buildLobbyComponents, remainingMaps, mentions };
+function countVotes(lobby) {
+  const votes = Object.values(lobby.votes || {});
+  return { a: votes.filter((v) => v === 'a').length, b: votes.filter((v) => v === 'b').length };
+}
+
+/** Scheda di voto pubblicata nel canale privato della partita. */
+function buildVoteEmbed(lobby, extra = {}) {
+  const { a, b } = countVotes(lobby);
+  const needed = Math.floor(lobby.players.length / 2) + 1;
+
+  const embed = new EmbedBuilder()
+    .setColor(extra.result ? COLORS.success : COLORS.gold)
+    .setTitle(`🎮  PARTITA #${lobby.id}  ·  ${lobby.chosen_map}`)
+    .setDescription(
+      extra.result ||
+        `Al termine votate chi ha vinto. Servono **${needed} voti** per chiudere.\n` +
+          `-# Team A inizia in ${lobby.side_a === 'attack' ? 'Attacco' : 'Difesa'}.`,
+    )
+    .addFields(
+      { name: `🔴 Team A — ${a} voti`, value: mentions(lobby.team_a), inline: true },
+      { name: `🔵 Team B — ${b} voti`, value: mentions(lobby.team_b), inline: true },
+    )
+    .setFooter({ text: `Lobby #${lobby.id}` })
+    .setTimestamp();
+
+  return embed;
+}
+
+function buildVoteComponents(lobby) {
+  const { a, b } = countVotes(lobby);
+
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`ihl_vote:${lobby.id}:a`)
+        .setLabel(`Ha vinto Team A (${a})`)
+        .setEmoji('🔴')
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId(`ihl_vote:${lobby.id}:b`)
+        .setLabel(`Ha vinto Team B (${b})`)
+        .setEmoji('🔵')
+        .setStyle(ButtonStyle.Primary),
+    ),
+  ];
+}
+
+module.exports = {
+  buildLobbyEmbed,
+  buildLobbyComponents,
+  buildVoteEmbed,
+  buildVoteComponents,
+  countVotes,
+  remainingMaps,
+  mentions,
+};
