@@ -44,7 +44,10 @@ module.exports = {
       // Ogni handler va atteso qui dentro: restituendo la promise senza await,
       // un errore sfuggirebbe al catch e l'utente non vedrebbe alcun messaggio.
       if (interaction.isButton()) {
-        const [action, argument] = interaction.customId.split(':');
+        // L'argomento può contenere due punti (nomi di mappe, etichette): si
+        // separa solo la prima parte e il resto viene ricomposto integro.
+        const [action, ...rest] = interaction.customId.split(':');
+        const argument = rest.join(':');
 
         switch (action) {
           case 'ticket_open':
