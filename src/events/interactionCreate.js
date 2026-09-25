@@ -72,6 +72,13 @@ module.exports = {
     } catch (err) {
       logger.error('Errore gestione interazione', err);
 
+      // Discord annida il dettaglio di "Invalid Form Body" (50035) troppo in
+      // profondità perché console.error lo stampi: senza questo nei log si legge
+      // solo `components: [Object]` e non si capisce quale componente è rifiutato.
+      if (err.rawError?.errors) {
+        logger.error('Dettaglio del rifiuto Discord:', JSON.stringify(err.rawError.errors, null, 2));
+      }
+
       const payload = {
         content: `⚠️ Errore durante l'elaborazione: ${err.message || 'errore sconosciuto'}`,
         ephemeral: true,
