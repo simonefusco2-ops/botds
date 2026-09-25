@@ -284,12 +284,6 @@ async function openMatch(client, lobby) {
   });
 
   await renderQueue(client, updated);
-  await renderCheckin(client, updated);
-
-  // Allo scadere dell'attesa il bot segnala chi manca: da lì lo staff può sostituire.
-  scheduleTimeout(client, checkinKey(lobby.id), ihlConfig.timers.substituteAfter, () =>
-    announceMissing(client, lobby.id),
-  );
 
   // Se per qualche motivo il vocale non è nato, il check-in bloccherebbe tutto.
   if (!voice) {
@@ -297,7 +291,35 @@ async function openMatch(client, lobby) {
     return startPicks(client, updated);
   }
 
-  return updated;
+  // Chi è già collegato da qualche parte lo porta dentro il bot: deve muoversi a
+  // mano solo chi in vocale non c'è proprio.
+  await gatherConnected(client, guild, updated, voice);
+
+  await renderCheckin(client, lobbyRepository.find(lobby.id));
+
+  // Allo scadere dell'attesa il bot segnala chi manca: da lì lo staff può sostituire.
+  scheduleTimeout(client, checkinKey(lobby.id), ihlConfig.timers.substituteAfter, () =>
+    announceMissing(client, lobby.id),
+  );
+
+  // Con tutti già dentro non c'è niente da aspettare: si parte subito.
+  await handleCheckinChange(client, lobby.id);
+
+  return lobbyRepository.find(lobby.id);
+}
+
+/** Trascina nel ritrovo i giocatori già collegati a un qualsiasi vocale. */
+async function gatherConnected(client, guild, lobby, voice) {
+  for (const id of lobby.players) {
+    const member = await guild.members.fetch(id).catch(() => null);
+
+    // Discord non può spostare chi non è collegato: quelli entrano da soli.
+    if (!member?.voice?.channel || member.voice.channel.id === voice.id) continue;
+
+    await member.voice.setChannel(voice).catch((err) => {
+      logger.warn(`IHL lobby ${lobby.id}: impossibile portare ${id} nel ritrovo: ${err.message}`);
+    });
+  }
 }
 
 /** Chi dei giocatori è collegato in questo momento al vocale di ritrovo. */
