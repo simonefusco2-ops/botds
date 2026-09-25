@@ -10,6 +10,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const benvenuto = require('../../../config/benvenuto.config');
 const logger = require('../../utils/logger');
+const { applyEmoji } = require('../../utils/emoji');
 
 const CUSTOM_ID_PREFIX = 'role_toggle';
 
@@ -22,15 +23,15 @@ const STYLES = {
 
 function buildRoleRow() {
   return new ActionRowBuilder().addComponents(
-    benvenuto.roles.map((role) => {
-      const button = new ButtonBuilder()
-        .setCustomId(`${CUSTOM_ID_PREFIX}:${role.id}`)
-        .setLabel(role.label)
-        .setStyle(STYLES[role.style] || ButtonStyle.Secondary);
-
-      if (role.emoji) button.setEmoji(role.emoji);
-      return button;
-    }),
+    benvenuto.roles.map((role) =>
+      applyEmoji(
+        new ButtonBuilder()
+          .setCustomId(`${CUSTOM_ID_PREFIX}:${role.id}`)
+          .setLabel(role.label)
+          .setStyle(STYLES[role.style] || ButtonStyle.Secondary),
+        role.emoji,
+      ),
+    ),
   );
 }
 

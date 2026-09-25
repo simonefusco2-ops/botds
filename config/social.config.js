@@ -28,6 +28,8 @@ module.exports = {
       handle: '@ivpiteresport',
       url: 'https://x.com/ivpiteresport',
       emoji: '𝕏',
+      // 𝕏 è un simbolo matematico, non un'emoji: valido nel testo ma non sui bottoni.
+      buttonEmoji: '✖️',
       description: 'Annunci ufficiali, risultati e comunicazioni rapide.',
     },
     {

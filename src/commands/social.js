@@ -22,6 +22,7 @@ const settingsRepository = require('../database/repositories/settingsRepository'
 const { COLORS, SOCIAL_PLATFORMS } = require('../utils/embeds');
 const { buildCard } = require('../utils/cards');
 const { toReuploadable } = require('../utils/attachments');
+const { applyEmoji } = require('../utils/emoji');
 
 const PANEL_SETTINGS_KEY = 'social_panel_message';
 
@@ -32,15 +33,12 @@ const PLATFORM_CHOICES = Object.entries(SOCIAL_PLATFORMS).map(([value, preset]) 
 
 function buildLinkRow() {
   return new ActionRowBuilder().addComponents(
-    socialConfig.accounts.slice(0, 5).map((account) => {
-      const button = new ButtonBuilder()
-        .setLabel(account.label)
-        .setStyle(ButtonStyle.Link)
-        .setURL(account.url);
-
-      if (account.emoji) button.setEmoji(account.emoji);
-      return button;
-    }),
+    socialConfig.accounts.slice(0, 5).map((account) =>
+      applyEmoji(
+        new ButtonBuilder().setLabel(account.label).setStyle(ButtonStyle.Link).setURL(account.url),
+        account.buttonEmoji || account.emoji,
+      ),
+    ),
   );
 }
 

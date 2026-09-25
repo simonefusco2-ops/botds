@@ -19,6 +19,7 @@ const ticketTypes = require('../../config/tickets.config');
 const { COLORS } = require('../utils/embeds');
 const { buildCard } = require('../utils/cards');
 const { toReuploadable } = require('../utils/attachments');
+const { applyEmoji } = require('../utils/emoji');
 
 const DEFAULT_TITLE = '⚡  CURIA  ⚡';
 
@@ -45,11 +46,13 @@ function buildTypeRows() {
   for (let i = 0; i < ticketTypes.length; i += 5) {
     const row = new ActionRowBuilder().addComponents(
       ticketTypes.slice(i, i + 5).map((type) =>
-        new ButtonBuilder()
-          .setCustomId(`ticket_open:${type.id}`)
-          .setLabel(type.label)
-          .setEmoji(type.emoji)
-          .setStyle(STYLES[type.style] || ButtonStyle.Secondary),
+        applyEmoji(
+          new ButtonBuilder()
+            .setCustomId(`ticket_open:${type.id}`)
+            .setLabel(type.label)
+            .setStyle(STYLES[type.style] || ButtonStyle.Secondary),
+          type.emoji,
+        ),
       ),
     );
     rows.push(row);
