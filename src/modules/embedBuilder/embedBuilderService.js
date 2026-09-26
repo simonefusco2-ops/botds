@@ -83,8 +83,9 @@ function stringifyFields(fields = []) {
     .join('\n');
 }
 
-function buildCustomCard({ title, description, fieldsRaw, footer, colorKey, guild, imageRef, thumbnailRef }) {
+function buildCustomCard({ title, description, fieldsRaw, footer, colorKey, guild, imageRef, thumbnailRef, mention }) {
   return buildCard({
+    mention,
     accentColor: PALETTE[colorKey] ?? PALETTE.valorant,
     bannerRef: imageRef,
     thumbnailRef,
@@ -93,6 +94,31 @@ function buildCustomCard({ title, description, fieldsRaw, footer, colorKey, guil
     sections: parseFields(fieldsRaw),
     footnote: footer || guild.name,
   });
+}
+
+/**
+ * I tag scelti con /embed: il testo da mostrare sopra la scheda e chi deve
+ * ricevere davvero la notifica. Senza allowedMentions espliciti Discord
+ * notificherebbe comunque, ma così un ruolo scritto nel testo non pinga.
+ */
+function buildMention({ everyone, role, user }) {
+  const parts = [];
+  const allowedMentions = { parse: [], roles: [], users: [] };
+
+  if (everyone) {
+    parts.push(everyone === 'here' ? '@here' : '@everyone');
+    allowedMentions.parse.push('everyone');
+  }
+  if (role) {
+    parts.push(`<@&${role}>`);
+    allowedMentions.roles.push(role);
+  }
+  if (user) {
+    parts.push(`<@${user}>`);
+    allowedMentions.users.push(user);
+  }
+
+  return parts.length ? { line: parts.join(' '), allowedMentions } : null;
 }
 
 /** Il contenuto sorgente viene salvato per messaggio, così /embed-modifica può ripresentarlo nel popup. */
@@ -225,17 +251,23 @@ async function handleEmbedModalSubmit(interaction) {
     guild: interaction.guild,
     imageRef: image?.ref || null,
     thumbnailRef: thumbnail?.ref || null,
+    mention: data.mention?.line,
   });
 
-  const source = { title, description, fieldsRaw, footer, colorKey: data.colorKey };
+  const source = { title, description, fieldsRaw, footer, colorKey: data.colorKey, mention: data.mention?.line || null };
 
   if (message) {
-    await message.edit({ ...card, files });
+    // La modifica non deve notificare di nuovo chi era già stato taggato.
+    await message.edit({ ...card, files, allowedMentions: { parse: [] } });
     saveCardSource(message.id, source);
     return interaction.editReply({ content: `✅ Messaggio aggiornato in ${channel}.` });
   }
 
-  const sent = await channel.send({ ...card, files });
+  const sent = await channel.send({
+    ...card,
+    files,
+    allowedMentions: data.mention?.allowedMentions || { parse: [] },
+  });
   saveCardSource(sent.id, source);
 
   return interaction.editReply({
@@ -250,6 +282,7 @@ module.exports = {
   MODAL_CREATE,
   MODAL_EDIT,
   setPending,
+  buildMention,
   buildEmbedModal,
   handleEmbedModalSubmit,
   loadCardSource,

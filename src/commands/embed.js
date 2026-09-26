@@ -12,6 +12,7 @@ const {
   COLOR_CHOICES,
   MODAL_CREATE,
   setPending,
+  buildMention,
   buildEmbedModal,
 } = require('../modules/embedBuilder/embedBuilderService');
 
@@ -34,9 +35,19 @@ module.exports = {
     )
     .addStringOption((opt) =>
       opt.setName('colore').setDescription('Colore della barra laterale').addChoices(...COLOR_CHOICES),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName('tagga')
+        .setDescription('Tagga tutto il server sopra il messaggio')
+        .addChoices({ name: '@everyone', value: 'everyone' }, { name: '@here', value: 'here' }),
+    )
+    .addMentionableOption((opt) =>
+      opt.setName('menziona').setDescription('Un ruolo o un utente da taggare sopra il messaggio'),
     ),
   async execute(interaction) {
     const channel = interaction.options.getChannel('canale') || interaction.channel;
+    const mentionable = interaction.options.get('menziona');
 
     setPending(interaction.user.id, {
       mode: 'create',
@@ -44,6 +55,11 @@ module.exports = {
       image: interaction.options.getAttachment('immagine'),
       thumbnail: interaction.options.getAttachment('thumbnail'),
       colorKey: interaction.options.getString('colore') || 'valorant',
+      mention: buildMention({
+        everyone: interaction.options.getString('tagga'),
+        role: mentionable?.role?.id,
+        user: mentionable?.user?.id,
+      }),
     });
 
     await interaction.showModal(buildEmbedModal(MODAL_CREATE));

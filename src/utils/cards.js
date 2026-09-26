@@ -26,7 +26,9 @@ const {
  * qui invece il banner apre il messaggio e i titoli usano gli heading markdown
  * (# / ###), che Discord rende molto più grandi del testo normale.
  *
- * Un messaggio con questo formato non può contenere `content` né `embeds`.
+ * Un messaggio con questo formato non può contenere `content` né `embeds`: i
+ * tag (`mention`) vanno quindi in un testo a parte, sopra la scheda, e
+ * notificano secondo gli `allowedMentions` dell'invio.
  */
 function buildCard({
   accentColor,
@@ -38,6 +40,7 @@ function buildCard({
   separateSections = false,
   footnote,
   rows = [],
+  mention,
 }) {
   const container = new ContainerBuilder();
   if (accentColor) container.setAccentColor(accentColor);
@@ -102,7 +105,8 @@ function buildCard({
     container.addActionRowComponents(row);
   }
 
-  return { components: [container], flags: MessageFlags.IsComponentsV2 };
+  const components = mention ? [new TextDisplayBuilder().setContent(mention), container] : [container];
+  return { components, flags: MessageFlags.IsComponentsV2 };
 }
 
 module.exports = { buildCard };

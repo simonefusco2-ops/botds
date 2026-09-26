@@ -65,6 +65,8 @@ module.exports = {
       image: interaction.options.getAttachment('immagine'),
       thumbnail: interaction.options.getAttachment('thumbnail'),
       colorKey: interaction.options.getString('colore') || source?.colorKey || 'valorant',
+      // I tag restano come erano: la modifica li mostra ma non notifica di nuovo.
+      mention: source?.mention ? { line: source.mention } : null,
     });
 
     await interaction.showModal(
