@@ -94,6 +94,7 @@ module.exports = {
       sub
         .setName('classifica')
         .setDescription('Pubblica il pannello classifica sfogliabile (staff)')
+        .addStringOption((opt) => leagueOption(opt, true))
         .addChannelOption((opt) =>
           opt
             .setName('canale')
@@ -102,20 +103,20 @@ module.exports = {
         )
         .addAttachmentOption((opt) =>
           opt.setName('immagine').setDescription('Banner mostrato in cima alla classifica'),
-        )
-        .addStringOption((opt) => leagueOption(opt, true)),
+        ),
     )
     .addSubcommand((sub) =>
       sub
         .setName('pannello')
         .setDescription('Pubblica il pannello con lo stato delle code (staff)')
+        // Discord pretende le opzioni obbligatorie prima di quelle facoltative.
+        .addStringOption((opt) => leagueOption(opt, true))
         .addChannelOption((opt) =>
           opt
             .setName('canale')
             .setDescription('Canale del pannello (default: questo canale)')
             .addChannelTypes(ChannelType.GuildText),
-        )
-        .addStringOption((opt) => leagueOption(opt, true)),
+        ),
     )
     .addSubcommand((sub) =>
       sub
@@ -123,14 +124,14 @@ module.exports = {
         .setDescription("Corregge l'ELO di un giocatore (staff)")
         .addUserOption((opt) => opt.setName('giocatore').setDescription('Giocatore da correggere').setRequired(true))
         .addIntegerOption((opt) => opt.setName('valore').setDescription('Punti da impostare o da sommare').setRequired(true))
+        .addStringOption((opt) => leagueOption(opt, true))
         .addStringOption((opt) =>
           opt
             .setName('modo')
             .setDescription('Default: imposta')
             .addChoices({ name: 'Imposta a', value: 'set' }, { name: 'Somma (anche negativo)', value: 'add' }),
         )
-        .addStringOption((opt) => opt.setName('motivo').setDescription('Annotato nella risposta'))
-        .addStringOption((opt) => leagueOption(opt, true)),
+        .addStringOption((opt) => opt.setName('motivo').setDescription('Annotato nella risposta')),
     )
     .addSubcommand((sub) =>
       sub
