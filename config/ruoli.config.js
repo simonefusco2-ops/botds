@@ -32,10 +32,10 @@ module.exports = {
     '-# Servono ai capitani per bilanciare le squadre nel draft.',
 
   roles: [
-    { id: 'duelist', label: 'Duelist', roleId: '1553349012407459851', emoji: '' },
-    { id: 'initiator', label: 'Initiator', roleId: '1553348465977983087', emoji: '' },
-    { id: 'controller', label: 'Controller', roleId: '1553349054669262858', emoji: '' },
-    { id: 'sentinel', label: 'Sentinel', roleId: '1553349120377360497', emoji: '' },
+    { id: 'duelist', label: 'Duelist', roleId: '1553349012407459851', emoji: '<:Duelist:1553355503042699334>' },
+    { id: 'initiator', label: 'Initiator', roleId: '1553348465977983087', emoji: '<:Initiator:1553355489457340486>' },
+    { id: 'controller', label: 'Controller', roleId: '1553349054669262858', emoji: '<:Controller:1553355476991873074>' },
+    { id: 'sentinel', label: 'Sentinel', roleId: '1553349120377360497', emoji: '<:Sentinel:1553355461560901662>' },
   ],
 
   rankHeading: '### 📊  IL TUO RANK',
