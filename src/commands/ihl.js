@@ -31,7 +31,7 @@ function leagueOf(interaction) {
   return leagues.find(interaction.options.getString('lega'));
 }
 
-const STAFF_ONLY = ['pannello', 'classifica', 'annulla', 'elo-modifica', 'risultato', 'sostituisci', 'sblocca'];
+const STAFF_ONLY = ['pannello', 'classifica', 'annulla', 'elo-modifica', 'risultato', 'sostituisci', 'sblocca', 'rimuovi'];
 
 const STATE_LABELS = {
   queue: 'in coda',
@@ -165,6 +165,12 @@ module.exports = {
     )
     .addSubcommand((sub) =>
       sub
+        .setName('rimuovi')
+        .setDescription('Toglie un giocatore dalla coda in cui si trova (staff)')
+        .addUserOption((opt) => opt.setName('giocatore').setDescription('Chi togliere').setRequired(true)),
+    )
+    .addSubcommand((sub) =>
+      sub
         .setName('sblocca')
         .setDescription('Rimette in pari una partita bloccata senza annullarla (staff)')
         .addIntegerOption((opt) =>
@@ -287,6 +293,26 @@ module.exports = {
       await lobbyManager.finishMatch(client, lobby.id, winner);
       return interaction.editReply({
         content: `✅ Partita **#${lobby.id}** chiusa con vittoria **Team ${winner.toUpperCase()}**.`,
+      });
+    }
+
+    if (subcommand === 'rimuovi') {
+      const target = interaction.options.getUser('giocatore', true);
+      await interaction.deferReply({ ephemeral: true });
+
+      const removed = await lobbyManager.removeFromQueues(client, target.id);
+      if (removed.length) {
+        return interaction.editReply({
+          content: `✅ ${target} tolto dalla coda ${removed.map((lobby) => `**#${lobby.id}**`).join(', ')}.`,
+        });
+      }
+
+      // Una partita già avviata non è una coda: lì serve la sostituzione.
+      const busy = lobbyManager.busyIn(target.id);
+      return interaction.editReply({
+        content: busy
+          ? `⚠️ ${target} non è in coda ma nella partita **#${busy.id}**: usa \`/ihl sostituisci\`.`
+          : `⚠️ ${target} non è in nessuna coda.`,
       });
     }
 

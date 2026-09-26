@@ -364,6 +364,67 @@ async function joinQueue(client, interaction, leagueId) {
   return renderQueue(client, next);
 }
 
+/**
+ * Toglie un giocatore da tutte le code in raccolta, senza passare da un click:
+ * serve per chi esce dal server o per lo staff. Restituisce le code toccate.
+ * Il cambio di stato avviene tutto prima del primo await.
+ */
+async function removeFromQueues(client, userId) {
+  const touched = lobbyRepository
+    .listActive()
+    .filter((lobby) => lobby.state === 'queue' && lobby.players.includes(userId))
+    .map((lobby) => lobbyRepository.update(lobby.id, { players: lobby.players.filter((id) => id !== userId) }));
+
+  for (const lobby of touched) await renderQueue(client, lobby);
+  return touched;
+}
+
+/**
+ * Chi esce dal server: dalla coda sparisce subito; se era già al check-in lo
+ * si dice nel canale della partita, perché lo staff può sostituirlo senza
+ * aspettare i minuti d'attesa (vedi substitutePlayer).
+ */
+async function handleMemberLeft(client, userId) {
+  const removed = await removeFromQueues(client, userId);
+  if (removed.length) logger.info(`IHL: ${userId} è uscito dal server, tolto dalle code ${removed.map((l) => `#${l.id}`).join(', ')}.`);
+
+  for (const lobby of lobbyRepository.listActive()) {
+    if (lobby.state !== 'checkin' || !lobby.players.includes(userId)) continue;
+
+    const channel = await client.channels.fetch(lobby.text_channel_id).catch(() => null);
+    await channel
+      ?.send({
+        content:
+          `🚪 <@${userId}> è uscito dal server. Lo staff può sostituirlo subito:\n` +
+          `\`/ihl sostituisci codice:${lobby.id} esce:${userId} entra:@riserva\``,
+        allowedMentions: { roles: ihlConfig.managerRoleIds },
+      })
+      .catch(() => {});
+  }
+}
+
+/**
+ * All'avvio: chi è uscito dal server mentre il bot era spento è ancora in coda.
+ * Si toglie solo chi Discord dice che non è più membro (Unknown Member), non
+ * chi non si riesce a leggere per un errore di rete.
+ */
+async function pruneQueues(client) {
+  const queues = lobbyRepository.listActive().filter((lobby) => lobby.state === 'queue' && lobby.players.length);
+
+  for (const lobby of queues) {
+    const guild = await client.guilds.fetch(lobby.guild_id).catch(() => null);
+    if (!guild) continue;
+
+    for (const id of lobby.players) {
+      const gone = await guild.members
+        .fetch(id)
+        .then(() => false)
+        .catch((err) => err.code === 10007);
+      if (gone) await handleMemberLeft(client, id);
+    }
+  }
+}
+
 async function leaveQueue(client, interaction) {
   const lobby = lobbyRepository.findQueueInChannel(interaction.channelId);
 
@@ -614,9 +675,16 @@ async function substitutePlayer(client, lobbyId, outId, inId) {
   const busy = busyIn(inId);
   if (busy) return { error: `<@${inId}> è già impegnato nella partita #${busy.id}.` };
 
+  // Chi è uscito dal server non tornerà: aspettare i minuti non serve.
+  const guild = await client.guilds.fetch(lobby.guild_id).catch(() => null);
+  const outGone = await guild?.members
+    .fetch(outId)
+    .then(() => false)
+    .catch((err) => err.code === 10007);
+
   const waited = Math.floor(Date.now() / 1000) - (lobby.checkin_at || 0);
   const left = ihlConfig.timers.substituteAfter - waited;
-  if (left > 0) {
+  if (left > 0 && !outGone) {
     return { error: `Ancora **${Math.ceil(left / 60)} minuti** di attesa prima di poter sostituire.` };
   }
 
@@ -1146,6 +1214,9 @@ module.exports = {
   busyIn,
   joinQueue,
   leaveQueue,
+  removeFromQueues,
+  handleMemberLeft,
+  pruneQueues,
   openMatch,
   presentPlayers,
   handleCheckinChange,

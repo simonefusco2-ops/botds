@@ -28,6 +28,9 @@ module.exports = {
     await ihlLobbyManager.resumeLobbies(client).catch((err) => {
       logger.error('Errore nel ripristino delle partite IHL', err);
     });
+    await ihlLobbyManager.pruneQueues(client).catch((err) => {
+      logger.error('Errore nel ripulire le code IHL', err);
+    });
 
     // Senza await: su tutto il server richiede tempo, e il resto non deve aspettare.
     if (guild) {

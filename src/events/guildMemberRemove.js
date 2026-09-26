@@ -9,12 +9,18 @@
  */
 const logger = require('../utils/logger');
 const memberLogger = require('../modules/memberLog/memberLogger');
+const lobbyManager = require('../modules/ihl/lobbyManager');
 
 module.exports = {
   name: 'guildMemberRemove',
-  async execute(member) {
+  async execute(member, client) {
     await memberLogger.logLeave(member).catch((err) => {
       logger.error(`Errore log uscita di ${member.user?.tag || member.id}`, err);
+    });
+
+    // Chi se ne va non può restare in coda: occuperebbe un posto per sempre.
+    await lobbyManager.handleMemberLeft(client, member.id).catch((err) => {
+      logger.error(`IHL: errore nel togliere ${member.id} dalle code`, err);
     });
   },
 };
