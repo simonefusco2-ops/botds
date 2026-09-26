@@ -105,7 +105,9 @@ module.exports = {
 
   /**
    * Duello di riflessi fra i due capitani, al posto del lancio della moneta:
-   * decide chi apre il draft. Dopo un'attesa casuale compare il bottone SPARA,
+   * decide chi apre il draft. Prima entrambi premono PRONTO (entro
+   * `readyTimeout` secondi: chi non lo fa perde, se non lo fa nessuno decide
+   * la moneta). Poi, dopo un'attesa casuale, compare il bottone SPARA,
    * e vince chi lo preme per primo; chi preme prima del segnale perde. Se
    * nessuno spara entro `timeout` secondi decide la moneta.
    * Con `enabled: false` si torna al lancio della moneta.
@@ -115,13 +117,19 @@ module.exports = {
     minDelay: 1,
     maxDelay: 3,
     timeout: 10,
+    readyTimeout: 60,
     title: '🔫 **DUELLO** · {a} vs {b}',
+    askReady: 'Premete **Pronto** tutti e due: appena lo siete parte il duello.',
+    readyButton: 'Pronto',
+    readyStatus: '{a} {statoA}  ·  {b} {statoB}',
     ready: 'Preparatevi… sparate solo quando il bottone diventa **SPARA!**',
     waitButton: 'Aspetta…',
     fireButton: 'SPARA!',
     win: '🏆 {vincitore} ha sparato per primo ({tempo} s): apre il draft.',
     falseStart: '💥 {perdente} ha sparato prima del segnale! {vincitore} apre il draft.',
     noShot: '🪙 Nessuno ha sparato: decide la moneta. {vincitore} apre il draft.',
+    notReady: '⌛ {perdente} non si è messo pronto in tempo: {vincitore} apre il draft.',
+    nobodyReady: '🪙 Nessuno dei due si è messo pronto: decide la moneta. {vincitore} apre il draft.',
   },
 
   // Canale dove finisce la cronaca delle partite: "partita avviata", il

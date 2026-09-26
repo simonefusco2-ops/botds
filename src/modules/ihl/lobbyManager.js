@@ -800,28 +800,44 @@ function duelText(template, values) {
   return Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, value), template);
 }
 
-function duelComponents(lobbyId, armed) {
+/** Il bottone del momento: Pronto, poi Aspetta…, poi SPARA. */
+function duelComponents(lobbyId, phase) {
   const d = ihlConfig.duel;
-  return [
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`ihl_duel:${lobbyId}`)
-        .setLabel(armed ? d.fireButton : d.waitButton)
-        .setEmoji(armed ? '🔫' : '⏳')
-        .setStyle(armed ? ButtonStyle.Danger : ButtonStyle.Secondary),
-    ),
-  ];
+  const button = new ButtonBuilder().setCustomId(`ihl_duel:${lobbyId}`);
+
+  if (phase === 'ready') {
+    button.setCustomId(`ihl_duel_ready:${lobbyId}`).setLabel(d.readyButton).setEmoji('✋').setStyle(ButtonStyle.Success);
+  } else if (phase === 'fire') {
+    button.setLabel(d.fireButton).setEmoji('🔫').setStyle(ButtonStyle.Danger);
+  } else {
+    button.setLabel(d.waitButton).setEmoji('⏳').setStyle(ButtonStyle.Secondary);
+  }
+
+  return [new ActionRowBuilder().addComponents(button)];
+}
+
+function readyContent(lobby, duel) {
+  const d = ihlConfig.duel;
+  const mark = (id) => (duel.ready.has(id) ? '✅' : '⬜');
+  const status = duelText(d.readyStatus, {
+    a: `<@${lobby.captain_a}>`,
+    b: `<@${lobby.captain_b}>`,
+    statoA: mark(lobby.captain_a),
+    statoB: mark(lobby.captain_b),
+  });
+  return `${duel.header}\n${d.askReady}\n${status}`;
 }
 
 async function startDuel(client, lobby) {
   const d = ihlConfig.duel;
   const channel = await client.channels.fetch(lobby.text_channel_id).catch(() => null);
   const header = duelText(d.title, { a: `<@${lobby.captain_a}>`, b: `<@${lobby.captain_b}>` });
+  const duel = { message: null, header, phase: 'ready', ready: new Set(), signalAt: null };
 
   const message = await channel
     ?.send({
-      content: `${header}\n${d.ready}`,
-      components: duelComponents(lobby.id, false),
+      content: readyContent(lobby, duel),
+      components: duelComponents(lobby.id, 'ready'),
       allowedMentions: { users: [lobby.captain_a, lobby.captain_b] },
     })
     .catch(() => null);
@@ -829,21 +845,56 @@ async function startDuel(client, lobby) {
   // Senza messaggio non c'è duello: decide la moneta.
   if (!message) return resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'noShot');
 
-  const duel = { message, header, signalAt: null };
+  duel.message = message;
   duels.set(lobby.id, duel);
 
+  // Chi non si mette pronto non può tenere ferma la partita.
+  scheduleTimeout(client, lobby.id, d.readyTimeout, async () => {
+    if (duels.get(lobby.id) !== duel || duel.phase !== 'ready') return;
+    const [only] = [...duel.ready];
+    if (only) return resolveDuel(client, lobby.id, only, 'notReady');
+    return resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'nobodyReady');
+  });
+}
+
+/** Click su Pronto. Con entrambi pronti parte l'attesa casuale prima di SPARA. */
+async function pressReady(client, interaction, lobbyId) {
+  const lobby = lobbyRepository.find(lobbyId);
+  const duel = duels.get(lobbyId);
+
+  if (!lobby || lobby.state !== 'duel' || !duel || duel.phase !== 'ready') {
+    return interaction.reply({ content: '⚠️ Il duello è già partito o finito.', ephemeral: true });
+  }
+
+  const id = interaction.user.id;
+  if (id !== lobby.captain_a && id !== lobby.captain_b) {
+    return interaction.reply({ content: '⛔ Il duello è solo fra i due capitani.', ephemeral: true });
+  }
+
+  // Deciso in modo sincrono: due "pronto" simultanei fanno partire il duello una volta sola.
+  duel.ready.add(id);
+  if (duel.ready.size < 2) {
+    return interaction.update({ content: readyContent(lobby, duel), components: duelComponents(lobbyId, 'ready') });
+  }
+
+  duel.phase = 'wait';
+  const d = ihlConfig.duel;
   const delay = d.minDelay + Math.random() * Math.max(0, d.maxDelay - d.minDelay);
-  scheduleTimeout(client, lobby.id, delay, async () => {
-    if (duels.get(lobby.id) !== duel) return;
+
+  scheduleTimeout(client, lobbyId, delay, async () => {
+    if (duels.get(lobbyId) !== duel) return;
 
     // Armato PRIMA di mostrare il bottone: un click che arriva mentre la
     // modifica viaggia è già valido, non una falsa partenza.
+    duel.phase = 'fire';
     duel.signalAt = Date.now();
-    scheduleTimeout(client, lobby.id, d.timeout, () =>
-      resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'noShot'),
+    scheduleTimeout(client, lobbyId, d.timeout, () =>
+      resolveDuel(client, lobbyId, pickRandom([lobby.captain_a, lobby.captain_b]), 'noShot'),
     );
-    await message.edit({ components: duelComponents(lobby.id, true) }).catch(() => {});
+    await duel.message.edit({ components: duelComponents(lobbyId, 'fire') }).catch(() => {});
   });
+
+  return interaction.update({ content: `${duel.header}\n${d.ready}`, components: duelComponents(lobbyId, 'wait') });
 }
 
 /**
@@ -862,6 +913,10 @@ async function pressDuel(client, interaction, lobbyId) {
   const shooter = interaction.user.id;
   if (shooter !== lobby.captain_a && shooter !== lobby.captain_b) {
     return interaction.reply({ content: '⛔ Il duello è solo fra i due capitani.', ephemeral: true });
+  }
+
+  if (duel.phase === 'ready') {
+    return interaction.reply({ content: '✋ Prima dovete essere pronti tutti e due.', ephemeral: true });
   }
 
   const other = shooter === lobby.captain_a ? lobby.captain_b : lobby.captain_a;
@@ -1381,6 +1436,7 @@ module.exports = {
   chooseSide,
   banMap,
   pressDuel,
+  pressReady,
   unstickLobby,
   pickPlayer,
   castVote,

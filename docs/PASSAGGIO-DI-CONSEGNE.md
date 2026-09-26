@@ -41,7 +41,8 @@ CHECK-IN      canale testuale privato della partita + stanza vocale di check-in;
               ognuno riceve un DM con il bottone per entrare nel check-in;
               chi è già in vocale viene trascinato dentro. Dopo 7 minuti lo staff
               può sostituire chi non si presenta (/ihl sostituisci)
-DUELLO        duello di riflessi fra i capitani: dopo 1-3 s compare SPARA, chi
+DUELLO        i due capitani premono PRONTO (60 s: chi non lo fa perde), poi
+              duello di riflessi: dopo 1-3 s compare SPARA, chi
               preme per primo apre il draft; chi preme prima perde; nessuno
               entro 10 s → moneta (config/ihl.config.js, `duel`)
 DRAFT         i capitani si alternano scegliendo i giocatori; accanto a ogni nome
