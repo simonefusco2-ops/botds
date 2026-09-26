@@ -33,7 +33,11 @@ const {
 /**
  * Ciclo di vita di una partita:
  *
- *   queue → checkin → side → draft → ban → live → closed
+ *   queue → checkin → draft → ban → side → live → closed
+ *
+ * Lo stesso ordine di FACEIT: prima le squadre, poi il veto delle mappe, e il
+ * lato lo sceglie chi NON ha fatto l'ultimo ban (chi ha deciso la mappa non
+ * decide anche il lato).
  *
  * La coda vive nel canale del pannello. Appena si riempie nasce un canale
  * testuale privato: da lì in poi tutto — check-in, coinflip, lato, ban, draft e
@@ -735,7 +739,8 @@ async function applyPlayerPermissions(client, lobby, outId, inId) {
 
 /**
  * I due ELO più alti fanno i capitani, ma chi sceglie per primo lo decide il
- * lancio della moneta: il più forte non parte avvantaggiato anche nel veto.
+ * lancio della moneta. Chi vince apre il draft; l'altro apre il veto e, con un
+ * numero pari di ban, sceglie anche il lato. Così nessuno prende tutto.
  */
 async function startPicks(client, lobby) {
   const ranked = ihlRepository
@@ -754,7 +759,7 @@ async function startPicks(client, lobby) {
   const mapPool = pool.map((map) => map.name);
 
   const updated = lobbyRepository.update(lobby.id, {
-    state: 'side',
+    state: 'draft',
     captain_a: captainA,
     captain_b: captainB,
     team_a: [captainA],
@@ -769,14 +774,12 @@ async function startPicks(client, lobby) {
     ?.send({
       content:
         '🪙 **Lancio della moneta**\n' +
-        `Capitani: <@${captainA}> e <@${captainB}>. Il sorteggio ha scelto **<@${first}>**, che apre le scelte.`,
+        `Capitani: <@${captainA}> e <@${captainB}>. Il sorteggio ha scelto **<@${first}>**, che apre il draft.`,
       allowedMentions: { users: [first] },
     })
     .catch(() => {});
 
-  scheduleTimeout(client, lobby.id, ihlConfig.timers.sideChoice, () =>
-    chooseSide(client, lobby.id, pickRandom(['attack', 'defense']), true),
-  );
+  scheduleTimeout(client, lobby.id, ihlConfig.timers.pick, () => autoPick(client, lobby.id));
 
   return renderMatch(client, updated);
 }
@@ -787,18 +790,29 @@ async function chooseSide(client, lobbyId, side, automatic = false) {
 
   clearTimer(lobbyId);
 
-  // Chi ha scelto il lato non apre anche il draft: la prima scelta va all'altro.
-  const other = lobby.turn === lobby.captain_a ? lobby.captain_b : lobby.captain_a;
-
   // Il lato si registra sempre dal punto di vista del Team A.
   const sideA = lobby.turn === lobby.captain_a ? side : side === 'attack' ? 'defense' : 'attack';
 
-  const updated = lobbyRepository.update(lobbyId, { state: 'draft', side_a: sideA, turn: other });
-
   if (automatic) logger.info(`IHL lobby ${lobbyId}: lato scelto dal bot (${side}).`);
 
-  scheduleTimeout(client, lobbyId, ihlConfig.timers.pick, () => autoPick(client, lobbyId));
-  return renderMatch(client, updated);
+  // Partite aperte con l'ordine vecchio (lato prima del draft): finiscono così.
+  if (!lobby.chosen_map) {
+    const other = lobby.turn === lobby.captain_a ? lobby.captain_b : lobby.captain_a;
+    const updated = lobbyRepository.update(lobbyId, { state: 'draft', side_a: sideA, turn: other });
+    scheduleTimeout(client, lobbyId, ihlConfig.timers.pick, () => autoPick(client, lobbyId));
+    return renderMatch(client, updated);
+  }
+
+  // Lato scelto: la partita parte. Stato cambiato prima di ogni await.
+  const updated = lobbyRepository.update(lobbyId, { state: 'live', side_a: sideA, turn: null });
+
+  // Prima la scheda e l'annuncio, poi le vocali: creare stanze e spostare
+  // dieci persone richiede secondi, e intanto tutti devono sapere dove si gioca.
+  await renderMatch(client, updated).catch((err) =>
+    logger.error(`IHL lobby ${lobbyId}: scheda della partita non aggiornata`, err),
+  );
+  await announceSides(client, updated);
+  await setupVoiceChannels(client, updated);
 }
 
 // --- fase 4: ban delle mappe ------------------------------------------------
@@ -815,26 +829,24 @@ async function banMap(client, lobbyId, mapName, automatic = false) {
 
   if (automatic) logger.info(`IHL lobby ${lobbyId}: ban automatico di ${mapName}.`);
 
-  // Resta una sola mappa: si gioca lì, e i giocatori vanno nelle vocali.
+  const nextTurn = lobby.turn === lobby.captain_a ? lobby.captain_b : lobby.captain_a;
+
+  // Resta una sola mappa: si gioca lì. Il lato lo sceglie chi non ha fatto
+  // l'ultimo ban, come su FACEIT.
   if (left.length === 1) {
     const updated = lobbyRepository.update(lobbyId, {
-      state: 'live',
+      state: 'side',
       banned_maps: banned,
       chosen_map: left[0].name,
-      turn: null,
+      turn: nextTurn,
     });
 
-    // Prima la scheda e l'annuncio, poi le vocali: creare stanze e spostare
-    // dieci persone richiede secondi, e intanto tutti devono sapere dove si gioca.
-    await renderMatch(client, updated).catch((err) =>
-      logger.error(`IHL lobby ${lobbyId}: scheda della partita non aggiornata`, err),
+    scheduleTimeout(client, lobbyId, ihlConfig.timers.sideChoice, () =>
+      chooseSide(client, lobbyId, pickRandom(['attack', 'defense']), true),
     );
-    await announceSides(client, updated);
-    await setupVoiceChannels(client, updated);
-    return;
+    return renderMatch(client, updated);
   }
 
-  const nextTurn = lobby.turn === lobby.captain_a ? lobby.captain_b : lobby.captain_a;
   const updated = lobbyRepository.update(lobbyId, { banned_maps: banned, turn: nextTurn });
 
   scheduleTimeout(client, lobbyId, ihlConfig.timers.mapBan, () => autoBan(client, lobbyId));
@@ -884,14 +896,15 @@ async function pickPlayer(client, lobbyId, playerId, automatic = false) {
 
   const half = ihlConfig.queueSize / 2;
 
-  // Squadre complete: si passa al veto delle mappe, che apre chi ha vinto il
-  // sorteggio (l'altro capitano ha già aperto il draft).
+  // Squadre complete: si passa al veto delle mappe, che apre chi NON ha vinto
+  // il sorteggio (il vincitore ha già aperto il draft).
   if (teamA.length >= half && teamB.length >= half) {
+    const first = lobby.first_pick || lobby.captain_a;
     const updated = lobbyRepository.update(lobbyId, {
       team_a: teamA,
       team_b: teamB,
       state: 'ban',
-      turn: lobby.first_pick || lobby.captain_a,
+      turn: first === lobby.captain_a ? lobby.captain_b : lobby.captain_a,
     });
 
     scheduleTimeout(client, lobbyId, ihlConfig.timers.mapBan, () => autoBan(client, lobbyId));

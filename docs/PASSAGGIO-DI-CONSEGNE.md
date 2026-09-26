@@ -15,8 +15,8 @@ cose, in ordine di importanza:
 
 1. **Manda le IPL, la In-House League.** Dieci persone entrano in coda da un
    pannello, il bot forma la partita e la porta avanti da solo fino al risultato:
-   check-in in vocale, coinflip, scelta del lato, draft dei giocatori, ban delle
-   mappe, voto del vincitore, ELO aggiornato, classifica riscritta.
+   check-in in vocale, coinflip, draft dei giocatori, ban delle mappe, scelta
+   del lato, voto del vincitore, ELO aggiornato, classifica riscritta.
 2. **Smista le persone.** Verifica il rank Valorant dal link tracker.gg, assegna
    il ruolo del rank, raccoglie i ruoli di gioco (Duelist, Initiator, Controller,
    Sentinel) e dà l'accesso alle IPL quando i requisiti sono entrambi soddisfatti.
@@ -41,11 +41,12 @@ CHECK-IN      canale testuale privato della partita + stanza vocale di check-in;
               ognuno riceve un DM con il bottone per entrare nel check-in;
               chi è già in vocale viene trascinato dentro. Dopo 7 minuti lo staff
               può sostituire chi non si presenta (/ihl sostituisci)
-COINFLIP      decide chi dei due capitani scegli per primo (non l'ELO)
-LATO          il capitano scelto prende attacco o difesa
+COINFLIP      decide chi dei due capitani apre il draft (non l'ELO)
 DRAFT         i capitani si alternano scegliendo i giocatori; accanto a ogni nome
               compaiono le emoji del rank e dei ruoli di gioco
-BAN MAPPE     dopo il draft, a turno, su tutte le 7 mappe attive
+BAN MAPPE     a turno su tutte le 7 mappe attive; apre l'altro capitano
+LATO          come su FACEIT: attacco o difesa li sceglie chi NON ha fatto
+              l'ultimo ban (con 7 mappe, lo stesso capitano che ha aperto il veto)
 LIVE          due stanze vocali, squadre spostate dentro
 VOTO          i 10 votano il vincitore nel canale della partita: **prima squadra a
               6 voti**, nessuna scadenza (le partite possono durare ore)

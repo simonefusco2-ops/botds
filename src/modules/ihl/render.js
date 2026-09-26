@@ -232,11 +232,22 @@ function buildMatchEmbed(lobby, extra = {}) {
   }
 
   if (lobby.state === 'side') {
+    // Ordine vecchio (lato prima del draft): solo per le partite già aperte.
+    if (!lobby.chosen_map) {
+      embed.setDescription(
+        `👑 Capitani: <@${lobby.captain_a}> e <@${lobby.captain_b}>\n\n` +
+          `🪙 Tocca a <@${lobby.turn}> scegliere da che lato iniziare.\n` +
+          '-# Alla scadenza del tempo decide il bot.',
+      );
+      return embed;
+    }
+
     embed.setDescription(
-      `👑 Capitani: <@${lobby.captain_a}> e <@${lobby.captain_b}>\n\n` +
-        `🪙 **Lancio della moneta:** tocca a <@${lobby.turn}> scegliere da che lato iniziare.\n` +
+      `🗺️ **Mappa:** ${lobby.chosen_map}\n\n` +
+        `Tocca a <@${lobby.turn}> scegliere **da che lato inizia la sua squadra**: non ha fatto l'ultimo ban.\n` +
         '-# Alla scadenza del tempo decide il bot.',
     );
+    embed.addFields(teamField(lobby, 'a'), teamField(lobby, 'b'));
     return embed;
   }
 
