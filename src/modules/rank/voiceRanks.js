@@ -7,7 +7,7 @@
  * Copyright (c) 2026 Fusco. Tutti i diritti riservati.
  * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
  */
-const { ChannelType } = require('discord.js');
+const { ChannelType, Routes } = require('discord.js');
 const rankConfig = require('../../../config/rank.config');
 const logger = require('../../utils/logger');
 
@@ -17,15 +17,18 @@ const logger = require('../../utils/logger');
  * Entra qualcuno → la sua emoji si aggiunge, esce → sparisce. Il rank si legge
  * dai ruoli Discord, quindi vale per chiunque abbia fatto la verifica.
  *
- * DUE LIMITI DI DISCORD, da tenere a mente leggendo questo file:
+ * Si scrive nello **stato del canale vocale** (`PUT /channels/{id}/voice-status`),
+ * la riga che Discord mostra sotto il nome: accetta le emoji del server — quindi
+ * i loghini veri dei rank — e non ha il tetto delle rinomine, così la lista sta
+ * dietro al viavai quasi in tempo reale.
  *
- *  1. nei nomi dei canali le emoji del server non esistono — si usano le
- *     `nameEmoji` unicode, non i loghini caricati;
- *  2. un canale si rinomina **due volte ogni dieci minuti**. Rinominare a ogni
- *     entrata e uscita è impossibile: le richieste finirebbero in coda e il
- *     nome resterebbe indietro di minuti. Per questo si aspetta che il viavai
- *     si fermi e si scrive una volta sola, saltando del tutto le scritture che
- *     non cambierebbero niente.
+ * Il ripiego `mode: 'name'` rinomina il canale, ma lì valgono due limiti di
+ * Discord: nei nomi le emoji del server non esistono (si usano le `nameEmoji`
+ * unicode) e un canale si rinomina solo due volte ogni dieci minuti, quindi la
+ * lista resta indietro. Per questo lo stato è la modalità predefinita.
+ *
+ * In entrambi i casi le scritture sono raggruppate: si aspetta che il viavai si
+ * fermi e si scrive una volta sola, saltando quelle che non cambierebbero nulla.
  */
 
 /** Rinomine in attesa, per canale: l'ultima vince. */
@@ -51,17 +54,30 @@ function rankOf(member) {
   return rankConfig.ranks.find((rank) => rank.roleId && member.roles.cache.has(rank.roleId)) || null;
 }
 
-/** Le emoji di chi è nella stanza, dal rank più alto al più basso. */
-function emojisIn(channel) {
+/** I rank di chi è nella stanza, dal più alto al più basso. */
+function ranksIn(channel) {
   const order = new Map(rankConfig.ranks.map((rank, index) => [rank.name, index]));
 
   return [...channel.members.values()]
     .map((member) => rankOf(member))
     .filter(Boolean)
     .sort((a, b) => order.get(b.name) - order.get(a.name))
-    .slice(0, settings().maxEmojis)
+    .slice(0, settings().maxEmojis);
+}
+
+/** Le emoji unicode, le uniche che funzionano nei nomi dei canali. */
+function emojisIn(channel) {
+  return ranksIn(channel)
     .map((rank) => rank.nameEmoji)
     .filter(Boolean);
+}
+
+/** Lo stato da scrivere sotto il nome: qui le emoji del server si vedono. */
+function wantedStatus(channel) {
+  return ranksIn(channel)
+    .map((rank) => rank.emoji)
+    .filter(Boolean)
+    .join(' ');
 }
 
 /**
@@ -118,28 +134,61 @@ function wantedName(channel) {
 function schedule(channel) {
   if (!watches(channel)) return;
 
+  const { mode, debounceMs, renameDebounceMs } = settings();
+  const wait = mode === 'name' ? renameDebounceMs : debounceMs;
+
   clearTimeout(pending.get(channel.id));
 
   const timer = setTimeout(() => {
     pending.delete(channel.id);
-    apply(channel).catch((err) => logger.warn(`Vocali: rinomina di ${channel.id} fallita: ${err.message}`));
-  }, settings().debounceMs);
+    apply(channel).catch((err) => logger.warn(`Vocali: aggiornamento di ${channel.id} fallito: ${err.message}`));
+  }, wait);
 
   timer.unref?.();
   pending.set(channel.id, timer);
 }
 
+/** L'ultimo stato scritto per canale: evita di riscrivere lo stesso. */
+const lastStatus = new Map();
+
 async function apply(channel) {
   // La stanza può essere sparita nel frattempo: le vocali di partita si cancellano.
   const fresh = await channel.client.channels.fetch(channel.id).catch(() => null);
-  if (!fresh || !watches(fresh)) return;
+  if (!fresh || !watches(fresh)) {
+    lastStatus.delete(channel.id);
+    return;
+  }
 
-  const wanted = wantedName(fresh);
-  if (wanted === fresh.name) return;
+  if (settings().mode === 'name') return applyName(fresh);
+  return applyStatus(fresh);
+}
+
+/**
+ * Scrive lo stato del canale. discord.js non ha ancora un metodo dedicato, ma
+ * la rotta esiste: la chiamiamo direttamente.
+ */
+async function applyStatus(channel) {
+  const wanted = wantedStatus(channel);
+  if (lastStatus.get(channel.id) === wanted) return;
+
+  try {
+    await channel.client.rest.put(Routes.channelVoiceStatus(channel.id), { body: { status: wanted } });
+    lastStatus.set(channel.id, wanted);
+    logger.info(`Vocali: stato di "${channel.name}" → "${wanted || '(vuoto)'}".`);
+  } catch (err) {
+    // 403 qui significa quasi sempre che manca "Imposta stato canale vocale".
+    const hint = err.status === 403 ? ' — al bot manca il permesso "Imposta stato canale vocale".' : '';
+    logger.warn(`Vocali: stato di "${channel.name}" non aggiornato: ${err.message}${hint}`);
+  }
+}
+
+async function applyName(channel) {
+  const wanted = wantedName(channel);
+  if (wanted === channel.name) return;
 
   // Il nome va letto prima: dopo setName l'oggetto porta già quello nuovo.
-  const before = fresh.name;
-  await fresh.setName(wanted);
+  const before = channel.name;
+  await channel.setName(wanted);
   logger.info(`Vocali: "${before}" → "${wanted}".`);
 }
 
@@ -152,4 +201,14 @@ function handleVoiceUpdate(oldState, newState) {
   }
 }
 
-module.exports = { handleVoiceUpdate, wantedName, baseName, emojisIn, rankOf, watches, schedule };
+module.exports = {
+  handleVoiceUpdate,
+  wantedStatus,
+  wantedName,
+  baseName,
+  ranksIn,
+  emojisIn,
+  rankOf,
+  watches,
+  schedule,
+};

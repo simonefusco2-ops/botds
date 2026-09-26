@@ -72,29 +72,33 @@ module.exports = {
   ],
 
   /**
-   * Elenco dei rank nel nome delle stanze vocali.
+   * Elenco dei rank di chi è dentro una stanza vocale.
    *
-   * ⚠️  Due limiti di Discord, entrambi invalicabili:
-   *   1. nei nomi dei canali le emoji del server NON esistono: uscirebbero come
-   *      testo `<:IRON3:123>`. Si usano quindi le `nameEmoji` unicode.
-   *   2. un canale può essere rinominato solo DUE VOLTE OGNI DIECI MINUTI.
-   *      Oltre, Discord mette la richiesta in coda per minuti. Per questo le
-   *      rinomine sono raggruppate: si aspetta che il viavai si calmi
-   *      (`debounceMs`) e si scrive una volta sola.
+   * `mode: 'status'` scrive nello **stato del canale vocale**, la riga che
+   * Discord mostra sotto il nome: accetta le emoji del server e si può
+   * aggiornare spesso, quindi la lista è praticamente in tempo reale.
+   *
+   * `mode: 'name'` rinomina il canale. Sconsigliato: nei nomi le emoji del
+   * server non esistono (si ripiega sulle `nameEmoji` unicode) e Discord
+   * consente solo DUE rinomine ogni dieci minuti per canale, quindi la lista
+   * resta indietro. Resta disponibile come ripiego.
    */
   voiceRanks: {
     enabled: true,
+    mode: 'status',
 
     // Vuoti = tutte le vocali del server. Riempine uno per restringere.
     categoryIds: [],
     channelIds: [],
 
-    // Quanto aspettare, dall'ultimo movimento, prima di rinominare.
-    debounceMs: 20000,
+    // Attesa dall'ultimo movimento prima di scrivere: con lo stato bastano
+    // pochi secondi, con la rinomina serve molto di più per via del limite.
+    debounceMs: 3000,
+    renameDebounceMs: 20000,
 
-    // Cosa separa il nome dalle emoji, e quante emoji al massimo.
-    separator: ' · ',
+    // Quante emoji al massimo, e cosa separa il nome dalle emoji (solo 'name').
     maxEmojis: 10,
+    separator: ' · ',
   },
 
   // Soglia raccontata nel regolamento: da qui in su si gioca nella Pro.

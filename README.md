@@ -59,6 +59,10 @@ Tutte le stanze temporanee sono visibili a tutto il server — il Discord si ved
 
 I capitani sono i due ELO più alti, ma **chi apre le scelte lo decide un sorteggio**. L'ordine delle fasi è lato, draft e infine ban delle mappe, che parte da tutte quelle in rotazione. Il voto del vincitore non ha scadenza: l'ELO viene assegnato appena una squadra raggiunge la maggioranza dei voti. Altri comandi: `/ihl profilo`, `/ihl partite`, `/ihl risultato`, `/ihl elo-modifica`, `/ihl annulla`.
 
+## Rank di chi è in vocale
+
+A ogni entrata e uscita il bot scrive nello **stato del canale vocale** (la riga sotto il nome) le emoji dei rank presenti, ordinate dal più alto. Lo stato accetta le emoji del server e non ha il tetto delle rinomine, quindi la lista è praticamente in tempo reale. Si configura in `config/rank.config.js` → `voiceRanks`: `mode: 'status'` (predefinito) oppure `'name'`, che rinomina il canale ma usa emoji unicode ed è limitato a due rinomine ogni dieci minuti. Serve al bot il permesso **Imposta stato canale vocale**.
+
 ## Ruoli di gioco e verifica del rank
 
 `/pannello-ruoli` pubblica il pannello "Richiesta rank e ruoli" (banner opzionale, testo in `config/ruoli.config.js`): quattro bottoni per i ruoli di gioco, che ognuno si assegna e si toglie da solo, e un bottone che apre una finestra dove si incolla il link del proprio profilo **tracker.gg**.
