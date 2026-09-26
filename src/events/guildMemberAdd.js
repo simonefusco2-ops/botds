@@ -10,6 +10,7 @@
 const config = require('../config');
 const logger = require('../utils/logger');
 const memberLogger = require('../modules/memberLog/memberLogger');
+const separators = require('../modules/separators/separators');
 
 module.exports = {
   name: 'guildMemberAdd',
@@ -18,6 +19,10 @@ module.exports = {
     // di confrontare i contatori il prima possibile dopo l'ingresso.
     await memberLogger.logJoin(member).catch((err) => {
       logger.error(`Errore log ingresso di ${member.user.tag}`, err);
+    });
+
+    await separators.sync(member).catch((err) => {
+      logger.error(`Errore assegnazione separatori a ${member.user.tag}`, err);
     });
 
     if (!config.autoRoleId) return;

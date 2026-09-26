@@ -123,6 +123,7 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 | IPL PRO / IPL OPEN | `1553355794320326736` / `1553024176129048656` | `config/rank.config.js` |
 | Nove ruoli dei rank | da Ferro a Radiante | `config/rank.config.js` |
 | Quattro ruoli di gioco | Duelist, Initiator, Controller, Sentinel | `config/ruoli.config.js` |
+| Separatori community / rank / ruoli | `1553405950826778684` / `1553403291013218425` / `1553351503027376210` | `config/separatori.config.js` |
 
 Gli altri (staff, categorie ticket, canali di log) stanno nel `.env` sulla VPS;
 `.env.example` elenca le variabili.
@@ -143,7 +144,8 @@ bot, porta `API_PORT` (default 3000).
 **Da fare sulla VPS (non è codice)**
 - [ ] `HENRIK_API_KEY` nel `.env` — e **rigenerare la chiave**, è già passata in chat
 - [ ] `npm run prova-rank` per validare la lettura del rank dalla VPS
-- [ ] il ruolo del bot va **sopra** i ruoli dei rank e quelli IPL, o non li assegna
+- [ ] il ruolo del bot va **sopra** i ruoli dei rank, quelli IPL e i separatori, o non li assegna
+- [ ] ID del **separatore staff** in `config/separatori.config.js` (`staff.roleId`)
 - [ ] permesso **«Imposta stato canale vocale»** per i rank in vocale
 - [ ] ripubblicare i pannelli delle due leghe e le classifiche
 - [ ] tolto il modulo Faceit: `npm run deploy-commands` (sparisce `/link`) e

@@ -13,6 +13,7 @@ const inviteTracker = require('../modules/memberLog/inviteTracker');
 const twitchWatcher = require('../modules/twitch/twitchWatcher');
 const rssWatcher = require('../modules/social/rssWatcher');
 const ihlLobbyManager = require('../modules/ihl/lobbyManager');
+const separators = require('../modules/separators/separators');
 
 module.exports = {
   name: 'ready',
@@ -27,6 +28,11 @@ module.exports = {
     await ihlLobbyManager.resumeLobbies(client).catch((err) => {
       logger.error('Errore nel ripristino delle partite IHL', err);
     });
+
+    // Senza await: su tutto il server richiede tempo, e il resto non deve aspettare.
+    if (guild) {
+      separators.syncAll(guild).catch((err) => logger.error('Errore nei separatori all\'avvio', err));
+    }
 
     twitchWatcher.start(client);
     rssWatcher.start(client);

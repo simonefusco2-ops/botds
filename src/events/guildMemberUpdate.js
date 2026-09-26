@@ -10,6 +10,7 @@
 const logger = require('../utils/logger');
 const iplAccess = require('../modules/rank/iplAccess');
 const notify = require('../modules/rank/notify');
+const separators = require('../modules/separators/separators');
 
 /**
  * L'accesso alle IPL dipende dai ruoli, quindi va ricontrollato ogni volta che
@@ -25,6 +26,12 @@ module.exports = {
       const uguali = oldMember.roles.cache.every((role) => newMember.roles.cache.has(role.id));
       if (uguali) return;
     }
+
+    // Chi entra o esce dallo staff guadagna o perde il separatore staff; e se
+    // qualcuno toglie a mano un separatore, torna.
+    await separators.sync(newMember).catch((err) => {
+      logger.error(`Errore nei separatori di ${newMember.id}`, err);
+    });
 
     // Come stava prima, per capire dopo cosa è cambiato davvero.
     const prima = notify.snapshot(oldMember);
