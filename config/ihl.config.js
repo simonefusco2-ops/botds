@@ -103,6 +103,27 @@ module.exports = {
     substituteAfter: 420,
   },
 
+  /**
+   * Duello di riflessi fra i due capitani, al posto del lancio della moneta:
+   * decide chi apre il draft. Dopo un'attesa casuale compare il bottone SPARA,
+   * e vince chi lo preme per primo; chi preme prima del segnale perde. Se
+   * nessuno spara entro `timeout` secondi decide la moneta.
+   * Con `enabled: false` si torna al lancio della moneta.
+   */
+  duel: {
+    enabled: true,
+    minDelay: 1,
+    maxDelay: 3,
+    timeout: 10,
+    title: '🔫 **DUELLO** · {a} vs {b}',
+    ready: 'Preparatevi… sparate solo quando il bottone diventa **SPARA!**',
+    waitButton: 'Aspetta…',
+    fireButton: 'SPARA!',
+    win: '🏆 {vincitore} ha sparato per primo ({tempo} s): apre il draft.',
+    falseStart: '💥 {perdente} ha sparato prima del segnale! {vincitore} apre il draft.',
+    noShot: '🪙 Nessuno ha sparato: decide la moneta. {vincitore} apre il draft.',
+  },
+
   // Canale dove finisce la cronaca delle partite: "partita avviata", il
   // risultato con i punti e gli annullamenti. Lasciandolo vuoto, quei messaggi
   // restano nel canale delle code come prima.

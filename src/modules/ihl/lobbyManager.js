@@ -33,7 +33,7 @@ const {
 /**
  * Ciclo di vita di una partita:
  *
- *   queue → checkin → draft → ban → side → live → closed
+ *   queue → checkin → duel → draft → ban → side → live → closed
  *
  * Lo stesso ordine di FACEIT: prima le squadre, poi il veto delle mappe, e il
  * lato lo sceglie chi NON ha fatto l'ultimo ban (chi ha deciso la mappa non
@@ -739,8 +739,9 @@ async function applyPlayerPermissions(client, lobby, outId, inId) {
 
 /**
  * I due ELO più alti fanno i capitani, ma chi sceglie per primo lo decide il
- * lancio della moneta. Chi vince apre il draft; l'altro apre il veto e, con un
- * numero pari di ban, sceglie anche il lato. Così nessuno prende tutto.
+ * duello di riflessi (o la moneta). Chi vince apre il draft; l'altro apre il
+ * veto e, con un numero pari di ban, sceglie anche il lato. Così nessuno
+ * prende tutto.
  */
 async function startPicks(client, lobby) {
   const ranked = ihlRepository
@@ -749,7 +750,6 @@ async function startPicks(client, lobby) {
     .map((player) => player.discord_id);
 
   const [captainA, captainB] = ranked;
-  const first = pickRandom([captainA, captainB]);
 
   // Il veto parte da tutte le mappe in rotazione. Solo se `mapPoolSize` indica
   // un numero se ne estrae a caso un sottoinsieme, per accorciarlo.
@@ -759,28 +759,150 @@ async function startPicks(client, lobby) {
   const mapPool = pool.map((map) => map.name);
 
   const updated = lobbyRepository.update(lobby.id, {
-    state: 'draft',
+    state: 'duel',
     captain_a: captainA,
     captain_b: captainB,
     team_a: [captainA],
     team_b: [captainB],
-    turn: first,
-    first_pick: first,
+    turn: null,
     map_pool: mapPool,
   });
 
-  const channel = await client.channels.fetch(updated.text_channel_id).catch(() => null);
-  await channel
+  await renderMatch(client, updated);
+
+  if (!ihlConfig.duel?.enabled) {
+    const first = pickRandom([captainA, captainB]);
+    const channel = await client.channels.fetch(updated.text_channel_id).catch(() => null);
+    await channel
+      ?.send({
+        content:
+          '🪙 **Lancio della moneta**\n' +
+          `Capitani: <@${captainA}> e <@${captainB}>. Il sorteggio ha scelto **<@${first}>**, che apre il draft.`,
+        allowedMentions: { users: [first] },
+      })
+      .catch(() => {});
+    return startDraft(client, lobby.id, first);
+  }
+
+  return startDuel(client, updated);
+}
+
+// --- duello di riflessi -------------------------------------------------------
+
+/**
+ * Duelli in corso, per lobby: il messaggio e l'istante del segnale. Stanno in
+ * memoria perché durano secondi; se il bot si riavvia nel mezzo, alla ripresa
+ * decide la moneta (vedi resumeLobbies).
+ */
+const duels = new Map();
+
+function duelText(template, values) {
+  return Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, value), template);
+}
+
+function duelComponents(lobbyId, armed) {
+  const d = ihlConfig.duel;
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`ihl_duel:${lobbyId}`)
+        .setLabel(armed ? d.fireButton : d.waitButton)
+        .setEmoji(armed ? '🔫' : '⏳')
+        .setStyle(armed ? ButtonStyle.Danger : ButtonStyle.Secondary),
+    ),
+  ];
+}
+
+async function startDuel(client, lobby) {
+  const d = ihlConfig.duel;
+  const channel = await client.channels.fetch(lobby.text_channel_id).catch(() => null);
+  const header = duelText(d.title, { a: `<@${lobby.captain_a}>`, b: `<@${lobby.captain_b}>` });
+
+  const message = await channel
     ?.send({
-      content:
-        '🪙 **Lancio della moneta**\n' +
-        `Capitani: <@${captainA}> e <@${captainB}>. Il sorteggio ha scelto **<@${first}>**, che apre il draft.`,
-      allowedMentions: { users: [first] },
+      content: `${header}\n${d.ready}`,
+      components: duelComponents(lobby.id, false),
+      allowedMentions: { users: [lobby.captain_a, lobby.captain_b] },
     })
-    .catch(() => {});
+    .catch(() => null);
 
-  scheduleTimeout(client, lobby.id, ihlConfig.timers.pick, () => autoPick(client, lobby.id));
+  // Senza messaggio non c'è duello: decide la moneta.
+  if (!message) return resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'noShot');
 
+  const duel = { message, header, signalAt: null };
+  duels.set(lobby.id, duel);
+
+  const delay = d.minDelay + Math.random() * Math.max(0, d.maxDelay - d.minDelay);
+  scheduleTimeout(client, lobby.id, delay, async () => {
+    if (duels.get(lobby.id) !== duel) return;
+
+    // Armato PRIMA di mostrare il bottone: un click che arriva mentre la
+    // modifica viaggia è già valido, non una falsa partenza.
+    duel.signalAt = Date.now();
+    scheduleTimeout(client, lobby.id, d.timeout, () =>
+      resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'noShot'),
+    );
+    await message.edit({ components: duelComponents(lobby.id, true) }).catch(() => {});
+  });
+}
+
+/**
+ * Click sul bottone del duello. Tutto il verdetto si decide in modo sincrono,
+ * prima di ogni await: due capitani che premono nello stesso istante non
+ * possono vincere entrambi.
+ */
+async function pressDuel(client, interaction, lobbyId) {
+  const lobby = lobbyRepository.find(lobbyId);
+  const duel = duels.get(lobbyId);
+
+  if (!lobby || lobby.state !== 'duel' || !duel) {
+    return interaction.reply({ content: '⚠️ Il duello è già finito.', ephemeral: true });
+  }
+
+  const shooter = interaction.user.id;
+  if (shooter !== lobby.captain_a && shooter !== lobby.captain_b) {
+    return interaction.reply({ content: '⛔ Il duello è solo fra i due capitani.', ephemeral: true });
+  }
+
+  const other = shooter === lobby.captain_a ? lobby.captain_b : lobby.captain_a;
+  const early = !duel.signalAt;
+  const winner = early ? other : shooter;
+  const seconds = early ? null : ((Date.now() - duel.signalAt) / 1000).toFixed(2).replace('.', ',');
+
+  const result = resolveDuel(client, lobbyId, winner, early ? 'falseStart' : 'win', seconds, interaction);
+  return result;
+}
+
+/** Chiude il duello con un vincitore e fa partire il draft. */
+async function resolveDuel(client, lobbyId, winner, outcome, seconds = null, interaction = null) {
+  const lobby = lobbyRepository.find(lobbyId);
+  if (!lobby || lobby.state !== 'duel') return;
+
+  const duel = duels.get(lobbyId);
+  duels.delete(lobbyId);
+  clearTimer(lobbyId);
+
+  const loser = winner === lobby.captain_a ? lobby.captain_b : lobby.captain_a;
+  const line = duelText(ihlConfig.duel[outcome], {
+    vincitore: `<@${winner}>`,
+    perdente: `<@${loser}>`,
+    tempo: seconds ?? '',
+  });
+
+  // Il passaggio al draft avviene qui, ancora in modo sincrono.
+  const started = startDraft(client, lobbyId, winner);
+
+  const payload = { content: `${duel?.header || ''}\n${line}`, components: [] };
+  if (interaction) await interaction.update(payload).catch(() => {});
+  else await duel?.message.edit(payload).catch(() => {});
+
+  return started;
+}
+
+/** Il vincitore del duello (o della moneta) apre il draft. */
+function startDraft(client, lobbyId, first) {
+  const updated = lobbyRepository.update(lobbyId, { state: 'draft', turn: first, first_pick: first });
+  scheduleTimeout(client, lobbyId, ihlConfig.timers.pick, () => autoPick(client, lobbyId));
   return renderMatch(client, updated);
 }
 
@@ -1171,6 +1293,12 @@ async function unstickLobby(client, lobbyId) {
     return { lobby: lobbyRepository.find(lobby.id), done };
   }
 
+  if (lobby.state === 'duel') {
+    await resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'noShot');
+    done.push('duello deciso con la moneta');
+    return { lobby: lobbyRepository.find(lobby.id), done };
+  }
+
   if (lobby.state === 'live') {
     // Un voto arrivato alla maggioranza mentre la scheda era bloccata.
     const { a, b } = countVotes(lobby);
@@ -1221,6 +1349,12 @@ async function resumeLobbies(client) {
       continue;
     }
 
+    // Un duello interrotto dal riavvio non si può riprendere: decide la moneta.
+    if (lobby.state === 'duel') {
+      await resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'noShot');
+      continue;
+    }
+
     rearmPhaseTimer(client, lobby);
 
     await renderMatch(client, lobby).catch((err) =>
@@ -1246,6 +1380,7 @@ module.exports = {
   startPicks,
   chooseSide,
   banMap,
+  pressDuel,
   unstickLobby,
   pickPlayer,
   castVote,
