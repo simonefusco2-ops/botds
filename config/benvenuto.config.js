@@ -57,12 +57,18 @@ module.exports = {
   rolesTitle: '🎮  Prendi il ruolo Valorant',
   rolesHint: 'Clicca il bottone per assegnartelo. Riclicca per rimuoverlo.',
 
+  /**
+   * Discord non ha bottoni neri né bottoni ridimensionabili: i colori sono
+   * cinque fissi e la larghezza dipende dalla lunghezza dell'etichetta.
+   * "secondary" è il grigio scuro, che sul tema scuro è la cosa più vicina al
+   * nero; l'etichetta lunga serve a farlo venire più largo.
+   */
   roles: [
     {
       id: '1548053779943788564',
-      label: 'Valorant',
+      label: 'Prendi il ruolo Valorant',
       emoji: '<:valorant_round:1548245738557939784>',
-      style: 'danger',
+      style: 'secondary',
     },
   ],
 
