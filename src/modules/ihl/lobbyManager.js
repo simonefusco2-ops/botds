@@ -7,7 +7,7 @@
  * Copyright (c) 2026 Fusco. Tutti i diritti riservati.
  * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
  */
-const { ChannelType, PermissionFlagsBits } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits } = require('discord.js');
 const ihlConfig = require('../../../config/ihl.config');
 const config = require('../../config');
 const logger = require('../../utils/logger');
@@ -474,6 +474,9 @@ async function openMatch(client, lobby) {
     return startPicks(client, updated);
   }
 
+  // Senza await: dieci DM richiedono qualche secondo e il check-in non li aspetta.
+  dmCheckin(client, updated, updated.players).catch((err) => logger.error(`IHL lobby ${lobby.id}: DM del check-in`, err));
+
   // Chi è già collegato da qualche parte lo porta dentro il bot: deve muoversi a
   // mano solo chi in vocale non c'è proprio.
   await gatherConnected(client, guild, updated, voice);
@@ -489,6 +492,41 @@ async function openMatch(client, lobby) {
   await handleCheckinChange(client, lobby.id);
 
   return lobbyRepository.find(lobby.id);
+}
+
+/**
+ * Il DM "coda creata" con il link al vocale di check-in. Parte una volta sola
+ * per giocatore: all'apertura della partita, o quando entra da sostituto.
+ * Chi ha i DM chiusi non lo riceve, e va bene così: resta il tag nel canale.
+ */
+async function dmCheckin(client, lobby, ids) {
+  const dm = ihlConfig.checkinDm;
+  if (!dm?.enabled || !lobby.checkin_voice_id) return;
+
+  const content = dm.text
+    .replaceAll('{partita}', lobby.id)
+    .replaceAll('{lega}', leagues.find(lobby.league).name)
+    .replaceAll('{vocale}', `<#${lobby.checkin_voice_id}>`)
+    .replaceAll('{minuti}', Math.round(ihlConfig.timers.substituteAfter / 60));
+
+  const components = [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setStyle(ButtonStyle.Link)
+        .setLabel(dm.button)
+        .setEmoji('🎧')
+        .setURL(`https://discord.com/channels/${lobby.guild_id}/${lobby.checkin_voice_id}`),
+    ),
+  ];
+
+  let closed = 0;
+  for (const id of ids) {
+    const user = await client.users.fetch(id).catch(() => null);
+    const sent = await user?.send({ content, components }).then(() => true).catch(() => false);
+    if (!sent) closed += 1;
+  }
+
+  if (closed) logger.info(`IHL lobby ${lobby.id}: DM del check-in non recapitato a ${closed} giocatori.`);
 }
 
 /** Trascina nel ritrovo i giocatori già collegati a un qualsiasi vocale. */
@@ -592,6 +630,7 @@ async function substitutePlayer(client, lobbyId, outId, inId) {
   const updated = lobbyRepository.update(lobbyId, { players });
 
   await applyPlayerPermissions(client, updated, outId, inId);
+  dmCheckin(client, updated, [inId]).catch((err) => logger.error(`IHL lobby ${lobbyId}: DM del check-in`, err));
 
   const channel = await client.channels.fetch(updated.text_channel_id).catch(() => null);
   await channel

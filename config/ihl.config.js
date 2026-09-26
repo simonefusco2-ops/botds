@@ -122,6 +122,20 @@ module.exports = {
     checkinName: '🎧 Check-in',
   },
 
+  /**
+   * DM mandato a ogni giocatore appena la coda diventa partita: uno solo per
+   * partita (e uno a chi entra con /ihl sostituisci). Il bottone porta dritto
+   * nel vocale di check-in. Segnaposto: {partita} {lega} {vocale} {minuti}.
+   */
+  checkinDm: {
+    enabled: true,
+    text:
+      '🟢 **Coda creata: la partita #{partita} ({lega}) è pronta!**\n' +
+      'Entra nel vocale {vocale}: si parte solo quando ci siete tutti e dieci.\n' +
+      '-# Dopo {minuti} minuti lo staff può sostituire chi non si è presentato.',
+    button: 'Entra nel check-in',
+  },
+
   // Canale testuale privato della singola partita: ci entrano solo i dieci
   // giocatori e lo staff, si vota il vincitore e viene eliminato dopo
   // `deleteAfter` secondi dalla chiusura della votazione.

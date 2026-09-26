@@ -38,6 +38,7 @@ Due leghe separate, con code, classifiche ed ELO indipendenti:
 CODA          il pannello apre le code; 10 posti, un giocatore per una sola partita
   ↓           (al decimo il bot crea subito la coda successiva)
 CHECK-IN      canale testuale privato della partita + stanza vocale di check-in;
+              ognuno riceve un DM con il bottone per entrare nel check-in;
               chi è già in vocale viene trascinato dentro. Dopo 7 minuti lo staff
               può sostituire chi non si presenta (/ihl sostituisci)
 COINFLIP      decide chi dei due capitani scegli per primo (non l'ELO)
