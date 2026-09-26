@@ -41,11 +41,14 @@ module.exports = {
   rankHeading: '### 📊  IL TUO RANK',
 
   // {soglia} viene sostituito con il primo rank che richiede l'approvazione.
+  // {soglia} arriva già in grassetto e con la sua icona: non aggiungere
+  // asterischi attorno, o Discord lascia i simboli in mezzo al testo.
   rankBody:
     'Premi **Verifica il mio rank** e incolla il link del tuo profilo **tracker.gg**.\n\n' +
-    '**Sotto {soglia}** il ruolo te lo assegna il bot **subito**.\n' +
-    '**Da {soglia} in su** si apre una pratica con lo staff, che controlla il profilo e approva.\n\n' +
-    '**Dove prendere il link:** vai su {sito}, cerca il tuo Riot ID e copia l\'indirizzo dalla barra del browser.\n' +
+    'Sotto {soglia} il ruolo te lo assegna il bot **subito**.\n' +
+    'Da {soglia} in su si apre una pratica con lo staff, che controlla il profilo e approva.\n\n' +
+    '**Dove prendere il link**\n' +
+    'Vai su {sito}, cerca il tuo Riot ID e copia l\'indirizzo dalla barra del browser.\n' +
     'Deve venire una cosa così:\n```{esempio}```',
 
   button: { label: 'Verifica il mio rank', emoji: '🔎' },

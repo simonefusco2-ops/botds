@@ -25,6 +25,7 @@ const rankProvider = require('./rankProvider');
 const rolePanel = require('./rolePanel');
 const ticketManager = require('../tickets/ticketManager');
 const { COLORS } = require('../../utils/embeds');
+const { toButtonEmoji } = require('../../utils/emoji');
 
 /**
  * Richiesta del ruolo rank dentro il ticket IPL.
@@ -96,13 +97,19 @@ function buildComponents(ownerId, rank) {
     .setCustomId(encode('pick', ownerId, 'x'))
     .setPlaceholder(rank ? `Cambia rank (ora: ${rank.name})` : 'Scegli il rank da assegnare')
     .addOptions(
-      rankConfig.ranks.map((entry) => ({
-        label: entry.name,
-        value: entry.name,
-        emoji: entry.emoji,
-        description: `Lega ${leagues.find(entry.league).name}`,
-        default: rank?.name === entry.name,
-      })),
+      rankConfig.ranks.map((entry) => {
+        // Un'emoji non valida farebbe rifiutare l'intero messaggio: meglio la
+        // voce senza icona che la scheda che non parte.
+        const emoji = toButtonEmoji(entry.emoji);
+
+        return {
+          label: entry.name,
+          value: entry.name,
+          ...(emoji ? { emoji } : {}),
+          description: `Lega ${leagues.find(entry.league).name}`,
+          default: rank?.name === entry.name,
+        };
+      }),
     );
 
   const buttons = new ActionRowBuilder().addComponents(

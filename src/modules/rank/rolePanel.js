@@ -33,9 +33,18 @@ const { applyEmoji } = require('../../utils/emoji');
  */
 const MODAL_ID = 'rank_modal';
 
+/**
+ * Il nome della soglia, già in grassetto e con la sua icona.
+ *
+ * Va inserito in frasi che NON aggiungono altri asterischi attorno: due
+ * grassetti annidati (`**Sotto **Ascendente****`) Discord non li chiude, e il
+ * testo esce con gli asterischi in mezzo alle parole.
+ */
 function rankLabel() {
   const rank = rankConfig.ranks.find((entry) => entry.name === rankConfig.approvalFrom);
-  return rank ? `${rank.emoji} **${rank.name}**` : `**${rankConfig.approvalFrom}**`;
+  if (!rank) return `**${rankConfig.approvalFrom}**`;
+
+  return `${rank.emoji} **${rank.name}**`;
 }
 
 function buildRoleRow() {
