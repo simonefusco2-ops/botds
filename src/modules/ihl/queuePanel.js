@@ -130,12 +130,23 @@ async function publishPanel(interaction, league) {
 
 async function refreshPanel(client, league) {
   const stored = settingsRepository.get(panelKey(league));
-  if (!stored) return;
+  if (!stored) {
+    logger.warn(`IHL ${league.name}: nessun pannello registrato, pubblicane uno con /ihl pannello.`);
+    return;
+  }
 
   const [channelId, messageId] = stored.split(':');
   const channel = await client.channels.fetch(channelId).catch(() => null);
   const message = await channel?.messages.fetch(messageId).catch(() => null);
-  await message?.edit(buildPanel(league, isOpen(league))).catch(() => {});
+
+  if (!message) {
+    logger.warn(`IHL ${league.name}: pannello ${messageId} non trovato in ${channelId}.`);
+    return;
+  }
+
+  await message
+    .edit(buildPanel(league, isOpen(league)))
+    .catch((err) => logger.warn(`IHL ${league.name}: pannello non aggiornato: ${err.message}`));
 }
 
 async function toggleQueues(client, interaction, leagueId) {
@@ -150,8 +161,19 @@ async function toggleQueues(client, interaction, leagueId) {
   const opening = !isOpen(league);
   settingsRepository.set(openKey(league), opening ? '1' : '0');
 
-  await interaction.deferUpdate();
-  await refreshPanel(client, league);
+  /**
+   * Il pannello si aggiorna modificando il messaggio su cui si è premuto.
+   *
+   * Prima passava dal riferimento salvato nel database: se quello si perde o
+   * punta a un messaggio che non c'è più, l'aggiornamento saltava in silenzio e
+   * il pannello restava a "code chiuse" pur avendole aperte — quindi non lo si
+   * poteva più chiudere. Il messaggio del bottone, invece, è il pannello per
+   * definizione: non può essere quello sbagliato.
+   */
+  await interaction.update(buildPanel(league, opening));
+
+  // Già che l'abbiamo in mano, rimettiamo a posto il riferimento salvato.
+  settingsRepository.set(panelKey(league), `${interaction.channelId}:${interaction.message.id}`);
 
   const channel = interaction.channel;
   renameChannel(channel, league, opening);
