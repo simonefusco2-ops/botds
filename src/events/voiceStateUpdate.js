@@ -10,6 +10,7 @@
 const logger = require('../utils/logger');
 const lobbyRepository = require('../database/repositories/lobbyRepository');
 const lobbyManager = require('../modules/ihl/lobbyManager');
+const voiceRanks = require('../modules/rank/voiceRanks');
 
 /**
  * Serve al check-in della In-House League: la partita parte solo quando tutti e
@@ -20,6 +21,9 @@ const lobbyManager = require('../modules/ihl/lobbyManager');
 module.exports = {
   name: 'voiceStateUpdate',
   async execute(oldState, newState, client) {
+    // Le emoji dei rank nel nome della stanza seguono chi entra e chi esce.
+    voiceRanks.handleVoiceUpdate(oldState, newState);
+
     const channels = new Set([oldState.channelId, newState.channelId].filter(Boolean));
     if (!channels.size) return;
 
