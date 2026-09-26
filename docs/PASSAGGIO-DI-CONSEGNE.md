@@ -106,7 +106,7 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 
 **Notifiche e utilità**
 `/twitch aggiungi|rimuovi|lista|prova` · `/social pannello|aggiungi|rimuovi|lista|controlla|prova`
-· `/inviti [utente]` · `/link faceit_name` · `/embed` · `/embed-modifica`
+· `/inviti [utente]` · `/embed` · `/embed-modifica`
 
 ---
 
@@ -130,8 +130,8 @@ Gli altri (staff, categorie ticket, canali di log) stanno nel `.env` sulla VPS;
 
 `docs/INTEGRAZIONE-SITO.md` descrive l'API di sola lettura che alimenta la
 classifica sul sito: `/api/v1/health`, `/leaderboard`, `/players/:id`, `/matches`,
-con `?lega=pro|open`, token opzionale, CORS e rate limit. Gira sulla stessa porta
-dei webhook Faceit.
+con `?lega=pro|open`, token opzionale, CORS e rate limit. Gira sul server HTTP del
+bot, porta `API_PORT` (default 3000).
 
 ---
 
@@ -143,15 +143,15 @@ dei webhook Faceit.
 - [ ] il ruolo del bot va **sopra** i ruoli dei rank e quelli IPL, o non li assegna
 - [ ] permesso **«Imposta stato canale vocale»** per i rank in vocale
 - [ ] ripubblicare i pannelli delle due leghe e le classifiche
+- [ ] tolto il modulo Faceit: `npm run deploy-commands` (sparisce `/link`) e
+      ripubblicare `/ticket-panel` (il ticket «Faceit Hub» ora è «Partite IPL»)
 - [ ] feed RSS dei social (X, Instagram, TikTok non hanno API di lettura gratuite:
       si passa da un bridge RSS)
 
 **Aperto sul codice**
-- [ ] Hub Faceit: il modulo `src/modules/faceit/` c'è ma è in standby, le IPL
-      girano sulle lobby interne
 - [ ] Riot RSO per la verifica vera dell'identità, se Riot approva la richiesta
-- [ ] il `README.md` descrive ancora la fase iniziale del progetto: questo
-      documento e `CLAUDE.md` sono la fonte aggiornata
+- [ ] il `README.md` descrive ancora in parte la fase iniziale del progetto:
+      questo documento e `CLAUDE.md` sono la fonte aggiornata
 
 ---
 

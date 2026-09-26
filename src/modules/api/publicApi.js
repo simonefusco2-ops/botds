@@ -17,7 +17,7 @@ const leagues = require('../ihl/leagues');
 /**
  * API di sola lettura per il sito ivpiter.it.
  *
- * Vive sullo stesso server Express dei webhook Faceit e legge direttamente il
+ * Vive sul server HTTP del bot (httpServer.js) e legge direttamente il
  * database del bot: quello che vedi qui è sempre allineato alla classifica su
  * Discord, senza esportazioni manuali. Tutti gli endpoint sono GET.
  *

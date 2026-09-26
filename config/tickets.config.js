@@ -21,13 +21,13 @@
 module.exports = [
   {
     id: 'hub',
-    label: 'Faceit Hub',
+    label: 'Partite IPL',
     emoji: '⚔️',
     style: 'primary',
-    description: 'Problemi con match, ELO, code o collegamento account',
+    description: 'Problemi con partite, ELO o code delle IPL',
     intro:
-      'Indica il tuo **nickname Faceit**, il **link del match** interessato e descrivi cosa è accaduto. ' +
-      'Se il problema riguarda il collegamento, specifica se hai già usato `/link`.',
+      'Indica il **codice della partita** interessata e descrivi cosa è accaduto. ' +
+      'Se hai screenshot o clip, allegali qui.',
     categoryId: null,
     staffRoleId: null,
   },

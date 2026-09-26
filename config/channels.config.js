@@ -40,13 +40,4 @@ module.exports = [
       { name: 'Flex', value: 'TBD', inline: true },
     ],
   },
-  {
-    channelId: process.env.FACEIT_CHANNEL_ID,
-    title: '🔗 Faceit Hub',
-    color: 0xff5500,
-    description:
-      'Collega il tuo account Faceit con `/link <nome_faceit>` per partecipare alle IHL automatizzate.\n\n' +
-      '[Vai alla Faceit Hub](https://www.faceit.com/)',
-    fields: [],
-  },
 ];

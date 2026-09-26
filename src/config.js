@@ -42,14 +42,14 @@ module.exports = {
   socialPollSeconds: parseInt(process.env.SOCIAL_POLL_SECONDS || '300', 10),
   socialMaxPerCheck: parseInt(process.env.SOCIAL_MAX_PER_CHECK || '3', 10),
 
-  faceitApiKey: process.env.FACEIT_API_KEY || null,
-  faceitWebhookSecret: process.env.FACEIT_WEBHOOK_SECRET || null,
-  faceitWebhookPort: parseInt(process.env.FACEIT_WEBHOOK_PORT || '3000', 10),
-
   // Chiave del servizio che fornisce il rank di Valorant (HenrikDev).
   rankApiKey: process.env.HENRIK_API_KEY || null,
 
-  // API di sola lettura per il sito: gira sulla stessa porta dei webhook Faceit.
+  // Porta del server HTTP (API per il sito). FACEIT_WEBHOOK_PORT è il vecchio
+  // nome: resta letto perché il .env sulla VPS potrebbe avere ancora quello.
+  httpPort: parseInt(process.env.API_PORT || process.env.FACEIT_WEBHOOK_PORT || '3000', 10),
+
+  // API di sola lettura per il sito.
   // Senza API_TOKEN è aperta (i dati sono gli stessi già pubblici su Discord).
   apiEnabled: process.env.API_ENABLED !== 'false',
   apiToken: process.env.API_TOKEN || null,

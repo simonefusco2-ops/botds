@@ -272,7 +272,7 @@ a rispondere uguale.
 
 ## 7. Da fare sul server (lato IVPITER)
 
-L'API ascolta sulla porta **3000**, la stessa dei webhook Faceit. Da esporre
+L'API ascolta sulla porta **3000** (`API_PORT` nel `.env`). Da esporre
 **solo dietro HTTPS**, con un reverse proxy. Esempio nginx:
 
 ```nginx

@@ -14,7 +14,7 @@ const { Client, GatewayIntentBits, Collection, Partials } = require('discord.js'
 
 const config = require('./config');
 const logger = require('./utils/logger');
-const { createWebhookServer } = require('./modules/faceit/webhookServer');
+const { createHttpServer } = require('./modules/api/httpServer');
 
 const client = new Client({
   intents: [
@@ -45,6 +45,6 @@ for (const file of fs.readdirSync(eventsPath).filter((f) => f.endsWith('.js'))) 
 process.on('unhandledRejection', (err) => logger.error('Unhandled promise rejection', err));
 process.on('uncaughtException', (err) => logger.error('Uncaught exception', err));
 
-createWebhookServer(client);
+createHttpServer();
 
 client.login(config.discordToken);

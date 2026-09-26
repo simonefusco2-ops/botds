@@ -1,6 +1,6 @@
-# Valorant Team & Faceit Hub Bot
+# IVPITER — Bot Discord
 
-Bot Discord modulare (Discord.js v14) per la gestione di un team Valorant e l'automazione della Faceit Hub (In-House League).
+Bot Discord modulare (Discord.js v14) della community IVPITER: In-House League (IPL), verifica rank, pannelli e notifiche.
 
 > **Il progetto è cresciuto oltre questo README.** Oggi il bot manda le IPL (due
 > leghe, code, draft, ban mappe, voto, ELO), la verifica dei rank e l'accesso
@@ -18,10 +18,10 @@ botds/
 │   └── channels.config.js        # embed per /setup-channels
 ├── data/                          # database SQLite (creato a runtime)
 ├── src/
-│   ├── index.js                  # entry point: client Discord + server webhook Faceit
+│   ├── index.js                  # entry point: client Discord + server HTTP (API per il sito)
 │   ├── deploy-commands.js        # registrazione comandi slash
 │   ├── config.js                 # caricamento/validazione env
-│   ├── commands/                 # comandi slash (ticket, embed, setup, link, twitch, inviti, leaderboard)
+│   ├── commands/                 # comandi slash (ihl, pannelli, ticket, embed, twitch, social, inviti)
 │   ├── events/                   # eventi Discord.js (ready, interactionCreate)
 │   ├── database/
 │   │   ├── db.js                 # connessione better-sqlite3 + schema
@@ -30,7 +30,7 @@ botds/
 │   │   ├── tickets/               # sistema ticket (creazione, transcript, ping DM)
 │   │   ├── memberLog/             # log ingressi/uscite + tracking inviti
 │   │   ├── twitch/                # notifiche live (polling API Helix)
-│   │   ├── faceit/                # webhook server Express + routing vocale
+│   │   ├── api/                   # server HTTP + API di sola lettura per il sito
 │   │   └── leaderboard/           # classifica persistente
 │   └── utils/                    # embed builder, logger
 └── .env.example
@@ -49,7 +49,6 @@ npm start
 
 1. **Ticket** — `/ticket-panel` pubblica il pannello (con banner opzionale, titolo e testo personalizzabili dal comando stesso) con un bottone per ogni tipo di ticket definito in `config/tickets.config.js`. Ogni tipo può avere categoria e ruolo staff dedicati, e istruzioni proprie mostrate all'apertura; un utente può avere una pratica aperta per tipo. Il canale creato include i bottoni "Chiudi e Cancella", "Salva Transcript" e "Ping Utente in DM".
 2. **Setup messaggi** — `/setup-channels` (admin) popola/aggiorna i canali definiti in `config/channels.config.js` con embed curati (titolo, testo, campi, banner/thumbnail). Può essere eseguito più volte: se un messaggio esiste già lo edita invece di duplicarlo.
-4. **Faceit Hub** — `/link <faceit_name>` collega l'account; il server Express (`FACEIT_WEBHOOK_PORT`) riceve i webhook Faceit su `POST /webhooks/faceit`, smista i team in due canali vocali temporanei e li elimina a fine match.
 5. **Leaderboard** — `/leaderboard-setup` inizializza l'embed persistente; viene aggiornato automaticamente (`message.edit`) a ogni match concluso.
 6. **Ruolo automatico** — impostando `AUTOROLE_ID` nel `.env`, il bot assegna automaticamente quel ruolo a ogni nuovo membro che entra nel server (il ruolo del bot deve stare più in alto di quel ruolo nella lista ruoli del server).
 7. **Notifiche live Twitch** — il bot controlla periodicamente (`TWITCH_POLL_SECONDS`, default 120s) gli streamer registrati con `/twitch aggiungi` e pubblica in `TWITCH_ANNOUNCE_CHANNEL_ID` un embed con titolo, gioco, spettatori, anteprima e bottone "Guarda la live", menzionando quanto impostato in `TWITCH_MENTION` (`everyone`, `here`, un ID ruolo o `nessuna`). L'annuncio è legato all'ID della diretta, quindi un riavvio del bot non genera doppioni. Sottocomandi: `aggiungi`, `rimuovi`, `lista`, `prova`.
@@ -91,6 +90,6 @@ Gli ID dei ruoli rank vanno riempiti in `config/rank.config.js`: finché sono vu
 
 ## API per il sito
 
-Sulla stessa porta dei webhook gira un'API di sola lettura che espone classifica, profili e storico partite della In-House League, sempre allineata a quanto si vede su Discord: `GET /api/v1/leaderboard`, `/api/v1/players/:discordId`, `/api/v1/matches`, `/api/v1/health`. La lega si sceglie con `?lega=pro` o `?lega=open`.
+Sul server HTTP del bot (porta `API_PORT`, default 3000) gira un'API di sola lettura che espone classifica, profili e storico partite della In-House League, sempre allineata a quanto si vede su Discord: `GET /api/v1/leaderboard`, `/api/v1/players/:discordId`, `/api/v1/matches`, `/api/v1/health`. La lega si sceglie con `?lega=pro` o `?lega=open`.
 
 La documentazione completa da consegnare a chi sviluppa il sito è in [`docs/INTEGRAZIONE-SITO.md`](docs/INTEGRAZIONE-SITO.md): endpoint, esempi di risposta, schema del database, funzionamento dell'ELO e configurazione del reverse proxy.

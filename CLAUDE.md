@@ -17,7 +17,8 @@ messaggi di commit, testi dei pannelli, log. Tutta l'utenza del bot è italiana.
 - Node.js + **discord.js v14** (CommonJS, niente TypeScript, niente build step)
 - **better-sqlite3** in WAL: query sincrone con prepared statement, scritture
   multiple dentro `db.transaction()`
-- Express solo per i webhook Faceit e l'API pubblica di sola lettura
+- Express solo per l'API pubblica di sola lettura (`src/modules/api/`); la sua
+  porta fa anche da lucchetto: una seconda istanza del bot la trova occupata e si ferma
 
 ```bash
 npm start                  # avvia il bot
@@ -43,7 +44,10 @@ src/
     ihl/      In-House League: code, draft, ban mappe, voto, classifica, leghe
     rank/     verifica rank, ruoli di gioco, accesso IPL, insegne, stato vocale
     tickets/  pratiche (apertura, chiusura, transcript)
-    social/   notifiche RSS · twitch/ · memberLog/ · welcome/ · faceit/ · api/
+    social/   notifiche RSS          twitch/   notifiche live
+    memberLog/ ingressi e inviti     welcome/  benvenuto
+    api/      server HTTP e API per il sito
+    embedBuilder/ /embed e /embed-modifica
   database/   db.js (schema + migrazioni) e repositories/ (una per tabella)
   utils/      cards.js (Components V2), embeds.js, emoji.js, attachments.js, logger.js
 docs/       INTEGRAZIONE-SITO.md (API per il sito), PASSAGGIO-DI-CONSEGNE.md (il concept)
@@ -105,7 +109,7 @@ cambio nei testi dei pannelli va rilanciato il comando che li pubblica.
 
 ## Segreti
 
-Token Discord, `HENRIK_API_KEY`, chiavi Faceit e Twitch vivono **solo** nel `.env`
+Token Discord, `HENRIK_API_KEY` e chiavi Twitch vivono **solo** nel `.env`
 sulla VPS (`.env` è in `.gitignore`). Non vanno mai scritti nel repo, nei commit,
 nei messaggi di pull request o nei log. `.env.example` elenca le variabili senza
 valori.
