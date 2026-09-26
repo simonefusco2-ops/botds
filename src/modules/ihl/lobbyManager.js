@@ -123,6 +123,14 @@ async function publishQueue(client, lobby, { announce = false } = {}) {
   const channel = await client.channels.fetch(lobby.channel_id).catch(() => null);
   if (!channel) return;
 
+  // Questa coda non è più in raccolta: la sua scheda non deve esistere. Capita
+  // quando una pubblicazione era già in fila mentre la partita partiva; senza
+  // questo controllo ricomparirebbe un "10/10" con il bottone per entrare.
+  if (lobby.state !== 'queue') {
+    await deleteQueueCard(client, lobby);
+    return;
+  }
+
   const payload = { embeds: [buildQueueEmbed(lobby)], components: buildQueueComponents() };
 
   if (announce) {
@@ -184,13 +192,33 @@ async function publishNotice(client, lobby, extra = {}) {
   if (sent) lobbyRepository.update(lobby.id, { notice_message_id: sent.id });
 }
 
-/** La coda è diventata partita: la sua scheda non serve più nel canale delle code. */
-async function removeQueueCard(client, lobby) {
+/**
+ * La coda è diventata partita: la sua scheda non serve più nel canale delle code.
+ * Passa dalla stessa fila delle pubblicazioni, altrimenti una già in attesa
+ * potrebbe ripubblicarla subito dopo la cancellazione.
+ */
+function removeQueueCard(client, lobby) {
+  return withLock(`queue:${lobby.id}`, () => deleteQueueCard(client, fresh(lobby)));
+}
+
+async function deleteQueueCard(client, lobby) {
   if (!lobby.message_id) return;
 
   const channel = await client.channels.fetch(lobby.channel_id).catch(() => null);
   const message = await channel?.messages.fetch(lobby.message_id).catch(() => null);
-  await message?.delete().catch(() => {});
+
+  if (message) {
+    const removed = await message
+      .delete()
+      .then(() => true)
+      .catch((err) => {
+        logger.warn(`IHL coda ${lobby.id}: scheda non eliminata: ${err.message}`);
+        return false;
+      });
+
+    // Tenere il riferimento permette di riprovare alla chiusura delle code.
+    if (!removed) return;
+  }
 
   lobbyRepository.update(lobby.id, { message_id: null });
 }
@@ -965,4 +993,5 @@ module.exports = {
   renderQueue,
   renderNotice,
   renderMatch,
+  removeQueueCard,
 };
