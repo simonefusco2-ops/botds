@@ -26,6 +26,8 @@ const {
   countVotes,
   votesNeeded,
   remainingMaps,
+  sides,
+  TEAM_LABELS,
 } = require('./render');
 
 /**
@@ -266,7 +268,9 @@ async function publishMatch(client, lobby, extra = {}) {
   if (lobby.match_message_id) {
     const message = await channel.messages.fetch(lobby.match_message_id).catch(() => null);
     if (message) {
-      await message.edit(payload).catch(() => {});
+      await message.edit(payload).catch((err) => {
+        logger.error(`IHL lobby ${lobby.id}: scheda della partita non modificata: ${err.message}`);
+      });
       return;
     }
   }
@@ -717,8 +721,14 @@ async function banMap(client, lobbyId, mapName, automatic = false) {
       turn: null,
     });
 
+    // Prima la scheda e l'annuncio, poi le vocali: creare stanze e spostare
+    // dieci persone richiede secondi, e intanto tutti devono sapere dove si gioca.
+    await renderMatch(client, updated).catch((err) =>
+      logger.error(`IHL lobby ${lobbyId}: scheda della partita non aggiornata`, err),
+    );
+    await announceSides(client, updated);
     await setupVoiceChannels(client, updated);
-    return renderMatch(client, lobbyRepository.find(lobbyId));
+    return;
   }
 
   const nextTurn = lobby.turn === lobby.captain_a ? lobby.captain_b : lobby.captain_a;
@@ -726,6 +736,24 @@ async function banMap(client, lobbyId, mapName, automatic = false) {
 
   scheduleTimeout(client, lobbyId, ihlConfig.timers.mapBan, () => autoBan(client, lobbyId));
   return renderMatch(client, updated);
+}
+
+/** Mappa decisa: chi parte in attacco e chi in difesa, con i capitani taggati. */
+async function announceSides(client, lobby) {
+  const channel = await client.channels.fetch(lobby.text_channel_id).catch(() => null);
+  const side = sides(lobby);
+  const captain = (team) => (team === 'a' ? lobby.captain_a : lobby.captain_b);
+
+  await channel
+    ?.send({
+      content:
+        `🗺️ **Si gioca su ${lobby.chosen_map}**\n` +
+        `⚔️ In **attacco**: ${TEAM_LABELS[side.attack]} (capitano <@${captain(side.attack)}>)\n` +
+        `🛡️ In **difesa**: ${TEAM_LABELS[side.defense]} (capitano <@${captain(side.defense)}>)\n` +
+        '-# Vi sposto nelle vocali delle squadre. A fine partita votate il vincitore sulla scheda.',
+      allowedMentions: { users: [lobby.captain_a, lobby.captain_b] },
+    })
+    .catch((err) => logger.warn(`IHL lobby ${lobby.id}: annuncio dei lati non inviato: ${err.message}`));
 }
 
 async function autoBan(client, lobbyId) {
@@ -967,8 +995,9 @@ async function cancelLobby(client, lobbyId) {
 
 /**
  * I timer vivono in memoria: dopo un riavvio vanno riarmati, altrimenti una
- * lobby resterebbe appesa a una fase che nessuno chiude. Il voto non ha
- * scadenza, quindi le partite in corso non hanno bisogno di nulla.
+ * lobby resterebbe appesa a una fase che nessuno chiude. Le schede si
+ * ripubblicano: se una era rimasta indietro rispetto allo stato (una modifica
+ * fallita), il riavvio la rimette in pari e tornano i bottoni giusti.
  */
 async function resumeLobbies(client) {
   const active = lobbyRepository.listActive().filter((lobby) => lobby.state !== 'queue');
@@ -993,6 +1022,10 @@ async function resumeLobbies(client) {
     } else if (lobby.state === 'ban') {
       scheduleTimeout(client, lobby.id, ihlConfig.timers.mapBan, () => autoBan(client, lobby.id));
     }
+
+    await renderMatch(client, lobby).catch((err) =>
+      logger.error(`IHL lobby ${lobby.id}: scheda non ripubblicata dopo il riavvio`, err),
+    );
   }
 
   logger.info(`IHL: ${active.length} partite riprese dopo il riavvio.`);

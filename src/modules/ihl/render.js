@@ -51,13 +51,36 @@ function tag(id, badges) {
   return badge ? `<@${id}> ${badge}` : `<@${id}>`;
 }
 
-function mentions(ids, badges) {
-  return ids.length ? ids.map((id) => tag(id, badges)).join('\n') : '-# nessuno';
+/**
+ * Discord rifiuta l'intero embed se un campo supera 1024 caratteri, e la
+ * scheda resta ferma alla fase prima. Dieci giocatori con rank e tre ruoli
+ * arrivano a ~1600: oltre il limite si tolgono le insegne, i nomi restano.
+ */
+const FIELD_LIMIT = 1024;
+
+function list(ids, badges, separator, limit, decorate = (id, text) => text) {
+  if (!ids.length) return '-# nessuno';
+
+  const full = ids.map((id) => decorate(id, tag(id, badges))).join(separator);
+  if (full.length <= limit) return full;
+
+  return ids.map((id) => decorate(id, `<@${id}>`)).join(separator);
 }
 
-function inline(ids, badges) {
-  return ids.length ? ids.map((id) => tag(id, badges)).join(' ') : '-# nessuno';
+function mentions(ids, badges, limit = FIELD_LIMIT) {
+  return list(ids, badges, '\n', limit);
 }
+
+function inline(ids, badges, limit = FIELD_LIMIT) {
+  return list(ids, badges, ' ', limit);
+}
+
+/** Chi parte in attacco e chi in difesa, dal lato registrato per il Team A. */
+function sides(lobby) {
+  return lobby.side_a === 'defense' ? { attack: 'b', defense: 'a' } : { attack: 'a', defense: 'b' };
+}
+
+const TEAM_LABELS = { a: '🔴 Team A', b: '🔵 Team B' };
 
 /**
  * La squadra con il capitano in evidenza.
@@ -70,13 +93,9 @@ function inline(ids, badges) {
 function teamField(lobby, side) {
   const team = side === 'a' ? lobby.team_a : lobby.team_b;
   const captain = side === 'a' ? lobby.captain_a : lobby.captain_b;
-  const label = side === 'a' ? '🔴 Team A' : '🔵 Team B';
+  const value = list(team, lobby.badges, '\n', FIELD_LIMIT, (id, text) => (id === captain ? `👑 ${text}` : text));
 
-  const value = team.length
-    ? team.map((id) => (id === captain ? `👑 ${tag(id, lobby.badges)}` : tag(id, lobby.badges))).join('\n')
-    : '-# nessuno';
-
-  return { name: label, value, inline: true };
+  return { name: TEAM_LABELS[side], value, inline: true };
 }
 
 /** L'elenco delle mappe del veto, con il bollino rosso su quelle già bannate. */
@@ -121,7 +140,7 @@ function buildQueueEmbed(lobby) {
     .setColor(COLORS.gold)
     .setTitle(`${league.emoji}  CODA IN FORMAZIONE  ·  ${league.name}`)
     .setDescription(
-      `**${lobby.players.length}/${ihlConfig.queueSize}** in coda\n\n${mentions(lobby.players, lobby.badges)}`,
+      `**${lobby.players.length}/${ihlConfig.queueSize}** in coda\n\n${mentions(lobby.players, lobby.badges, 4096)}`,
     )
     .setFooter({ text: `Coda #${lobby.id} · al decimo giocatore si apre la stanza della partita` })
     .setTimestamp();
@@ -173,7 +192,7 @@ function buildNoticeEmbed(lobby, extra = {}) {
     .setDescription(
       (lobby.text_channel_id
         ? `Tutto si svolge in <#${lobby.text_channel_id}>: check-in, mappe, squadre e voto.\n`
-        : '') + `-# ${inline(lobby.players, lobby.badges)}`,
+        : '') + `-# ${inline(lobby.players, lobby.badges, 4000)}`,
     );
 }
 
@@ -244,11 +263,12 @@ function buildMatchEmbed(lobby, extra = {}) {
 
   if (lobby.state === 'live' || lobby.state === 'closed') {
     const { a, b } = countVotes(lobby);
+    const side = sides(lobby);
 
     embed.setDescription(
       extra.result ||
         `**Mappa:** ${lobby.chosen_map}\n` +
-          `**Team A** inizia in **${lobby.side_a === 'attack' ? 'Attacco' : 'Difesa'}**\n\n` +
+          `⚔️ **Attacco:** ${TEAM_LABELS[side.attack]}  ·  🛡️ **Difesa:** ${TEAM_LABELS[side.defense]}\n\n` +
           `Finita la partita votate il vincitore qui sotto. **La prima squadra che arriva a ` +
           `${votesNeeded(lobby)} voti vince**: l'ELO viene assegnato in quel momento, non serve ` +
           'che votino tutti.\n-# Nessuna scadenza: votate quando avete finito, anche fra ore.',
@@ -379,6 +399,8 @@ module.exports = {
   mapList,
   pendingVoters,
   remainingMaps,
+  sides,
+  TEAM_LABELS,
   mentions,
   inline,
   tag,
