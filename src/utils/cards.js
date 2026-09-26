@@ -88,7 +88,13 @@ function buildCard({
 
   if (footnote) {
     container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
-    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`-# ${footnote}`));
+    // Il prefisso -# agisce solo sulla prima riga: se quella riga ha già un suo
+    // marcatore (un titolo ###, una citazione, un elenco) aggiungerlo lo farebbe
+    // stampare alla lettera invece di renderlo, quindi lo lasciamo stare.
+    const hasOwnPrefix = /^\s*(#{1,3}\s|-#\s|>\s|[-*]\s)/.test(footnote);
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(hasOwnPrefix ? footnote : `-# ${footnote}`),
+    );
   }
 
   for (const row of rows) {
