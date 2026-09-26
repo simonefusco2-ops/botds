@@ -23,6 +23,7 @@ const leagues = require('../ihl/leagues');
 const trackerLink = require('./trackerLink');
 const rankProvider = require('./rankProvider');
 const rolePanel = require('./rolePanel');
+const iplAccess = require('./iplAccess');
 const ticketManager = require('../tickets/ticketManager');
 const { COLORS } = require('../../utils/embeds');
 const { toButtonEmoji } = require('../../utils/emoji');
@@ -80,7 +81,7 @@ function buildCard({ owner, tracker, outcome, chosen }) {
     name: '✅ Verrà assegnato',
     value: rank
       ? `${rank.emoji} **${rank.name}** · lega **${league.name}**` +
-        (rankConfig.iplRoleId ? `\n-# Più il ruolo IPL per l'accesso alle HUB.` : '')
+        '\n-# Con un ruolo di gioco arriva da solo anche l\'accesso alle IPL.'
       : '-# nessun rank scelto: usa il menu qui sotto',
     inline: false,
   });
@@ -195,9 +196,12 @@ async function handlePick(interaction, ownerId) {
   return interaction.update({ embeds: [embed], components: buildComponents(ownerId, rank) });
 }
 
-/** Assegna i ruoli: il rank, l'accesso alle HUB e, se configurato, la lega. */
+/**
+ * Assegna il ruolo del rank. L'accesso alle IPL non si tocca qui: ci pensa
+ * iplAccess, che guarda anche i ruoli di gioco e viene richiamato alla fine.
+ */
 async function assignRoles(guild, member, rank) {
-  const wanted = [rank.roleId, rankConfig.iplRoleId, rankConfig.leagueRoleIds?.[rank.league]].filter(Boolean);
+  const wanted = [rank.roleId].filter(Boolean);
   if (!wanted.length) return { assigned: [], missing: true };
 
   const assigned = [];
@@ -260,6 +264,7 @@ async function handleApprove(interaction, ownerId, rankName) {
   }
 
   await clearOtherRanks(member, rank.roleId);
+  const accesso = await iplAccess.sync(member);
 
   const league = leagues.find(rankProvider.leagueOf(rank));
   const embed = EmbedBuilder.from(interaction.message.embeds[0])
@@ -272,10 +277,16 @@ async function handleApprove(interaction, ownerId, rankName) {
     ? `\n-# Non sono riuscito ad assegnare ${result.failed.length} ruolo/i: controlla che il ruolo del bot sia più in alto.`
     : '';
 
+  const accessoNota = accesso.league
+    ? `\n🎟️ Accesso **IPL ${accesso.league.toUpperCase()}** assegnato.`
+    : `\n-# Accesso IPL in attesa: gli manca ${iplAccess.missing(member).join(' e ')}.`;
+
   return interaction.editReply({
     content:
       `✅ ${member} approvato da ${interaction.user}: ${rank.emoji} **${rank.name}**, lega **${league.name}**.` +
-      `\nRuoli assegnati: ${result.assigned.map((role) => `<@&${role.id}>`).join(' ') || 'nessuno'}${failed}`,
+      `\nRuoli assegnati: ${result.assigned.map((role) => `<@&${role.id}>`).join(' ') || 'nessuno'}` +
+      accessoNota +
+      failed,
   });
 }
 
@@ -342,6 +353,7 @@ async function handleTrackerSubmit(client, interaction) {
   }
 
   await clearOtherRanks(interaction.member, outcome.rank.roleId);
+  const accesso = await iplAccess.sync(interaction.member);
 
   const league = leagues.find(rankProvider.leagueOf(outcome.rank));
   const failed = result.failed?.length
@@ -350,9 +362,14 @@ async function handleTrackerSubmit(client, interaction) {
 
   logger.info(`Rank: ${interaction.user.id} verificato in automatico (${outcome.label}).`);
 
+  const accessoNota = accesso.league
+    ? `\n🎟️ Hai anche l'accesso **IPL ${accesso.league.toUpperCase()}**: puoi entrare nelle code.`
+    : `\n-# Per giocare le IPL ti manca ${iplAccess.missing(interaction.member).join(' e ')}.`;
+
   return interaction.editReply({
     content:
       `✅ ${outcome.rank.emoji} **${outcome.label}** verificato: ruolo assegnato, sei nella **${league.name}**.` +
+      accessoNota +
       `\n-# Quando sali di rank rifai la verifica dal pannello.${failed}`,
   });
 }

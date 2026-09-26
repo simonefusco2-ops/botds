@@ -20,6 +20,9 @@
  * bottone esce senza icona, senza rompersi.
  */
 module.exports = {
+  // Il canale dove vive questo pannello: gli altri messaggi ci rimandano.
+  rolesChannelId: '1553343914960883802',
+
   title: '🎯  𝐑𝐈𝐂𝐇𝐈𝐄𝐒𝐓𝐀 𝐑𝐀𝐍𝐊 𝐄 𝐑𝐔𝐎𝐋𝐈',
 
   intro:

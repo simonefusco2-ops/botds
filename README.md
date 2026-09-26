@@ -59,6 +59,12 @@ Tutte le stanze temporanee sono visibili a tutto il server — il Discord si ved
 
 I capitani sono i due ELO più alti, ma **chi apre le scelte lo decide un sorteggio**. L'ordine delle fasi è lato, draft e infine ban delle mappe, che parte da tutte quelle in rotazione. Il voto del vincitore non ha scadenza: l'ELO viene assegnato appena una squadra raggiunge la maggioranza dei voti. Altri comandi: `/ihl profilo`, `/ihl partite`, `/ihl risultato`, `/ihl elo-modifica`, `/ihl annulla`.
 
+## Accesso alle IPL
+
+`/pannello-ipl` pubblica il pannello che spiega come partecipare (testo in `config/ipl.config.js`, banner opzionale): i due requisiti, le due leghe e il rimando al canale della richiesta ruoli.
+
+L'accesso è **automatico**: appena un membro ha un **rank verificato** e **almeno un ruolo di gioco**, il bot gli assegna il ruolo IPL — Pro da Immortale in su, Open per tutti gli altri rank. Il controllo (`src/modules/rank/iplAccess.js`) gira a ogni cambio di ruoli, quindi vale anche quando i ruoli li mette lo staff a mano; togliendo un requisito l'accesso viene tolto, e salendo a Immortale l'Open diventa Pro. Gli ID stanno in `config/rank.config.js` → `iplRoleIds`.
+
 ## Rank di chi è in vocale
 
 A ogni entrata e uscita il bot scrive nello **stato del canale vocale** (la riga sotto il nome) le emoji dei rank presenti, ordinate dal più alto. Lo stato accetta le emoji del server e non ha il tetto delle rinomine, quindi la lista è praticamente in tempo reale. Si configura in `config/rank.config.js` → `voiceRanks`: `mode: 'status'` (predefinito) oppure `'name'`, che rinomina il canale ma usa emoji unicode ed è limitato a due rinomine ogni dieci minuti. Serve al bot il permesso **Imposta stato canale vocale**.
@@ -73,7 +79,7 @@ Gli ID dei ruoli rank vanno riempiti in `config/rank.config.js`: finché sono vu
 
 ## Regolamento HUB e ruolo IPL
 
-`/regolamento-hub` pubblica il regolamento delle HUB (testo in `config/hub.config.js`) con banner opzionale e un bottone che apre un ticket del tipo `ipl`, dove lo staff chiede link del tracker o nome Riot. Quel tipo di ticket è marcato `hidden` in `config/tickets.config.js`, quindi non compare nel pannello generale `/ticket-panel`: la richiesta parte solo dopo aver letto le regole.
+`/regolamento-hub` pubblica il regolamento delle HUB (testo in `config/hub.config.js`) con banner opzionale: solo regole, senza bottoni, e un rimando al canale della richiesta ruoli. Il tipo di ticket `ipl` resta in `config/tickets.config.js`, marcato `hidden`, ed è quello che la verifica del rank apre da sola quando serve l'approvazione.
 
 ## API per il sito
 

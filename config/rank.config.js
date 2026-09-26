@@ -40,13 +40,18 @@ module.exports = {
     timeoutMs: 12000,
   },
 
-  // Ruolo che dà l'accesso alle HUB, assegnato insieme al rank.
-  iplRoleId: null,
-
-  // Ruoli delle due leghe, se ne usi di dedicati.
-  leagueRoleIds: {
-    pro: null,
-    open: null,
+  /**
+   * I ruoli che danno accesso alle IPL, assegnati da soli.
+   *
+   * Servono due cose insieme: almeno un ruolo di gioco (Duelist, Initiator,
+   * Controller o Sentinel) e un rank verificato. Chi ha Immortale o Radiante
+   * prende il Pro, tutti gli altri l'Open. Appena i requisiti smettono di
+   * essere soddisfatti il ruolo viene tolto, altrimenti resterebbe a chi si è
+   * levato il ruolo di gioco.
+   */
+  iplRoleIds: {
+    pro: '1553355794320326736',
+    open: '1553024176129048656',
   },
 
   /**

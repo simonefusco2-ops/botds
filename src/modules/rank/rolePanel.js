@@ -22,6 +22,7 @@ const logger = require('../../utils/logger');
 const { COLORS } = require('../../utils/embeds');
 const { buildCard } = require('../../utils/cards');
 const { applyEmoji } = require('../../utils/emoji');
+const iplAccess = require('./iplAccess');
 
 /**
  * Pannello "Richiesta rank e ruoli".
@@ -128,8 +129,16 @@ async function toggleRole(interaction, roleKey) {
     });
   }
 
+  // Il ruolo di gioco è metà dei requisiti: l'accesso IPL va ricalcolato subito.
+  const accesso = await iplAccess.sync(interaction.member);
+
+  const nota = accesso.league
+    ? `\n🎟️ Hai l'accesso **IPL ${accesso.league.toUpperCase()}**.`
+    : `\n-# Per le IPL ti manca ${iplAccess.missing(interaction.member).join(' e ')}.`;
+
   return interaction.reply({
-    content: has ? `➖ Ruolo **${entry.label}** rimosso.` : `➕ Ruolo **${entry.label}** assegnato.`,
+    content:
+      (has ? `➖ Ruolo **${entry.label}** rimosso.` : `➕ Ruolo **${entry.label}** assegnato.`) + nota,
     flags: MessageFlags.Ephemeral,
   });
 }

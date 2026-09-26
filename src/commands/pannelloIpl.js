@@ -8,23 +8,38 @@
  * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
  */
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
-const hub = require('../../config/hub.config');
+const iplConfig = require('../../config/ipl.config');
+const ruoliConfig = require('../../config/ruoli.config');
+const rankConfig = require('../../config/rank.config');
 const { COLORS } = require('../utils/embeds');
 const { buildCard } = require('../utils/cards');
 const { toReuploadable } = require('../utils/attachments');
 const settingsRepository = require('../database/repositories/settingsRepository');
 
-const SETTINGS_KEY = 'regolamento_hub_message';
+const SETTINGS_KEY = 'ipl_panel_message';
 
-/** Il regolamento non ha bottoni: rimanda al canale dove si fa la richiesta. */
-function fill(text) {
-  return text.replaceAll('{canale}', `<#${hub.rolesChannelId}>`);
+/** I ruoli di gioco elencati con le loro emoji, uno per riga. */
+function rolesList() {
+  return ruoliConfig.roles.map((role) => `> ${role.emoji} **${role.label}**`).join('\n');
+}
+
+function threshold() {
+  const rank = rankConfig.ranks.find((entry) => entry.name === rankConfig.approvalFrom);
+  return rank ? `${rank.emoji} **${rank.name}**` : `**${rankConfig.approvalFrom}**`;
+}
+
+/** Riempie i segnaposto del testo con i dati veri della configurazione. */
+function fill(text, channelId) {
+  return text
+    .replaceAll('{ruoli}', rolesList())
+    .replaceAll('{canale}', `<#${channelId}>`)
+    .replaceAll('{soglia}', threshold());
 }
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('regolamento-hub')
-    .setDescription('Pubblica il regolamento delle HUB con il bottone per richiedere il ruolo IPL')
+    .setName('pannello-ipl')
+    .setDescription('Pubblica il pannello che spiega come partecipare alle IPL')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addChannelOption((opt) =>
       opt
@@ -33,7 +48,7 @@ module.exports = {
         .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement),
     )
     .addAttachmentOption((opt) =>
-      opt.setName('immagine').setDescription('Banner mostrato in cima al regolamento'),
+      opt.setName('immagine').setDescription('Banner mostrato in cima al pannello'),
     ),
   async execute(interaction) {
     const channel = interaction.options.getChannel('canale') || interaction.channel;
@@ -41,7 +56,7 @@ module.exports = {
 
     let banner = null;
     try {
-      banner = await toReuploadable(interaction.options.getAttachment('immagine'), 'regolamento-hub');
+      banner = await toReuploadable(interaction.options.getAttachment('immagine'), 'ipl');
     } catch (err) {
       return interaction.editReply({ content: `❌ Errore sull'immagine: ${err.message}` });
     }
@@ -54,32 +69,32 @@ module.exports = {
         ? await channel.messages.fetch(storedMessageId).catch(() => null)
         : null;
 
-    // Aggiornando senza una nuova immagine riallegiamo quella presente: il
-    // riferimento attachment:// vale solo per i file inviati con la stessa chiamata.
     if (!banner && existing) {
       const previous = existing.attachments.first();
-      if (previous) banner = await toReuploadable(previous, 'regolamento-hub').catch(() => null);
+      if (previous) banner = await toReuploadable(previous, 'ipl').catch(() => null);
     }
+
+    const roles = ruoliConfig.rolesChannelId;
 
     const card = buildCard({
       accentColor: COLORS.gold,
       bannerRef: banner?.ref,
-      title: hub.title,
-      body: hub.intro,
-      sections: hub.rules.map((rule) => ({
-        name: `${rule.emoji}  ${rule.name}`,
-        value: `-# ${rule.subtitle}\n${rule.text}`,
+      title: iplConfig.title,
+      body: fill(iplConfig.intro, roles),
+      sections: iplConfig.sections.map((section) => ({
+        name: section.name,
+        value: fill(section.value, roles),
       })),
       separateSections: true,
-      // Leghe, sanzioni e istruzioni per l'accesso chiudono la scheda.
-      footnote: fill(`${hub.leagues}\n\n${hub.warning}\n\n${hub.request}\n\n-# ${hub.footer}`),
+      footnote:
+        `${iplConfig.leagues}\n\n${iplConfig.automatic}\n\n${iplConfig.closing}\n\n-# ${iplConfig.footer}`,
     });
 
     const payload = { ...card, files: banner ? [banner.file] : [] };
 
     if (existing) {
       await existing.edit(payload);
-      return interaction.editReply({ content: `✅ Regolamento HUB aggiornato in ${channel}.` });
+      return interaction.editReply({ content: `✅ Pannello IPL aggiornato in ${channel}.` });
     }
 
     const sent = await channel.send(payload);
@@ -87,8 +102,8 @@ module.exports = {
 
     return interaction.editReply({
       content:
-        `✅ Regolamento HUB pubblicato in ${channel}.\n` +
-        '-# Rilanciando il comando viene aggiornato, non duplicato. Senza `immagine` il banner già caricato resta.',
+        `✅ Pannello "come partecipare alle IPL" pubblicato in ${channel}.\n` +
+        '-# Rilanciando il comando viene aggiornato, non duplicato.',
     });
   },
 };

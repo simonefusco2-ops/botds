@@ -88,22 +88,17 @@ module.exports = {
     '-# In quale finisci lo decide il tuo rank verificato, non la tua parola.',
 
   request:
-    '### 🎫  COME GIOCARE — RICHIESTA RANK\n' +
-    'Per entrare nelle HUB serve il ruolo **IPL** e il **rank verificato**.\n' +
-    '**Il link del tuo profilo tracker.gg è obbligatorio:** senza quello la richiesta non viene accettata.\n\n' +
-    '**Dove prenderlo:** vai su [tracker.gg/valorant](https://tracker.gg/valorant), cerca il tuo Riot ID ' +
-    "e copia l'indirizzo dalla barra del browser.\n" +
-    '**Cosa ci aspettiamo indietro:**\n' +
-    '```https://tracker.gg/valorant/profile/riot/Nome%23TAG/overview```\n' +
-    'Premi il bottone qui sotto: si apre una stanza privata con lo staff. Incolla lì il link, ' +
-    'il bot legge il rank e propone il ruolo, un membro dello staff controlla e approva.',
+    '### 🎟️  COME SI ENTRA NELLE IPL\n' +
+    'Servono **due cose**, e le prendi entrambe in {canale}:\n' +
+    '> **1.** il **rank verificato**, incollando lì il link del tuo profilo **tracker.gg**\n' +
+    '> **2.** almeno un **ruolo di gioco** fra quelli disponibili\n\n' +
+    'Appena le hai tutte e due il bot ti assegna da solo l\'accesso: **IPL PRO** da Immortale in su, ' +
+    '**IPL OPEN** per tutti gli altri rank verificati. Non serve chiedere niente allo staff.',
 
-  button: {
-    label: 'Richiedi il ruolo IPL',
-    emoji: '🎫',
-  },
+  // Il pannello rimanda qui: è il canale della richiesta ruoli e rank.
+  rolesChannelId: '1553343914960883802',
 
-  // Tipo di ticket aperto dal bottone: deve esistere in config/tickets.config.js.
+  // Tipo di ticket usato dalla verifica del rank quando serve l'approvazione.
   ticketTypeId: 'ipl',
 
   footer: 'Benvenuto in IVPITER. Ad maiora!',
