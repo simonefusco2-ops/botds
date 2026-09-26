@@ -27,14 +27,41 @@ module.exports = {
 
   queueSize: 10,
 
-  // Nomi del canale delle code. Le lettere vengono convertite in maiuscoletto
-  // (ᴄᴏᴅᴇ ᴀᴘᴇʀᴛᴇ) perché Discord non le forza in minuscolo come farebbe con le
-  // lettere normali; metti smallCaps a false per usarli così come sono scritti.
-  queueChannelNames: {
-    open: '🟢︱code-aperte',
-    closed: '🔴︱code-chiuse',
-    smallCaps: true,
-  },
+  /**
+   * Le leghe.
+   *
+   * Ognuna ha il suo pannello, la sua classifica, il suo ELO e le sue partite:
+   * sono due campionati separati che condividono soltanto le regole. Il primo
+   * della lista è quello usato quando un comando non specifica la lega.
+   *
+   *  - id:              usato nei bottoni e nel database. Non cambiarlo dopo l'uso.
+   *  - channelNames:    nomi del canale del pannello secondo lo stato delle code
+   *  - historyChannelId: dove finisce la cronaca; se null usa quello condiviso
+   *  - categoryId:      categoria delle stanze temporanee; se null quella condivisa
+   */
+  leagues: [
+    {
+      id: 'pro',
+      name: 'LEGA PRO',
+      emoji: '🏆',
+      channelNames: { open: '🟢︱pro-aperte', closed: '🔴︱pro-chiuse' },
+      historyChannelId: null,
+      categoryId: null,
+    },
+    {
+      id: 'open',
+      name: 'LEGA OPEN',
+      emoji: '🎯',
+      channelNames: { open: '🟢︱open-aperte', closed: '🔴︱open-chiuse' },
+      historyChannelId: null,
+      categoryId: null,
+    },
+  ],
+
+  // Le lettere dei nomi dei canali vengono convertite in maiuscoletto
+  // (ᴘʀᴏ-ᴀᴘᴇʀᴛᴇ) perché Discord non le forza in minuscolo come farebbe con le
+  // lettere normali; metti a false per usarli così come sono scritti.
+  channelNamesSmallCaps: true,
 
   // Mappe attualmente in rotazione: solo da queste vengono estratte quelle del veto.
   // Per rimetterne una in gioco basta aggiungerne il nome, purché sia in `maps`.

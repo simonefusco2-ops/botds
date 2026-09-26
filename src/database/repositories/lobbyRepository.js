@@ -10,7 +10,7 @@
 const db = require('../db');
 
 const createStmt = db.prepare(
-  "INSERT INTO ihl_lobbies (guild_id, channel_id, state) VALUES (?, ?, 'queue')",
+  "INSERT INTO ihl_lobbies (league, guild_id, channel_id, state) VALUES (?, ?, ?, 'queue')",
 );
 const findStmt = db.prepare('SELECT * FROM ihl_lobbies WHERE id = ?');
 const findQueueStmt = db.prepare(
@@ -52,8 +52,8 @@ function hydrate(row) {
   return lobby;
 }
 
-function create(guildId, channelId) {
-  const { lastInsertRowid } = createStmt.run(guildId, channelId);
+function create(league, guildId, channelId) {
+  const { lastInsertRowid } = createStmt.run(league, guildId, channelId);
   return hydrate(findStmt.get(lastInsertRowid));
 }
 

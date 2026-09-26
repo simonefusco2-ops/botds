@@ -49,22 +49,15 @@ npm start
 
 ## In-House League
 
-`/ihl pannello` pubblica il pannello rosso/verde con cui lo staff apre e chiude le code. Alla decima persona in coda nasce una **stanza privata della partita** (`partita-<id>`, categoria in `config/ihl.config.js`): lì dentro si svolge tutto — check-in, coinflip, scelta del lato, ban delle mappe, draft e voto del vincitore — mentre il canale delle code resta libero e la coda successiva riparte subito. La cronaca — partita avviata, risultato coi punti, annullamenti — va nel canale dello storico indicato da `historyChannelId`.
+Ci sono **due leghe indipendenti**, `pro` e `open` (in `config/ihl.config.js`): pannello, code, partite, ELO e classifica separati, stesse regole. Lo stesso giocatore ha due punteggi distinti e non può essere in due partite insieme.
 
-Tutte le stanze temporanee sono visibili a tutto il server — il Discord si vede popolato — ma solo i dieci partecipanti e lo staff possono collegarsi alle vocali e scrivere nella testuale. Prima che la partita inizi viene creato un **vocale di ritrovo**: chi è già collegato a un vocale qualsiasi ci viene spostato dal bot, gli altri entrano da soli. Le scelte partono solo quando ci sono dentro tutti e dieci, e da lì i giocatori vengono spostati nelle vocali delle due squadre. Chi non si presenta può essere sostituito dallo staff con `/ihl sostituisci` dopo i minuti indicati da `timers.substituteAfter`. Chi è già in una partita non conclusa non può rimettersi in coda.
+`/ihl pannello lega:<pro|open>` pubblica il pannello rosso/verde nel canale scelto — uno per lega, in due canali diversi. `/ihl classifica lega:<pro|open> canale:#x immagine:<banner>` fa lo stesso con la classifica.
 
-I capitani sono i due ELO più alti, ma **chi apre le scelte lo decide un sorteggio**. L'ordine delle fasi è lato, draft e infine ban delle mappe, che parte da tutte quelle in rotazione. Il voto del vincitore non ha scadenza: l'ELO viene assegnato appena una squadra raggiunge la maggioranza dei voti. Altri comandi: `/ihl profilo`, `/ihl classifica`, `/ihl partite`, `/ihl risultato`, `/ihl elo-modifica`, `/ihl annulla`.
+Alla decima persona in coda nasce una **stanza privata della partita** (`partita-<id>`, in fondo alla categoria indicata da `categoryId`): lì dentro si svolge tutto — check-in, coinflip, scelta del lato, draft, ban delle mappe e voto del vincitore — mentre il canale delle code resta libero e la coda successiva riparte subito. La cronaca — partita avviata, risultato coi punti, annullamenti — va nel canale dello storico (`historyChannelId`, impostabile anche per lega).
 
-## Messaggi grafici senza toccare il codice
+Tutte le stanze temporanee sono visibili a tutto il server — il Discord si vede popolato — ma solo i dieci partecipanti e lo staff possono collegarsi alle vocali e scrivere nella testuale. Prima che la partita inizi viene creato un **vocale di ritrovo**: chi è già collegato a un vocale qualsiasi ci viene spostato dal bot, gli altri entrano da soli. Le scelte partono solo quando ci sono dentro tutti e dieci, e da lì i giocatori vengono spostati nelle vocali delle due squadre. Chi non si presenta può essere sostituito dallo staff con `/ihl sostituisci` dopo i minuti indicati da `timers.substituteAfter`.
 
-- **`/embed`** — crea un messaggio impaginato direttamente da Discord: nel comando scegli canale, carichi l'immagine banner, la thumbnail e il colore; si apre un popup dove scrivi titolo, testo (multilinea, con markdown) e le sezioni, una per riga nel formato `Titolo | Testo` (aggiungi `| inline` per affiancarle). Le immagini caricate vengono ri-allegate al messaggio, quindi non scadono. Alla fine ricevi l'ID del messaggio.
-- **`/embed-modifica`** — passi l'ID del messaggio e riapre lo stesso popup **già precompilato** col contenuto attuale: cambi quello che vuoi e il messaggio viene aggiornato sul posto (opzionalmente con nuova immagine/colore).
-
-Alternativa per i messaggi fissi di setup: il contenuto di `/setup-channels` si edita in `config/channels.config.js` (titolo, descrizione, campi, colore, `image`, `thumbnail`), poi serve `pm2 restart` e rieseguire il comando — se il messaggio esiste già viene aggiornato, non duplicato.
-
-## Webhook Faceit
-
-Configura nella Faceit Hub l'URL `https://<tuo-host>:<FACEIT_WEBHOOK_PORT>/webhooks/faceit`. Se imposti `FACEIT_WEBHOOK_SECRET`, il bot richiede l'header `x-webhook-secret` (o `?secret=`) corrispondente per accettare la richiesta.
+I capitani sono i due ELO più alti, ma **chi apre le scelte lo decide un sorteggio**. L'ordine delle fasi è lato, draft e infine ban delle mappe, che parte da tutte quelle in rotazione. Il voto del vincitore non ha scadenza: l'ELO viene assegnato appena una squadra raggiunge la maggioranza dei voti. Altri comandi: `/ihl profilo`, `/ihl partite`, `/ihl risultato`, `/ihl elo-modifica`, `/ihl annulla`.
 
 ## Regolamento HUB e ruolo IPL
 
@@ -72,6 +65,6 @@ Configura nella Faceit Hub l'URL `https://<tuo-host>:<FACEIT_WEBHOOK_PORT>/webho
 
 ## API per il sito
 
-Sulla stessa porta dei webhook gira un'API di sola lettura che espone classifica, profili e storico partite della In-House League, sempre allineata a quanto si vede su Discord: `GET /api/v1/leaderboard`, `/api/v1/players/:discordId`, `/api/v1/matches`, `/api/v1/health`.
+Sulla stessa porta dei webhook gira un'API di sola lettura che espone classifica, profili e storico partite della In-House League, sempre allineata a quanto si vede su Discord: `GET /api/v1/leaderboard`, `/api/v1/players/:discordId`, `/api/v1/matches`, `/api/v1/health`. La lega si sceglie con `?lega=pro` o `?lega=open`.
 
 La documentazione completa da consegnare a chi sviluppa il sito è in [`docs/INTEGRAZIONE-SITO.md`](docs/INTEGRAZIONE-SITO.md): endpoint, esempi di risposta, schema del database, funzionamento dell'ELO e configurazione del reverse proxy.

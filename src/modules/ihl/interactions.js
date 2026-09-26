@@ -11,6 +11,7 @@ const lobbyRepository = require('../../database/repositories/lobbyRepository');
 const lobbyManager = require('./lobbyManager');
 const queuePanel = require('./queuePanel');
 const ihlLeaderboard = require('./leaderboard');
+const leagues = require('./leagues');
 
 const PREFIX = 'ihl_';
 
@@ -41,21 +42,32 @@ async function requireTurn(interaction, lobby, state) {
 async function handle(client, interaction) {
   const [action, ...rest] = interaction.customId.split(':');
 
-  if (action === 'ihl_toggle') return queuePanel.toggleQueues(client, interaction);
+  // La lega viaggia nell'identificatore dei bottoni: due campionati vivono in
+  // canali diversi e il bot deve sapere subito di quale si tratta.
+  if (action === 'ihl_toggle') return queuePanel.toggleQueues(client, interaction, rest[0]);
 
   // La classifica è sfogliabile da chiunque: nessun controllo di turno o ruolo.
   // Dal pannello pubblico si apre una copia privata; dentro quella si sfoglia.
   if (action === 'ihl_lb') {
-    return ihlLeaderboard.turnPage(interaction, Number(rest[0]) || 0, rest[1] || ihlLeaderboard.PUBLIC);
+    return ihlLeaderboard.turnPage(
+      interaction,
+      Number(rest[0]) || 0,
+      rest[1] || ihlLeaderboard.PUBLIC,
+      rest[2],
+    );
   }
 
-  if (action === 'ihl_lb_me') return ihlLeaderboard.showOwnPosition(interaction);
+  if (action === 'ihl_lb_me') return ihlLeaderboard.showOwnPosition(interaction, rest[0]);
 
   if (action === 'ihl_join') {
-    if (!queuePanel.isOpen()) {
-      return interaction.reply({ content: '🔴 Le code sono chiuse in questo momento.', ephemeral: true });
+    const league = leagues.find(rest[0]);
+    if (!queuePanel.isOpen(league)) {
+      return interaction.reply({
+        content: `🔴 Le code della **${league.name}** sono chiuse in questo momento.`,
+        ephemeral: true,
+      });
     }
-    return lobbyManager.joinQueue(client, interaction);
+    return lobbyManager.joinQueue(client, interaction, league.id);
   }
 
   if (action === 'ihl_leave') return lobbyManager.leaveQueue(client, interaction);

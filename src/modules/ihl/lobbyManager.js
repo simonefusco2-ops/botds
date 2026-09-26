@@ -15,6 +15,7 @@ const lobbyRepository = require('../../database/repositories/lobbyRepository');
 const ihlRepository = require('../../database/repositories/ihlRepository');
 const eloService = require('./eloService');
 const ihlLeaderboard = require('./leaderboard');
+const leagues = require('./leagues');
 const {
   buildQueueEmbed,
   buildQueueComponents,
@@ -36,6 +37,13 @@ const {
  * voto — succede lì dentro, e il canale delle code torna subito disponibile per
  * la coda successiva.
  */
+
+/**
+ * Posizione richiesta per le stanze temporanee: Discord riduce i valori troppo
+ * alti all'ultimo posto disponibile, quindi le nuove stanze finiscono sempre in
+ * fondo alla categoria invece di infilarsi fra i canali fissi.
+ */
+const BOTTOM = 999;
 
 /** Timer in attesa, per chiave: la fase corrente e l'attesa del check-in. */
 const timers = new Map();
@@ -167,7 +175,7 @@ function renderNotice(client, lobby, extra = {}) {
 }
 
 async function publishNotice(client, lobby, extra = {}) {
-  const channelId = ihlConfig.historyChannelId || lobby.channel_id;
+  const channelId = leagues.historyChannelId(leagues.find(lobby.league)) || lobby.channel_id;
   const channel = await client.channels.fetch(channelId).catch(() => null);
   if (!channel) {
     logger.warn(`IHL lobby ${lobby.id}: canale dello storico ${channelId} non raggiungibile.`);
@@ -272,8 +280,8 @@ async function renderCheckin(client, lobby) {
  * La lobby in raccolta nel canale, creandola se non c'è. Le partite già avviate
  * non contano: restano attive in parallelo mentre la coda continua a riempirsi.
  */
-function getOrCreateLobby(guildId, channelId) {
-  return lobbyRepository.findQueueInChannel(channelId) || lobbyRepository.create(guildId, channelId);
+function getOrCreateLobby(leagueId, guildId, channelId) {
+  return lobbyRepository.findQueueInChannel(channelId) || lobbyRepository.create(leagueId, guildId, channelId);
 }
 
 /** La partita non ancora conclusa in cui il giocatore è già impegnato, se c'è. */
@@ -281,8 +289,8 @@ function busyIn(userId) {
   return lobbyRepository.listActive().find((lobby) => lobby.players.includes(userId)) || null;
 }
 
-async function joinQueue(client, interaction) {
-  const lobby = getOrCreateLobby(interaction.guildId, interaction.channelId);
+async function joinQueue(client, interaction, leagueId) {
+  const lobby = getOrCreateLobby(leagueId, interaction.guildId, interaction.channelId);
 
   if (lobby.state !== 'queue') {
     return interaction.reply({ content: '⚠️ La lobby è già partita: attendi la prossima.', ephemeral: true });
@@ -309,7 +317,7 @@ async function joinQueue(client, interaction) {
   }
 
   const players = [...lobby.players, interaction.user.id];
-  ihlRepository.ensure(interaction.user.id);
+  ihlRepository.ensure(lobby.league, interaction.user.id);
 
   if (players.length < ihlConfig.queueSize) {
     const updated = lobbyRepository.update(lobby.id, { players });
@@ -326,7 +334,7 @@ async function joinQueue(client, interaction) {
   // si aggiungerebbe come undicesimo e farebbe partire una seconda volta la
   // stessa partita. È esattamente così che nascevano due canali gemelli.
   const updated = lobbyRepository.update(lobby.id, { players, state: 'checkin' });
-  const next = lobbyRepository.create(updated.guild_id, updated.channel_id);
+  const next = lobbyRepository.create(updated.league, updated.guild_id, updated.channel_id);
 
   await interaction.reply({
     content: `✅ Coda completa (${players.length}/${ihlConfig.queueSize}): sto aprendo la stanza.`,
@@ -371,7 +379,8 @@ async function openMatch(client, lobby) {
   const guild = await client.guilds.fetch(lobby.guild_id).catch(() => null);
   if (!guild) return null;
 
-  const parent = ihlConfig.categoryId || config.tempVcCategoryId || undefined;
+  const league = leagues.find(lobby.league);
+  const parent = leagues.categoryId(league) || config.tempVcCategoryId || undefined;
   const allow = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
 
   // Le stanze della partita sono visibili a tutto il server: così si vede che
@@ -381,6 +390,7 @@ async function openMatch(client, lobby) {
       name: `${ihlConfig.matchChannel.prefix}${lobby.id}`,
       type: ChannelType.GuildText,
       parent,
+      position: BOTTOM,
       topic: `Partita IHL #${lobby.id}`,
       permissionOverwrites: [
         {
@@ -405,6 +415,7 @@ async function openMatch(client, lobby) {
       name: `${ihlConfig.voice.checkinName} · #${lobby.id}`,
       type: ChannelType.GuildVoice,
       parent,
+      position: BOTTOM,
       permissionOverwrites: [
         {
           id: guild.roles.everyone.id,
@@ -564,7 +575,7 @@ async function substitutePlayer(client, lobbyId, outId, inId) {
     return { error: `<@${outId}> è nel vocale di ritrovo: non si sostituisce chi si è presentato.` };
   }
 
-  ihlRepository.ensure(inId);
+  ihlRepository.ensure(lobby.league, inId);
   const players = lobby.players.map((id) => (id === outId ? inId : id));
   const updated = lobbyRepository.update(lobbyId, { players });
 
@@ -609,7 +620,7 @@ async function applyPlayerPermissions(client, lobby, outId, inId) {
  */
 async function startPicks(client, lobby) {
   const ranked = ihlRepository
-    .getMany(lobby.players)
+    .getMany(lobby.league, lobby.players)
     .sort((a, b) => b.elo - a.elo)
     .map((player) => player.discord_id);
 
@@ -777,7 +788,7 @@ async function setupVoiceChannels(client, lobby) {
   const guild = await client.guilds.fetch(lobby.guild_id).catch(() => null);
   if (!guild) return;
 
-  const parent = ihlConfig.categoryId || config.tempVcCategoryId || undefined;
+  const parent = leagues.categoryId(leagues.find(lobby.league)) || config.tempVcCategoryId || undefined;
   const created = {};
 
   for (const [key, name, team] of [
@@ -789,6 +800,7 @@ async function setupVoiceChannels(client, lobby) {
         name: `${name} · #${lobby.id}`,
         type: ChannelType.GuildVoice,
         parent,
+        position: BOTTOM,
         permissionOverwrites: [
           // Visibile a tutti, ma ci si collega solo se si gioca quella partita.
           {
@@ -862,10 +874,11 @@ async function finishMatch(client, lobbyId, winner, note) {
 
   clearLobbyTimers(lobbyId);
 
-  const changes = eloService.applyMatchResult(lobby.team_a, lobby.team_b, winner);
+  const changes = eloService.applyMatchResult(lobby.league, lobby.team_a, lobby.team_b, winner);
 
   for (const change of changes) {
     ihlRepository.recordMatch({
+      league: lobby.league,
       lobby_id: lobby.id,
       discord_id: change.discordId,
       team: change.team,
@@ -891,7 +904,7 @@ async function finishMatch(client, lobbyId, winner, note) {
   await renderMatch(client, updated, { result });
 
   scheduleCleanup(client, updated);
-  await ihlLeaderboard.refresh(client);
+  await ihlLeaderboard.refresh(client, lobby.league);
   return updated;
 }
 
@@ -935,7 +948,7 @@ async function cancelLobby(client, lobbyId) {
 
   await renderNotice(client, updated, { result: '🚫 **Partita annullata dallo staff.**' });
 
-  if (refunded.length) await ihlLeaderboard.refresh(client);
+  if (refunded.length) await ihlLeaderboard.refresh(client, lobby.league);
 
   return { lobby, refunded };
 }

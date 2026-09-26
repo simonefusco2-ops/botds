@@ -33,9 +33,9 @@ function computeDelta(teamAElos, teamBElos, winner) {
 }
 
 /** Applica il risultato a tutti i giocatori e restituisce il dettaglio per il riepilogo. */
-function applyMatchResult(teamA, teamB, winner) {
-  const playersA = ihlRepository.getMany(teamA);
-  const playersB = ihlRepository.getMany(teamB);
+function applyMatchResult(league, teamA, teamB, winner) {
+  const playersA = ihlRepository.getMany(league, teamA);
+  const playersB = ihlRepository.getMany(league, teamB);
 
   const { deltaA, deltaB } = computeDelta(
     playersA.map((p) => p.elo),
@@ -46,12 +46,12 @@ function applyMatchResult(teamA, teamB, winner) {
   const changes = [];
 
   for (const player of playersA) {
-    ihlRepository.applyResult(player.discord_id, deltaA, winner === 'a');
+    ihlRepository.applyResult(league, player.discord_id, deltaA, winner === 'a');
     changes.push({ discordId: player.discord_id, before: player.elo, delta: deltaA, team: 'a' });
   }
 
   for (const player of playersB) {
-    ihlRepository.applyResult(player.discord_id, deltaB, winner === 'b');
+    ihlRepository.applyResult(league, player.discord_id, deltaB, winner === 'b');
     changes.push({ discordId: player.discord_id, before: player.elo, delta: deltaB, team: 'b' });
   }
 

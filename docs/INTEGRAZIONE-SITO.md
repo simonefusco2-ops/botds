@@ -43,7 +43,21 @@ quindi non esistono stati intermedi visibili all'API.
 
 ---
 
-## 3. Come funziona la classifica
+## 3. Le due leghe
+
+Il sistema ospita **due campionati indipendenti**: `pro` e `open`. Hanno ELO,
+classifica e storico separati, e lo stesso giocatore può avere due punteggi
+diversi. **Ogni endpoint accetta il parametro `lega`** (`?lega=pro`, `?lega=open`);
+omettendolo si ottiene la prima lega, cioè `pro`.
+
+`GET /health` elenca le leghe esistenti con quanti giocatori ha ciascuna: è da lì
+che il sito può ricavarle senza averle scritte a mano.
+
+Nel database la colonna `league` distingue le righe in `ihl_players`,
+`ihl_matches` e `ihl_lobbies`. Le partite giocate prima dell'introduzione delle
+leghe sono marcate `archivio` e non appartengono a nessuna delle due.
+
+## 4. Come funziona la classifica
 
 - Ogni giocatore parte da **1000 ELO** alla prima coda.
 - A fine partita si applica un **Elo classico**: si confronta la media ELO delle
@@ -92,10 +106,10 @@ bot esistesse può mancare — l'API in quel caso restituisce `"name": null`.
 
 ---
 
-## 4. L'API
+## 5. L'API
 
 **Base URL:** `http://<host>:3000/api/v1` (in produzione va messa dietro HTTPS,
-vedi § 6).
+vedi § 7).
 
 Tutti gli endpoint sono **GET** e restituiscono JSON. Una richiesta con un altro
 metodo riceve `405`: l'API non può scrivere nulla.
@@ -119,6 +133,7 @@ La classifica, paginata.
 
 | parametro | default | note |
 |---|---|---|
+| `lega` | `pro` | `pro` oppure `open` |
 | `page` | `1` | prima pagina |
 | `size` | `25` | massimo `100` |
 
@@ -157,6 +172,7 @@ Profilo completo con lo storico.
 
 | parametro | default | note |
 |---|---|---|
+| `lega` | `pro` | `pro` oppure `open` |
 | `matches` | `20` | quante partite dello storico, massimo `200` |
 
 ```json
@@ -193,6 +209,7 @@ Le ultime partite, con le due squadre già ricomposte.
 
 | parametro | default | note |
 |---|---|---|
+| `lega` | `pro` | `pro` oppure `open` |
 | `limit` | `20` | massimo `200` |
 
 ```json
@@ -224,7 +241,7 @@ Le ultime partite, con le due squadre già ricomposte.
 
 ---
 
-## 5. Note per l'integrazione
+## 6. Note per l'integrazione
 
 **Fusi orari.** Tutte le date sono **UTC**, nel formato `YYYY-MM-DD HH:MM:SS`.
 Vanno convertite lato sito (`new Date(valore.replace(' ', 'T') + 'Z')`).
@@ -253,7 +270,7 @@ a rispondere uguale.
 
 ---
 
-## 6. Da fare sul server (lato IVPITER)
+## 7. Da fare sul server (lato IVPITER)
 
 L'API ascolta sulla porta **3000**, la stessa dei webhook Faceit. Da esporre
 **solo dietro HTTPS**, con un reverse proxy. Esempio nginx:
@@ -288,10 +305,11 @@ Per disattivare l'API: `API_ENABLED=false` e riavvio.
 
 ---
 
-## 7. Prova rapida
+## 8. Prova rapida
 
 ```bash
 curl -s http://127.0.0.1:3000/api/v1/health | jq
-curl -s "http://127.0.0.1:3000/api/v1/leaderboard?size=5" | jq '.players[] | {rank, name, elo}'
+curl -s "http://127.0.0.1:3000/api/v1/leaderboard?lega=pro&size=5" | jq '.players[] | {rank, name, elo}'
+curl -s "http://127.0.0.1:3000/api/v1/leaderboard?lega=open&size=5" | jq '.players[] | {rank, name, elo}'
 curl -s "http://127.0.0.1:3000/api/v1/matches?limit=3" | jq '.matches[] | {match_id, map, winner}'
 ```

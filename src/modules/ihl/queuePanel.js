@@ -14,18 +14,15 @@ const settingsRepository = require('../../database/repositories/settingsReposito
 const lobbyRepository = require('../../database/repositories/lobbyRepository');
 const lobbyManager = require('./lobbyManager');
 const { COLORS } = require('../../utils/embeds');
-const { toSmallCaps } = require('../../utils/smallCaps');
+const leagues = require('./leagues');
 
 const PANEL_KEY = 'ihl_panel_message';
 const OPEN_KEY = 'ihl_queues_open';
 const ANNOUNCE_KEY = 'ihl_announce_message';
 
-/** Nome del canale secondo lo stato, in maiuscoletto se richiesto dalla configurazione. */
-function channelName(open) {
-  const names = ihlConfig.queueChannelNames;
-  const raw = open ? names.open : names.closed;
-  return names.smallCaps ? toSmallCaps(raw) : raw;
-}
+// Ogni lega ricorda le sue cose: pannello, stato delle code, annunci.
+const panelKey = (league) => leagues.settingsKey(PANEL_KEY, league.id);
+const openKey = (league) => leagues.settingsKey(OPEN_KEY, league.id);
 
 /**
  * Rinomina il canale senza aspettarla.
@@ -36,8 +33,8 @@ function channelName(open) {
  * cioè, all'atto pratico, non arrivavano. Il nome è un dettaglio estetico:
  * si aggiorna quando Discord lo permette, intanto il resto va avanti.
  */
-function renameChannel(channel, open) {
-  const name = channelName(open);
+function renameChannel(channel, league, open) {
+  const name = leagues.channelName(league, open);
 
   // Niente richiesta se il nome è già quello: il limite non si spreca.
   if (channel.name === name) {
@@ -69,8 +66,8 @@ function renameChannel(channel, open) {
     );
 }
 
-function isOpen() {
-  return settingsRepository.get(OPEN_KEY) === '1';
+function isOpen(league) {
+  return settingsRepository.get(openKey(league)) === '1';
 }
 
 /** Solo i ruoli elencati in configurazione possono aprire o chiudere. */
@@ -78,22 +75,22 @@ function canManage(member) {
   return ihlConfig.managerRoleIds.some((roleId) => member.roles.cache.has(roleId));
 }
 
-function buildPanel(open) {
+function buildPanel(league, open) {
   const embed = new EmbedBuilder()
     .setColor(open ? COLORS.success : COLORS.danger)
-    .setTitle(open ? '🟢  CODE APERTE' : '🔴  CODE CHIUSE')
+    .setTitle(`${open ? '🟢' : '🔴'}  ${league.name}  ·  CODE ${open ? 'APERTE' : 'CHIUSE'}`)
     .setDescription(
       open
         ? 'Le code sono **aperte**: entra in vocale e premi il bottone per metterti in lista.\n' +
             `Al raggiungimento di **${ihlConfig.queueSize} giocatori** partono capitani, ban delle mappe e draft.`
         : 'Le code sono **chiuse**. Lo staff le aprirà a breve: resta sintonizzato.',
     )
-    .setFooter({ text: 'In-House League · IVPITER' })
+    .setFooter({ text: `In-House League · ${league.name}` })
     .setTimestamp();
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId('ihl_toggle')
+      .setCustomId(`ihl_toggle:${league.id}`)
       .setLabel(open ? 'Chiudi le code' : 'Apri le code')
       .setEmoji(open ? '🔒' : '🔓')
       .setStyle(open ? ButtonStyle.Danger : ButtonStyle.Success),
@@ -102,37 +99,46 @@ function buildPanel(open) {
   return { embeds: [embed], components: [row] };
 }
 
-async function publishPanel(interaction) {
+async function publishPanel(interaction, league) {
   const channel = interaction.options.getChannel('canale') || interaction.channel;
-  const payload = buildPanel(isOpen());
+  const payload = buildPanel(league, isOpen(league));
 
-  const stored = settingsRepository.get(PANEL_KEY);
+  const stored = settingsRepository.get(panelKey(league));
   const [storedChannelId, storedMessageId] = stored ? stored.split(':') : [];
 
   if (storedMessageId && storedChannelId === channel.id) {
     const existing = await channel.messages.fetch(storedMessageId).catch(() => null);
     if (existing) {
       await existing.edit(payload);
-      return interaction.reply({ content: `✅ Pannello code aggiornato in ${channel}.`, ephemeral: true });
+      return interaction.reply({
+        content: `✅ Pannello **${league.name}** aggiornato in ${channel}.`,
+        ephemeral: true,
+      });
     }
   }
 
   const sent = await channel.send(payload);
-  settingsRepository.set(PANEL_KEY, `${channel.id}:${sent.id}`);
-  return interaction.reply({ content: `✅ Pannello code pubblicato in ${channel}.`, ephemeral: true });
+  settingsRepository.set(panelKey(league), `${channel.id}:${sent.id}`);
+
+  return interaction.reply({
+    content:
+      `✅ Pannello **${league.name}** pubblicato in ${channel}.\n` +
+      '-# Ogni lega ha il suo canale, la sua classifica e il suo ELO: tienile separate.',
+    ephemeral: true,
+  });
 }
 
-async function refreshPanel(client) {
-  const stored = settingsRepository.get(PANEL_KEY);
+async function refreshPanel(client, league) {
+  const stored = settingsRepository.get(panelKey(league));
   if (!stored) return;
 
   const [channelId, messageId] = stored.split(':');
   const channel = await client.channels.fetch(channelId).catch(() => null);
   const message = await channel?.messages.fetch(messageId).catch(() => null);
-  await message?.edit(buildPanel(isOpen())).catch(() => {});
+  await message?.edit(buildPanel(league, isOpen(league))).catch(() => {});
 }
 
-async function toggleQueues(client, interaction) {
+async function toggleQueues(client, interaction, leagueId) {
   if (!canManage(interaction.member)) {
     return interaction.reply({
       content: '⛔ Solo Developer, Owner e Staff possono aprire o chiudere le code.',
@@ -140,25 +146,22 @@ async function toggleQueues(client, interaction) {
     });
   }
 
-  const opening = !isOpen();
-  settingsRepository.set(OPEN_KEY, opening ? '1' : '0');
+  const league = leagues.find(leagueId);
+  const opening = !isOpen(league);
+  settingsRepository.set(openKey(league), opening ? '1' : '0');
 
   await interaction.deferUpdate();
-  await refreshPanel(client);
+  await refreshPanel(client, league);
 
   const channel = interaction.channel;
-  renameChannel(channel, opening);
-
-  if (!opening) {
-    await clearSessionMessages(client, channel);
-    return;
-  }
+  renameChannel(channel, league, opening);
 
   // Si riparte sempre da una coda sola: eventuali schede rimaste da prima
   // vengono chiuse ed eliminate, così nel canale non ne convivono due.
   await clearSessionMessages(client, channel);
+  if (!opening) return;
 
-  const lobby = lobbyManager.getOrCreateLobby(interaction.guildId, channel.id);
+  const lobby = lobbyManager.getOrCreateLobby(league.id, interaction.guildId, channel.id);
   await lobbyManager.renderQueue(client, lobby, { announce: true });
 }
 
@@ -175,15 +178,18 @@ async function toggleQueues(client, interaction) {
  * Il pannello con il bottone e le cronache delle partite non si toccano.
  */
 async function purgeQueueMessages(client, channel) {
-  const stored = settingsRepository.get(PANEL_KEY);
-  const [, panelMessageId] = stored ? stored.split(':') : [];
+  // I pannelli di tutte le leghe restano intoccabili, non solo quello in uso.
+  const panelIds = leagues.all().map((league) => {
+    const stored = settingsRepository.get(panelKey(league));
+    return stored ? stored.split(':')[1] : null;
+  });
 
   const recent = await channel.messages.fetch({ limit: 50 }).catch(() => null);
   if (!recent) return;
 
   for (const message of recent.values()) {
     if (message.author?.id !== client.user.id) continue;
-    if (message.id === panelMessageId) continue;
+    if (panelIds.includes(message.id)) continue;
 
     const embed = message.embeds?.[0];
     const isQueueCard =

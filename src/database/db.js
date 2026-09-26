@@ -70,18 +70,23 @@ db.exec(`
     added_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- Una riga per giocatore PER LEGA: i campionati hanno ELO separati, quindi la
+  -- chiave è la coppia lega + giocatore.
   CREATE TABLE IF NOT EXISTS ihl_players (
-    discord_id TEXT PRIMARY KEY,
+    league TEXT NOT NULL DEFAULT 'pro',
+    discord_id TEXT NOT NULL,
     elo INTEGER NOT NULL,
     wins INTEGER NOT NULL DEFAULT 0,
     losses INTEGER NOT NULL DEFAULT 0,
     matches INTEGER NOT NULL DEFAULT 0,
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (league, discord_id)
   );
 
   -- Una riga per giocatore per partita: alimenta lo storico personale.
   CREATE TABLE IF NOT EXISTS ihl_matches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    league TEXT NOT NULL DEFAULT 'pro',
     lobby_id INTEGER,
     discord_id TEXT NOT NULL,
     team TEXT NOT NULL,
@@ -99,6 +104,7 @@ db.exec(`
   -- partita in corso, che resta recuperabile dal messaggio già pubblicato.
   CREATE TABLE IF NOT EXISTS ihl_lobbies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    league TEXT NOT NULL DEFAULT 'pro',
     guild_id TEXT NOT NULL,
     channel_id TEXT NOT NULL,
     message_id TEXT,
@@ -159,6 +165,49 @@ if (!lobbyColumns.includes('vote_deadline')) {
 for (const column of ['checkin_voice_id TEXT', 'checkin_at INTEGER', 'match_message_id TEXT', 'first_pick TEXT', 'notice_message_id TEXT']) {
   const [name, type] = column.split(' ');
   if (!lobbyColumns.includes(name)) db.exec(`ALTER TABLE ihl_lobbies ADD COLUMN ${name} ${type}`);
+}
+
+/**
+ * Passaggio a due leghe.
+ *
+ * `ihl_players` aveva il solo ID Discord come chiave, quindi non può ospitare
+ * due ELO per la stessa persona: la tabella va rifatta. Il passaggio è anche il
+ * momento in cui l'ELO viene azzerato, come richiesto, quindi le righe vecchie
+ * non vengono ricopiate: chi gioca riparte da zero nella lega in cui entra.
+ *
+ * Lo storico delle partite NON viene cancellato: le righe di prima vengono
+ * marcate come 'archivio', così restano nel database ma non compaiono in nessuna
+ * delle due leghe, dove i punteggi ripartono da capo.
+ */
+const playerColumns = db.prepare('PRAGMA table_info(ihl_players)').all().map((column) => column.name);
+
+if (!playerColumns.includes('league')) {
+  db.exec(`
+    ALTER TABLE ihl_players RENAME TO ihl_players_prima_delle_leghe;
+
+    CREATE TABLE ihl_players (
+      league TEXT NOT NULL DEFAULT 'pro',
+      discord_id TEXT NOT NULL,
+      elo INTEGER NOT NULL,
+      wins INTEGER NOT NULL DEFAULT 0,
+      losses INTEGER NOT NULL DEFAULT 0,
+      matches INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (league, discord_id)
+    );
+  `);
+}
+
+const matchColumns = db.prepare('PRAGMA table_info(ihl_matches)').all().map((column) => column.name);
+if (!matchColumns.includes('league')) {
+  db.exec("ALTER TABLE ihl_matches ADD COLUMN league TEXT NOT NULL DEFAULT 'pro'");
+  db.exec("UPDATE ihl_matches SET league = 'archivio'");
+}
+
+if (!lobbyColumns.includes('league')) {
+  db.exec("ALTER TABLE ihl_lobbies ADD COLUMN league TEXT NOT NULL DEFAULT 'pro'");
+  // Le lobby aperte prima delle leghe non appartengono a nessuna delle due.
+  db.exec("UPDATE ihl_lobbies SET state = 'closed' WHERE state != 'closed'");
 }
 
 module.exports = db;

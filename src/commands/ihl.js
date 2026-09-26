@@ -12,9 +12,24 @@ const ihlRepository = require('../database/repositories/ihlRepository');
 const lobbyRepository = require('../database/repositories/lobbyRepository');
 const queuePanel = require('../modules/ihl/queuePanel');
 const ihlConfig = require('../../config/ihl.config');
+const leagues = require('../modules/ihl/leagues');
 const ihlLeaderboard = require('../modules/ihl/leaderboard');
 const lobbyManager = require('../modules/ihl/lobbyManager');
 const { COLORS } = require('../utils/embeds');
+
+/** L'opzione con cui si sceglie il campionato. */
+function leagueOption(opt, required = false) {
+  return opt
+    .setName('lega')
+    .setDescription('Campionato di riferimento')
+    .setRequired(required)
+    .addChoices(...leagues.choices());
+}
+
+/** La lega indicata nel comando, o quella predefinita. */
+function leagueOf(interaction) {
+  return leagues.find(interaction.options.getString('lega'));
+}
 
 const STAFF_ONLY = ['pannello', 'classifica', 'annulla', 'elo-modifica', 'risultato', 'sostituisci'];
 
@@ -27,13 +42,13 @@ const STATE_LABELS = {
   live: 'in corso',
 };
 
-function buildProfileEmbed(user, player, history) {
+function buildProfileEmbed(user, player, history, league) {
   const winrate = player.matches ? Math.round((player.wins / player.matches) * 100) : 0;
 
   const embed = new EmbedBuilder()
     .setColor(COLORS.gold)
-    .setAuthor({ name: user.username, iconURL: user.displayAvatarURL() })
-    .setTitle(`📊  ${player.elo} ELO  ·  #${ihlRepository.rankOf(player.elo)} in classifica`)
+    .setAuthor({ name: `${user.username} · ${league.name}`, iconURL: user.displayAvatarURL() })
+    .setTitle(`📊  ${player.elo} ELO  ·  #${ihlRepository.rankOf(league.id, player.elo)} in classifica`)
     .setDescription(`**${player.wins}** vittorie · **${player.losses}** sconfitte · **${winrate}%** winrate`)
     .setThumbnail(user.displayAvatarURL({ size: 256 }))
     .setTimestamp();
@@ -72,7 +87,8 @@ module.exports = {
       sub
         .setName('profilo')
         .setDescription('Mostra ELO, statistiche e storico partite')
-        .addUserOption((opt) => opt.setName('giocatore').setDescription('Default: te stesso')),
+        .addUserOption((opt) => opt.setName('giocatore').setDescription('Default: te stesso'))
+        .addStringOption((opt) => leagueOption(opt)),
     )
     .addSubcommand((sub) =>
       sub
@@ -86,7 +102,8 @@ module.exports = {
         )
         .addAttachmentOption((opt) =>
           opt.setName('immagine').setDescription('Banner mostrato in cima alla classifica'),
-        ),
+        )
+        .addStringOption((opt) => leagueOption(opt, true)),
     )
     .addSubcommand((sub) =>
       sub
@@ -97,7 +114,8 @@ module.exports = {
             .setName('canale')
             .setDescription('Canale del pannello (default: questo canale)')
             .addChannelTypes(ChannelType.GuildText),
-        ),
+        )
+        .addStringOption((opt) => leagueOption(opt, true)),
     )
     .addSubcommand((sub) =>
       sub
@@ -111,7 +129,8 @@ module.exports = {
             .setDescription('Default: imposta')
             .addChoices({ name: 'Imposta a', value: 'set' }, { name: 'Somma (anche negativo)', value: 'add' }),
         )
-        .addStringOption((opt) => opt.setName('motivo').setDescription('Annotato nella risposta')),
+        .addStringOption((opt) => opt.setName('motivo').setDescription('Annotato nella risposta'))
+        .addStringOption((opt) => leagueOption(opt, true)),
     )
     .addSubcommand((sub) =>
       sub
@@ -164,33 +183,38 @@ module.exports = {
 
     if (subcommand === 'profilo') {
       const target = interaction.options.getUser('giocatore') || interaction.user;
-      const player = ihlRepository.get(target.id);
-      const history = ihlRepository.history(target.id, 10);
+      const league = leagueOf(interaction);
+      const player = ihlRepository.get(league.id, target.id);
+      const history = ihlRepository.history(league.id, target.id, 10);
 
-      return interaction.reply({ embeds: [buildProfileEmbed(target, player, history)], ephemeral: true });
+      return interaction.reply({
+        embeds: [buildProfileEmbed(target, player, history, league)],
+        ephemeral: true,
+      });
     }
 
     if (subcommand === 'classifica') {
       const channel = interaction.options.getChannel('canale') || interaction.channel;
       const image = interaction.options.getAttachment('immagine');
+      const league = leagueOf(interaction);
 
       await interaction.deferReply({ ephemeral: true });
 
       try {
-        await ihlLeaderboard.publish(client, channel, image);
+        await ihlLeaderboard.publish(client, channel, image, league);
       } catch (err) {
         return interaction.editReply({ content: `❌ Errore sull'immagine: ${err.message}` });
       }
 
       return interaction.editReply({
         content:
-          `✅ Classifica pubblicata in ${channel}: si aggiorna da sola a fine partita` +
+          `✅ Classifica **${league.name}** pubblicata in ${channel}: si aggiorna da sola a fine partita` +
           (image ? ' e il banner resta al suo posto.' : '.') +
-          '\n-# Rilanciando il comando viene aggiornata, non duplicata. Senza `immagine` il banner già caricato resta.',
+          '\n-# Ogni lega ha la sua classifica: pubblicale in due canali diversi.',
       });
     }
 
-    if (subcommand === 'pannello') return queuePanel.publishPanel(interaction);
+    if (subcommand === 'pannello') return queuePanel.publishPanel(interaction, leagueOf(interaction));
 
     // Con più code e partite in parallelo serve un modo per leggere i codici.
     if (subcommand === 'partite') {
@@ -201,13 +225,14 @@ module.exports = {
       }
 
       const lines = active.map((entry) => {
+        const league = leagues.find(entry.league);
         const state = STATE_LABELS[entry.state] || entry.state;
         const extra =
           entry.state === 'queue'
             ? `${entry.players.length}/${ihlConfig.queueSize} giocatori`
             : entry.chosen_map || 'mappa da definire';
         const room = entry.text_channel_id ? ` · <#${entry.text_channel_id}>` : '';
-        return `\`#${entry.id}\` · ${state} · ${extra}${room}`;
+        return `\`#${entry.id}\` · ${league.emoji} ${league.name} · ${state} · ${extra}${room}`;
       });
 
       return interaction.reply({
@@ -262,17 +287,18 @@ module.exports = {
       const mode = interaction.options.getString('modo') || 'set';
       const reason = interaction.options.getString('motivo');
 
-      const before = ihlRepository.get(target.id).elo;
-      const after = ihlRepository.setElo(target.id, mode === 'add' ? before + value : value).elo;
+      const league = leagueOf(interaction);
+      const before = ihlRepository.get(league.id, target.id).elo;
+      const after = ihlRepository.setElo(league.id, target.id, mode === 'add' ? before + value : value).elo;
 
       await interaction.reply({
         content:
-          `✅ ELO di ${target}: **${before} → ${after}**` +
+          `✅ ELO di ${target} in **${league.name}**: **${before} → ${after}**` +
           (reason ? `\n-# Motivo: ${reason}` : '') +
           `\n-# Modifica di ${interaction.user}`,
       });
 
-      return ihlLeaderboard.refresh(client);
+      return ihlLeaderboard.refresh(client, league.id);
     }
 
     // annulla

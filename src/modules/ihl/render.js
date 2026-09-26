@@ -16,6 +16,7 @@ const {
 } = require('discord.js');
 const ihlConfig = require('../../../config/ihl.config');
 const { COLORS } = require('../../utils/embeds');
+const leagues = require('./leagues');
 
 /**
  * Le schede della In-House League, divise per destinazione.
@@ -103,9 +104,11 @@ function pendingVoters(lobby) {
 // --- coda -------------------------------------------------------------------
 
 function buildQueueEmbed(lobby) {
+  const league = leagues.find(lobby.league);
+
   return new EmbedBuilder()
     .setColor(COLORS.gold)
-    .setTitle('🎮  CODA IN FORMAZIONE')
+    .setTitle(`${league.emoji}  CODA IN FORMAZIONE  ·  ${league.name}`)
     .setDescription(
       `**${lobby.players.length}/${ihlConfig.queueSize}** in coda\n\n${mentions(lobby.players)}`,
     )
@@ -113,11 +116,23 @@ function buildQueueEmbed(lobby) {
     .setTimestamp();
 }
 
-function buildQueueComponents() {
+function buildQueueComponents(lobby) {
+  // La lega viaggia nel bottone: il canale da solo non basta a dire a quale
+  // campionato appartiene la coda che si sta creando.
+  const suffix = lobby?.league ? `:${lobby.league}` : '';
+
   return [
     new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('ihl_join').setLabel('Entra in coda').setEmoji('✅').setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId('ihl_leave').setLabel('Esci').setEmoji('🚪').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId(`ihl_join${suffix}`)
+        .setLabel('Entra in coda')
+        .setEmoji('✅')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`ihl_leave${suffix}`)
+        .setLabel('Esci')
+        .setEmoji('🚪')
+        .setStyle(ButtonStyle.Secondary),
     ),
   ];
 }
@@ -129,17 +144,21 @@ function buildQueueComponents() {
  * diventa il riepilogo: nel canale resta la storia dei risultati, non i bottoni.
  */
 function buildNoticeEmbed(lobby, extra = {}) {
+  const league = leagues.find(lobby.league);
+
   const embed = new EmbedBuilder()
     .setColor(extra.result ? COLORS.success : COLORS.gold)
-    .setFooter({ text: `Partita #${lobby.id}` })
+    .setFooter({ text: `Partita #${lobby.id} · ${league.name}` })
     .setTimestamp();
 
   if (extra.result) {
-    return embed.setTitle(`🏁  PARTITA #${lobby.id}  ·  ${lobby.chosen_map || 'mappa n/d'}`).setDescription(extra.result);
+    return embed
+      .setTitle(`🏁  PARTITA #${lobby.id}  ·  ${league.name}  ·  ${lobby.chosen_map || 'mappa n/d'}`)
+      .setDescription(extra.result);
   }
 
   return embed
-    .setTitle(`🎮  PARTITA #${lobby.id} AVVIATA`)
+    .setTitle(`${league.emoji}  PARTITA #${lobby.id} AVVIATA  ·  ${league.name}`)
     .setDescription(
       (lobby.text_channel_id
         ? `Tutto si svolge in <#${lobby.text_channel_id}>: check-in, mappe, squadre e voto.\n`
@@ -153,7 +172,7 @@ function buildMatchEmbed(lobby, extra = {}) {
   const embed = new EmbedBuilder()
     .setColor(lobby.state === 'closed' ? COLORS.success : COLORS.gold)
     .setTitle(`${STATE_TITLES[lobby.state] || 'IN-HOUSE LEAGUE'}  ·  PARTITA #${lobby.id}`)
-    .setFooter({ text: `Partita #${lobby.id}` })
+    .setFooter({ text: `Partita #${lobby.id} · ${leagues.find(lobby.league).name}` })
     .setTimestamp();
 
   if (lobby.state === 'checkin') {

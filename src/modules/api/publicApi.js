@@ -12,6 +12,7 @@ const config = require('../../config');
 const logger = require('../../utils/logger');
 const ihlRepository = require('../../database/repositories/ihlRepository');
 const ihlConfig = require('../../../config/ihl.config');
+const leagues = require('../ihl/leagues');
 
 /**
  * API di sola lettura per il sito ivpiter.it.
@@ -110,6 +111,11 @@ function groupMatches(rows) {
   return [...matches.values()];
 }
 
+/** La lega richiesta, o quella predefinita: il sito può chiedere ?lega=open. */
+function readLeague(query) {
+  return leagues.find(query.lega || query.league);
+}
+
 function readPaging(query) {
   const size = Math.min(Math.max(parseInt(query.size, 10) || DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE);
   const page = Math.max(parseInt(query.page, 10) || 1, 1);
@@ -146,51 +152,62 @@ function mountPublicApi(app) {
   api.get('/health', (req, res) => {
     res.json({
       ok: true,
-      players: ihlRepository.count(),
-      updated_at: ihlRepository.lastUpdate(),
+      leagues: leagues.all().map((league) => ({
+        id: league.id,
+        name: league.name,
+        players: ihlRepository.count(league.id),
+        updated_at: ihlRepository.lastUpdate(league.id),
+      })),
       elo: { starting: ihlConfig.elo.starting, floor: ihlConfig.elo.floor, k_factor: ihlConfig.elo.kFactor },
     });
   });
 
   api.get('/leaderboard', (req, res) => {
     const { size, page, offset } = readPaging(req.query);
-    const total = ihlRepository.count();
+    const league = readLeague(req.query);
+    const total = ihlRepository.count(league.id);
 
     const players = ihlRepository
-      .pageWithNames(size, offset)
+      .pageWithNames(league.id, size, offset)
       // La posizione arriva dal database, non dall'indice: a pari ELO due
       // giocatori condividono la stessa posizione.
-      .map((player) => toPlayer(player, ihlRepository.rankOf(player.elo)));
+      .map((player) => toPlayer(player, ihlRepository.rankOf(league.id, player.elo)));
 
     res.json({
+      league: league.id,
+      league_name: league.name,
       page,
       size,
       total,
       pages: Math.max(1, Math.ceil(total / size)),
-      updated_at: ihlRepository.lastUpdate(),
+      updated_at: ihlRepository.lastUpdate(league.id),
       players,
     });
   });
 
   api.get('/players/:discordId', (req, res) => {
-    const player = ihlRepository.findWithName(req.params.discordId);
+    const league = readLeague(req.query);
+    const player = ihlRepository.findWithName(league.id, req.params.discordId);
     if (!player) return res.status(404).json({ error: 'player_not_found' });
 
     const limit = Math.min(Math.max(parseInt(req.query.matches, 10) || 20, 1), MAX_MATCHES);
 
     return res.json({
-      ...toPlayer(player, ihlRepository.rankOf(player.elo)),
-      total_players: ihlRepository.count(),
-      history: ihlRepository.history(player.discord_id, limit).map(toMatchRow),
+      league: league.id,
+      league_name: league.name,
+      ...toPlayer(player, ihlRepository.rankOf(league.id, player.elo)),
+      total_players: ihlRepository.count(league.id),
+      history: ihlRepository.history(league.id, player.discord_id, limit).map(toMatchRow),
     });
   });
 
   api.get('/matches', (req, res) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), MAX_MATCHES);
+    const league = readLeague(req.query);
 
     // Ogni partita occupa dieci righe: ne leggiamo dieci volte tante prima di raggrupparle.
-    const rows = ihlRepository.recentMatches(limit * ihlConfig.queueSize);
-    res.json({ matches: groupMatches(rows).slice(0, limit) });
+    const rows = ihlRepository.recentMatches(league.id, limit * ihlConfig.queueSize);
+    res.json({ league: league.id, matches: groupMatches(rows).slice(0, limit) });
   });
 
   api.use((req, res) => res.status(404).json({ error: 'not_found' }));
