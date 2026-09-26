@@ -59,6 +59,14 @@ Tutte le stanze temporanee sono visibili a tutto il server — il Discord si ved
 
 I capitani sono i due ELO più alti, ma **chi apre le scelte lo decide un sorteggio**. L'ordine delle fasi è lato, draft e infine ban delle mappe, che parte da tutte quelle in rotazione. Il voto del vincitore non ha scadenza: l'ELO viene assegnato appena una squadra raggiunge la maggioranza dei voti. Altri comandi: `/ihl profilo`, `/ihl partite`, `/ihl risultato`, `/ihl elo-modifica`, `/ihl annulla`.
 
+## Ruoli di gioco e verifica del rank
+
+`/pannello-ruoli` pubblica il pannello "Richiesta rank e ruoli" (banner opzionale, testo in `config/ruoli.config.js`): quattro bottoni per i ruoli di gioco, che ognuno si assegna e si toglie da solo, e un bottone che apre una finestra dove si incolla il link del proprio profilo **tracker.gg**.
+
+Il bot ricava il Riot ID dal link e chiede il rank al servizio configurato in `config/rank.config.js` (HenrikDev, chiave in `HENRIK_API_KEY`). Sotto la soglia `approvalFrom` (Ascendente) assegna subito rank e ruolo IPL, togliendo il rank precedente; da lì in su apre una pratica con la scheda di approvazione, dove lo staff può correggere il rank dal menu e poi approvare o rifiutare. Lo stesso controllo parte se il link viene incollato a mano dentro una pratica IPL.
+
+Gli ID dei ruoli rank vanno riempiti in `config/rank.config.js`: finché sono vuoti il bot mostra la proposta ma avvisa che non può assegnare niente. Per provare la lettura senza passare da Discord: `npm run prova-rank -- "<link tracker.gg>"`.
+
 ## Regolamento HUB e ruolo IPL
 
 `/regolamento-hub` pubblica il regolamento delle HUB (testo in `config/hub.config.js`) con banner opzionale e un bottone che apre un ticket del tipo `ipl`, dove lo staff chiede link del tracker o nome Riot. Quel tipo di ticket è marcato `hidden` in `config/tickets.config.js`, quindi non compare nel pannello generale `/ticket-panel`: la richiesta parte solo dopo aver letto le regole.

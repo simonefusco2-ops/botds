@@ -81,11 +81,22 @@ module.exports = {
     'Le violazioni possono comportare **richiami**, **sospensioni** o **esclusione dall\'HUB**, ' +
     'in base alla gravità e alla recidiva.',
 
+  leagues:
+    '### 🏅  LE DUE LEGHE\n' +
+    '🎯 **LEGA OPEN** — porta aperta: si gioca fino a **Ascendente 3**, per chi vuole divertirsi e crescere.\n' +
+    '🏆 **LEGA PRO** — da **Immortale 1** in su: livello alto, ritmo serio.\n' +
+    '-# In quale finisci lo decide il tuo rank verificato, non la tua parola.',
+
   request:
-    '### 🎫  COME OTTENERE IL RUOLO IPL\n' +
-    'Il ruolo **IPL** è necessario per partecipare alle HUB.\n' +
-    'Premi il bottone qui sotto: si apre una stanza privata con lo staff, dove dovrai mandare ' +
-    'il **link del tuo tracker** oppure il tuo **nome Riot completo** (Nome#TAG).',
+    '### 🎫  COME GIOCARE — RICHIESTA RANK\n' +
+    'Per entrare nelle HUB serve il ruolo **IPL** e il **rank verificato**.\n' +
+    '**Il link del tuo profilo tracker.gg è obbligatorio:** senza quello la richiesta non viene accettata.\n\n' +
+    '**Dove prenderlo:** vai su [tracker.gg/valorant](https://tracker.gg/valorant), cerca il tuo Riot ID ' +
+    "e copia l'indirizzo dalla barra del browser.\n" +
+    '**Cosa ci aspettiamo indietro:**\n' +
+    '```https://tracker.gg/valorant/profile/riot/Nome%23TAG/overview```\n' +
+    'Premi il bottone qui sotto: si apre una stanza privata con lo staff. Incolla lì il link, ' +
+    'il bot legge il rank e propone il ruolo, un membro dello staff controlla e approva.',
 
   button: {
     label: 'Richiedi il ruolo IPL',

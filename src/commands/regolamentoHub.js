@@ -102,8 +102,8 @@ module.exports = {
         value: `-# ${rule.subtitle}\n${rule.text}`,
       })),
       separateSections: true,
-      // Sanzioni e istruzioni per il ruolo chiudono la scheda, subito sopra il bottone.
-      footnote: `${hub.warning}\n\n${hub.request}\n\n-# ${hub.footer}`,
+      // Leghe, sanzioni e istruzioni per il rank chiudono la scheda, sopra il bottone.
+      footnote: `${hub.leagues}\n\n${hub.warning}\n\n${hub.request}\n\n-# ${hub.footer}`,
       rows: [buildRequestRow()],
     });
 

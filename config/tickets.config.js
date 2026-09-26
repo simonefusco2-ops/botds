@@ -40,9 +40,10 @@ module.exports = [
     style: 'success',
     description: 'Accesso alle HUB dopo aver letto il regolamento',
     intro:
-      'Per ottenere il ruolo **IPL** mandaci qui il **link del tuo tracker** ' +
-      '(tracker.gg, dak.gg o simili) **oppure** il tuo **nome Riot completo**, nel formato `Nome#TAG`.\n' +
-      'Confermaci inoltre di aver letto e accettato il **regolamento delle HUB**.',
+      'Incolla qui il **link del tuo profilo tracker.gg** — è obbligatorio:\n' +
+      '```https://tracker.gg/valorant/profile/riot/Nome%23TAG/overview```\n' +
+      'Appena lo mandi il bot legge il rank e propone il ruolo allo staff, che controlla e approva.\n' +
+      'Confermaci anche di aver letto e accettato il **regolamento delle HUB**.',
     categoryId: null,
     staffRoleId: null,
     hidden: true,

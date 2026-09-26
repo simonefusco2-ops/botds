@@ -45,30 +45,35 @@ function buildControlRow() {
   );
 }
 
-async function createTicket(interaction, typeId) {
-  const guild = interaction.guild;
+/**
+ * Crea la stanza del ticket e restituisce il canale.
+ *
+ * Separata da createTicket perché la pratica non nasce sempre da un bottone:
+ * anche la verifica del rank ne apre una, e lì non c'è nessuna risposta da
+ * modificare. Se l'utente ne ha già una aperta di quel tipo, torna quella.
+ */
+async function openTicketChannel(guild, user, botId, typeId) {
   const type = resolveType(typeId);
 
-  const existing = ticketRepository.findOpenByOwnerAndType(guild.id, interaction.user.id, type.id);
+  const existing = ticketRepository.findOpenByOwnerAndType(guild.id, user.id, type.id);
   if (existing) {
-    return interaction.reply({
-      content: `⚠️ Hai già una pratica aperta di tipo **${type.label}**: <#${existing.channel_id}>`,
-      ephemeral: true,
-    });
-  }
+    const channel = await guild.channels.fetch(existing.channel_id).catch(() => null);
+    if (channel) return { channel, type, reused: true };
 
-  await interaction.deferReply({ ephemeral: true });
+    // Il canale non c'è più: la pratica va chiusa, altrimenti resta un fantasma.
+    ticketRepository.close(existing.channel_id);
+  }
 
   const staffRoleId = type.staffRoleId || config.staffRoleId;
 
   const overwrites = [
     { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
     {
-      id: interaction.user.id,
+      id: user.id,
       allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
     },
     {
-      id: interaction.client.user.id,
+      id: botId,
       allow: [
         PermissionFlagsBits.ViewChannel,
         PermissionFlagsBits.SendMessages,
@@ -86,20 +91,43 @@ async function createTicket(interaction, typeId) {
   }
 
   const channel = await guild.channels.create({
-    name: `${type.id}-${interaction.user.username}`.toLowerCase().slice(0, 90),
+    name: `${type.id}-${user.username}`.toLowerCase().slice(0, 90),
     type: ChannelType.GuildText,
     parent: type.categoryId || config.ticketCategoryId || undefined,
     permissionOverwrites: overwrites,
-    topic: `${type.label} — richiesta di ${interaction.user.id}`,
+    topic: `${type.label} — richiesta di ${user.id}`,
   });
 
-  ticketRepository.create(channel.id, guild.id, interaction.user.id, type.id);
+  ticketRepository.create(channel.id, guild.id, user.id, type.id);
 
   await channel.send({
-    content: `${interaction.user}${staffRoleId ? ` <@&${staffRoleId}>` : ''}`,
-    embeds: [buildTicketControlEmbed(interaction.user, type)],
+    content: `${user}${staffRoleId ? ` <@&${staffRoleId}>` : ''}`,
+    embeds: [buildTicketControlEmbed(user, type)],
     components: [buildControlRow()],
   });
+
+  return { channel, type, reused: false };
+}
+
+async function createTicket(interaction, typeId) {
+  const type = resolveType(typeId);
+
+  const existing = ticketRepository.findOpenByOwnerAndType(interaction.guild.id, interaction.user.id, type.id);
+  if (existing) {
+    return interaction.reply({
+      content: `⚠️ Hai già una pratica aperta di tipo **${type.label}**: <#${existing.channel_id}>`,
+      ephemeral: true,
+    });
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+
+  const { channel } = await openTicketChannel(
+    interaction.guild,
+    interaction.user,
+    interaction.client.user.id,
+    type.id,
+  );
 
   await interaction.editReply({ content: `✅ Pratica **${type.label}** aperta: ${channel}` });
 }
@@ -165,4 +193,11 @@ async function pingUser(interaction) {
   }
 }
 
-module.exports = { createTicket, closeTicket, saveTranscript, pingUser, buildControlRow };
+module.exports = {
+  openTicketChannel,
+  createTicket,
+  closeTicket,
+  saveTranscript,
+  pingUser,
+  buildControlRow,
+};

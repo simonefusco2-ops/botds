@@ -15,6 +15,7 @@ const {
 } = require('../modules/embedBuilder/embedBuilderService');
 const { CUSTOM_ID_PREFIX: ROLE_BUTTON_PREFIX, handleRoleButton } = require('../modules/welcome/roleButtons');
 const ihlInteractions = require('../modules/ihl/interactions');
+const rankRequest = require('../modules/rank/rankRequest');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -31,7 +32,18 @@ module.exports = {
       if (interaction.isModalSubmit()) {
         if (interaction.customId === MODAL_CREATE || interaction.customId === MODAL_EDIT) {
           await handleEmbedModalSubmit(interaction);
+          return;
         }
+
+        if (interaction.customId.startsWith(rankRequest.PREFIX)) {
+          await rankRequest.handle(client, interaction);
+        }
+        return;
+      }
+
+      // Ruoli di gioco e verifica del rank: bottoni e menu del pannello ruoli.
+      if (interaction.customId?.startsWith(rankRequest.PREFIX)) {
+        await rankRequest.handle(client, interaction);
         return;
       }
 

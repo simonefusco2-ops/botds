@@ -10,7 +10,8 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "deploy-commands": "node src/deploy-commands.js",
-    "diagnose-social": "node scripts/diagnose-social.js"
+    "diagnose-social": "node scripts/diagnose-social.js",
+    "prova-rank": "node scripts/prova-rank.js"
   },
   "dependencies": {
     "axios": "^1.7.4",

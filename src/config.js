@@ -46,6 +46,9 @@ module.exports = {
   faceitWebhookSecret: process.env.FACEIT_WEBHOOK_SECRET || null,
   faceitWebhookPort: parseInt(process.env.FACEIT_WEBHOOK_PORT || '3000', 10),
 
+  // Chiave del servizio che fornisce il rank di Valorant (HenrikDev).
+  rankApiKey: process.env.HENRIK_API_KEY || null,
+
   // API di sola lettura per il sito: gira sulla stessa porta dei webhook Faceit.
   // Senza API_TOKEN è aperta (i dati sono gli stessi già pubblici su Discord).
   apiEnabled: process.env.API_ENABLED !== 'false',
