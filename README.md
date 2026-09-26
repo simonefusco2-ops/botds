@@ -2,6 +2,14 @@
 
 Bot Discord modulare (Discord.js v14) per la gestione di un team Valorant e l'automazione della Faceit Hub (In-House League).
 
+> **Il progetto è cresciuto oltre questo README.** Oggi il bot manda le IPL (due
+> leghe, code, draft, ban mappe, voto, ELO), la verifica dei rank e l'accesso
+> automatico alle leghe. La documentazione aggiornata è qui:
+>
+> - [`CLAUDE.md`](CLAUDE.md) — convenzioni, comandi, limiti di Discord, deploy
+> - [`docs/PASSAGGIO-DI-CONSEGNE.md`](docs/PASSAGGIO-DI-CONSEGNE.md) — il concept, i comandi, gli ID, cosa resta da fare
+> - [`docs/INTEGRAZIONE-SITO.md`](docs/INTEGRAZIONE-SITO.md) — l'API di sola lettura per il sito
+
 ## Struttura del progetto
 
 ```
