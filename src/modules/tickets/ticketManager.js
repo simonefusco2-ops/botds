@@ -132,6 +132,26 @@ async function createTicket(interaction, typeId) {
   await interaction.editReply({ content: `✅ Pratica **${type.label}** aperta: ${channel}` });
 }
 
+/**
+ * Chiude la pratica e programma l'eliminazione del canale.
+ *
+ * Separata da closeTicket perché la chiusura non arriva sempre da un bottone:
+ * anche l'approvazione della verifica del rank chiude da sé, e lì non c'è
+ * nessuna interazione a cui rispondere.
+ */
+function closeTicketChannel(channel, reason = 'Ticket chiuso', delayMs = 5000) {
+  if (!ticketRepository.findByChannel(channel.id)) return false;
+
+  ticketRepository.close(channel.id);
+
+  const timer = setTimeout(() => {
+    channel.delete(reason).catch((err) => logger.error('Errore eliminazione canale ticket', err));
+  }, delayMs);
+  timer.unref?.();
+
+  return true;
+}
+
 async function closeTicket(interaction) {
   const ticket = ticketRepository.findByChannel(interaction.channel.id);
   if (!ticket) {
@@ -139,11 +159,7 @@ async function closeTicket(interaction) {
   }
 
   await interaction.reply({ content: '🔒 Chiusura del ticket in corso... il canale verrà eliminato a breve.' });
-  ticketRepository.close(interaction.channel.id);
-
-  setTimeout(() => {
-    interaction.channel.delete('Ticket chiuso').catch((err) => logger.error('Errore eliminazione canale ticket', err));
-  }, 5000);
+  closeTicketChannel(interaction.channel);
 }
 
 async function saveTranscript(interaction) {
@@ -195,6 +211,7 @@ async function pingUser(interaction) {
 
 module.exports = {
   openTicketChannel,
+  closeTicketChannel,
   createTicket,
   closeTicket,
   saveTranscript,

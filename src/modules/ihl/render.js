@@ -16,6 +16,7 @@ const {
 } = require('discord.js');
 const ihlConfig = require('../../../config/ihl.config');
 const { COLORS } = require('../../utils/embeds');
+const { toButtonEmoji } = require('../../utils/emoji');
 const leagues = require('./leagues');
 
 /**
@@ -40,12 +41,22 @@ const STATE_TITLES = {
   closed: '🏁  PARTITA CONCLUSA',
 };
 
-function mentions(ids) {
-  return ids.length ? ids.map((id) => `<@${id}>`).join('\n') : '-# nessuno';
+/**
+ * Un giocatore con le sue insegne accanto: rank e ruoli di gioco.
+ * Senza insegne resta la sola menzione, quindi chi non ha verificato il rank
+ * compare comunque.
+ */
+function tag(id, badges) {
+  const badge = badges?.[id]?.badge;
+  return badge ? `<@${id}> ${badge}` : `<@${id}>`;
 }
 
-function inline(ids) {
-  return ids.length ? ids.map((id) => `<@${id}>`).join(' ') : '-# nessuno';
+function mentions(ids, badges) {
+  return ids.length ? ids.map((id) => tag(id, badges)).join('\n') : '-# nessuno';
+}
+
+function inline(ids, badges) {
+  return ids.length ? ids.map((id) => tag(id, badges)).join(' ') : '-# nessuno';
 }
 
 /**
@@ -62,7 +73,7 @@ function teamField(lobby, side) {
   const label = side === 'a' ? '🔴 Team A' : '🔵 Team B';
 
   const value = team.length
-    ? team.map((id) => (id === captain ? `👑 <@${id}>` : `<@${id}>`)).join('\n')
+    ? team.map((id) => (id === captain ? `👑 ${tag(id, lobby.badges)}` : tag(id, lobby.badges))).join('\n')
     : '-# nessuno';
 
   return { name: label, value, inline: true };
@@ -110,7 +121,7 @@ function buildQueueEmbed(lobby) {
     .setColor(COLORS.gold)
     .setTitle(`${league.emoji}  CODA IN FORMAZIONE  ·  ${league.name}`)
     .setDescription(
-      `**${lobby.players.length}/${ihlConfig.queueSize}** in coda\n\n${mentions(lobby.players)}`,
+      `**${lobby.players.length}/${ihlConfig.queueSize}** in coda\n\n${mentions(lobby.players, lobby.badges)}`,
     )
     .setFooter({ text: `Coda #${lobby.id} · al decimo giocatore si apre la stanza della partita` })
     .setTimestamp();
@@ -162,7 +173,7 @@ function buildNoticeEmbed(lobby, extra = {}) {
     .setDescription(
       (lobby.text_channel_id
         ? `Tutto si svolge in <#${lobby.text_channel_id}>: check-in, mappe, squadre e voto.\n`
-        : '') + `-# ${inline(lobby.players)}`,
+        : '') + `-# ${inline(lobby.players, lobby.badges)}`,
     );
 }
 
@@ -184,8 +195,8 @@ function buildMatchEmbed(lobby, extra = {}) {
         '**La partita parte solo quando ci siete tutti e dieci**, e da lì vi sposto nelle vocali delle squadre.',
     );
     embed.addFields(
-      { name: `✅ Dentro — ${present.length}/${lobby.players.length}`, value: inline(present) },
-      { name: `⌛ Mancano — ${missing.length}`, value: inline(missing) },
+      { name: `✅ Dentro — ${present.length}/${lobby.players.length}`, value: inline(present, lobby.badges) },
+      { name: `⌛ Mancano — ${missing.length}`, value: inline(missing, lobby.badges) },
     );
 
     if (extra.substitutable) {
@@ -225,7 +236,7 @@ function buildMatchEmbed(lobby, extra = {}) {
     embed.setDescription(`Turno di <@${lobby.turn}>: **scegli un giocatore**.`);
     embed.addFields(teamField(lobby, 'a'), teamField(lobby, 'b'), {
       name: `🎯 Ancora da scegliere — ${available.length}`,
-      value: inline(available),
+      value: inline(available, lobby.badges),
     });
 
     return embed;
@@ -252,7 +263,7 @@ function buildMatchEmbed(lobby, extra = {}) {
       const pending = pendingVoters(lobby);
       embed.addFields({
         name: `🗳️ Non hanno ancora votato — ${pending.length}`,
-        value: pending.length ? inline(pending) : '-# hanno votato tutti',
+        value: pending.length ? inline(pending, lobby.badges) : '-# hanno votato tutti',
       });
     }
 
@@ -318,10 +329,17 @@ function buildMatchComponents(lobby) {
           .setCustomId(`ihl_pick:${lobby.id}`)
           .setPlaceholder('Scegli un giocatore')
           .addOptions(
-            available.slice(0, 25).map((id) => ({
-              label: (lobby.names?.[id] || id).slice(0, 100),
-              value: id,
-            })),
+            available.slice(0, 25).map((id) => {
+              const badge = lobby.badges?.[id];
+              const emoji = toButtonEmoji(badge?.rank?.emoji);
+
+              return {
+                label: (lobby.names?.[id] || id).slice(0, 100),
+                value: id,
+                ...(emoji ? { emoji } : {}),
+                ...(badge?.label ? { description: badge.label.slice(0, 100) } : {}),
+              };
+            }),
           ),
       ),
     ];
@@ -363,4 +381,5 @@ module.exports = {
   remainingMaps,
   mentions,
   inline,
+  tag,
 };

@@ -24,6 +24,7 @@ const trackerLink = require('./trackerLink');
 const rankProvider = require('./rankProvider');
 const rolePanel = require('./rolePanel');
 const iplAccess = require('./iplAccess');
+const ruoliConfig = require('../../../config/ruoli.config');
 const ticketManager = require('../tickets/ticketManager');
 const { COLORS } = require('../../utils/embeds');
 const { toButtonEmoji } = require('../../utils/emoji');
@@ -236,6 +237,33 @@ async function clearOtherRanks(member, keepRoleId) {
   }
 }
 
+/**
+ * Avvisa in privato chi è stato approvato.
+ *
+ * Il ticket sparisce subito dopo, quindi senza questo messaggio la persona non
+ * saprebbe mai com'è finita. Nel DM c'è anche il passo successivo: il rank da
+ * solo non apre le IPL, serve un ruolo di gioco.
+ */
+async function notifyApproved(member, rank, accesso) {
+  const league = leagues.find(rankProvider.leagueOf(rank));
+
+  const seguito = accesso.league
+    ? `🎟️ Hai già l'accesso **IPL ${accesso.league.toUpperCase()}**: puoi entrare nelle code.`
+    : `⚠️ Per giocare le IPL ti manca ancora **un ruolo di gioco** ` +
+      `(${ruoliConfig.roles.map((role) => role.label).join(', ')}).\n` +
+      `Prendilo in <#${ruoliConfig.rolesChannelId}>: appena ce l'hai, l'accesso arriva da solo.`;
+
+  return member
+    .send({
+      content:
+        `${rank.emoji} **Rank approvato: ${rank.name}**\n` +
+        `Lo staff ha verificato il tuo profilo e ti ha assegnato il ruolo. Sei nella **${league.name}**.\n\n` +
+        seguito,
+    })
+    .then(() => true)
+    .catch(() => false);
+}
+
 async function handleApprove(interaction, ownerId, rankName) {
   if (!canApprove(interaction.member)) {
     return interaction.reply({ content: '⛔ Solo lo staff può approvare.', ephemeral: true });
@@ -277,15 +305,26 @@ async function handleApprove(interaction, ownerId, rankName) {
     ? `\n-# Non sono riuscito ad assegnare ${result.failed.length} ruolo/i: controlla che il ruolo del bot sia più in alto.`
     : '';
 
+  // Avvisato in privato e pratica chiusa: il canale non serve più.
+  const avvisato = await notifyApproved(member, rank, accesso);
+  const chiuso = ticketManager.closeTicketChannel(interaction.channel, 'Richiesta rank approvata', 8000);
+
   const accessoNota = accesso.league
     ? `\n🎟️ Accesso **IPL ${accesso.league.toUpperCase()}** assegnato.`
     : `\n-# Accesso IPL in attesa: gli manca ${iplAccess.missing(member).join(' e ')}.`;
+
+  const chiusura = chiuso
+    ? '\n🔒 Pratica chiusa: il canale sparisce fra pochi secondi.'
+    : '';
+  const dm = avvisato ? '' : `\n-# DM non recapitato: ${member} ha i messaggi privati chiusi.`;
 
   return interaction.editReply({
     content:
       `✅ ${member} approvato da ${interaction.user}: ${rank.emoji} **${rank.name}**, lega **${league.name}**.` +
       `\nRuoli assegnati: ${result.assigned.map((role) => `<@&${role.id}>`).join(' ') || 'nessuno'}` +
       accessoNota +
+      chiusura +
+      dm +
       failed,
   });
 }

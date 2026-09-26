@@ -73,7 +73,7 @@ module.exports = {
     { name: 'Diamante', match: ['diamond'], emoji: '<:DIAMOND3:1553358082149458080>', nameEmoji: '💎', league: 'open', roleId: '1553353701077553152' },
     { name: 'Ascendente', match: ['ascendant'], emoji: '<:ASCENDANT3:1553357147478429726>', nameEmoji: '🟩', league: 'open', roleId: '1553353834489978900' },
     { name: 'Immortale', match: ['immortal'], emoji: '<:IMMORTAL3:1553358030983139378>', nameEmoji: '🟥', league: 'pro', roleId: '1553353945945210970' },
-    { name: 'Radiante', match: ['radiant'], emoji: '🌟', nameEmoji: '🌟', league: 'pro', roleId: '1553354004845822103' },
+    { name: 'Radiante', match: ['radiant'], emoji: '<:RADIANT:1553358428552962058>', nameEmoji: '🌟', league: 'pro', roleId: '1553354004845822103' },
   ],
 
   /**

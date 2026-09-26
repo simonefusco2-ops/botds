@@ -16,6 +16,7 @@ const ihlRepository = require('../../database/repositories/ihlRepository');
 const eloService = require('./eloService');
 const ihlLeaderboard = require('./leaderboard');
 const leagues = require('./leagues');
+const badges = require('../rank/badges');
 const {
   buildQueueEmbed,
   buildQueueComponents,
@@ -139,7 +140,13 @@ async function publishQueue(client, lobby, { announce = false } = {}) {
     return;
   }
 
-  const payload = { embeds: [buildQueueEmbed(lobby)], components: buildQueueComponents() };
+  // Le insegne accanto ai nomi, e la lega dentro i bottoni: senza il secondo,
+  // il bottone della Open metterebbe in coda nella Pro.
+  const withBadges = { ...lobby, badges: await badges.forIds(channel.guild, lobby.players) };
+  const payload = {
+    embeds: [buildQueueEmbed(withBadges)],
+    components: buildQueueComponents(lobby),
+  };
 
   if (announce) {
     payload.content =
@@ -182,7 +189,8 @@ async function publishNotice(client, lobby, extra = {}) {
     return;
   }
 
-  const payload = { embeds: [buildNoticeEmbed(lobby, extra)], components: [] };
+  const withBadges = { ...lobby, badges: await badges.forIds(channel.guild, lobby.players) };
+  const payload = { embeds: [buildNoticeEmbed(withBadges, extra)], components: [] };
 
   if (lobby.notice_message_id) {
     const message = await channel.messages.fetch(lobby.notice_message_id).catch(() => null);
@@ -243,8 +251,12 @@ async function publishMatch(client, lobby, extra = {}) {
   if (!channel) return;
 
   const guild = channel.guild;
+
+  const withBadges = { ...lobby, badges: await badges.forIds(guild, lobby.players) };
   const withNames =
-    lobby.state === 'draft' ? { ...lobby, names: await resolveNames(guild, lobby.players) } : lobby;
+    lobby.state === 'draft'
+      ? { ...withBadges, names: await resolveNames(guild, lobby.players) }
+      : withBadges;
 
   const payload = {
     embeds: [buildMatchEmbed(withNames, extra)],
