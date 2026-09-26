@@ -53,9 +53,11 @@ CHIUSURA      ELO aggiornato, classifica riscritta, canali cancellati
 
 Ogni fase vive **dentro il canale della partita**. Il canale delle code resta
 pulito: solo il pannello e la scheda della coda. Avvii, risultati e annullamenti
-finiscono nel canale storico `1553153529361989683`. Le stanze temporanee le
-vedono tutti (il server sembra popolato) ma ci entrano solo i partecipanti, e
-nascono in fondo alla categoria `1547745773452533814`.
+finiscono nel canale storico `1553153529361989683`. La stanza testuale della
+partita la vedono solo i dieci e lo staff. Le vocali (check-in e squadre) le vedono
+tutti, così il server sembra popolato, ma ci entra solo chi gioca: nelle vocali
+delle squadre solo quella squadra. Nascono in fondo alla categoria
+`1547745773452533814`.
 
 ---
 

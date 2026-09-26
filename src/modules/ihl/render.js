@@ -191,7 +191,7 @@ function buildNoticeEmbed(lobby, extra = {}) {
     .setTitle(`${league.emoji}  PARTITA #${lobby.id} AVVIATA  ·  ${league.name}`)
     .setDescription(
       (lobby.text_channel_id
-        ? `Tutto si svolge in <#${lobby.text_channel_id}>: check-in, mappe, squadre e voto.\n`
+        ? `I giocatori trovano tutto in <#${lobby.text_channel_id}>: check-in, mappe, squadre e voto.\n`
         : '') + `-# ${inline(lobby.players, lobby.badges, 4000)}`,
     );
 }

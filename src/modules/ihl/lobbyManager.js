@@ -399,8 +399,8 @@ async function openMatch(client, lobby) {
   const parent = leagues.categoryId(league) || config.tempVcCategoryId || undefined;
   const allow = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
 
-  // Le stanze della partita sono visibili a tutto il server: così si vede che
-  // il Discord è vivo. Scrivere e collegarsi restano però riservati a chi gioca.
+  // La stanza testuale la vedono solo i dieci e lo staff. Le vocali invece le
+  // vedono tutti (il server sembra vivo), ma ci entra solo chi gioca.
   const text = await guild.channels
     .create({
       name: `${ihlConfig.matchChannel.prefix}${lobby.id}`,
@@ -409,11 +409,7 @@ async function openMatch(client, lobby) {
       position: BOTTOM,
       topic: `Partita IHL #${lobby.id}`,
       permissionOverwrites: [
-        {
-          id: guild.roles.everyone.id,
-          allow: [PermissionFlagsBits.ViewChannel],
-          deny: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.AddReactions],
-        },
+        { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
         { id: client.user.id, allow: [...allow, PermissionFlagsBits.ManageChannels] },
         ...ihlConfig.managerRoleIds.map((id) => ({ id, allow })),
         ...lobby.players.map((id) => ({ id, allow })),
@@ -993,6 +989,23 @@ async function cancelLobby(client, lobbyId) {
   return { lobby, refunded };
 }
 
+/** Toglie a @everyone la vista della stanza testuale; true se l'ha cambiata. */
+async function hideTextChannel(client, lobby) {
+  const channel = await client.channels.fetch(lobby.text_channel_id).catch(() => null);
+  if (!channel) return false;
+
+  const everyone = channel.guild.roles.everyone.id;
+  if (channel.permissionOverwrites.cache.get(everyone)?.deny.has(PermissionFlagsBits.ViewChannel)) return false;
+
+  return channel.permissionOverwrites
+    .edit(everyone, { ViewChannel: false })
+    .then(() => true)
+    .catch((err) => {
+      logger.warn(`IHL lobby ${lobby.id}: stanza testuale non resa privata: ${err.message}`);
+      return false;
+    });
+}
+
 /** Riarma il timer della fase: allo scadere decide il bot, come in partita. */
 function rearmPhaseTimer(client, lobby) {
   if (lobby.state === 'side') {
@@ -1018,6 +1031,9 @@ async function unstickLobby(client, lobbyId) {
   if (lobby.state === 'closed') return { error: `La partita \`#${lobbyId}\` è già conclusa.` };
 
   const done = [];
+
+  // Le stanze aperte prima che diventassero private: le si chiude ora.
+  if (await hideTextChannel(client, lobby)) done.push('stanza testuale resa privata');
 
   // Il check-in si rivaluta da capo: se ci sono tutti e dieci, parte.
   if (lobby.state === 'checkin') {
