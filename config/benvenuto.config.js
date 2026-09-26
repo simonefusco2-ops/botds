@@ -14,7 +14,7 @@
  * EMOJI PERSONALIZZATE SUI BOTTONI
  * I bottoni accettano solo emoji unicode oppure emoji caricate sul server.
  * Per usare i loghi dei giochi:
- *   1. Impostazioni server -> Emoji -> carica il logo (es. "valorant" e "cs")
+ *   1. Impostazioni server -> Emoji -> carica il logo (es. "valorant")
  *   2. In chat scrivi  \:valorant:  con la barra rovesciata e invia
  *   3. Discord mostrerà il codice, es. <:valorant:1234567890>
  *   4. Incolla quel codice nel campo `emoji` qui sotto
@@ -24,42 +24,52 @@ module.exports = {
 
   intro:
     'Sei entrato nella **Ivpiter Community**: qui si gioca, si compete e si cresce insieme.\n' +
-    'Bastano due passaggi per essere operativo.',
+    'Tre passaggi e sei operativo.',
 
-  // Canali richiamati nel messaggio: compaiono come link blu cliccabili.
-  rulesChannelId: '1547733991405387849',
-  socialChannelId: '1548054289262583838',
-
+  /**
+   * I passaggi del benvenuto. Ognuno rimanda al suo canale, che Discord rende
+   * come link blu cliccabile: il canale sta dentro il passaggio e non in un
+   * elenco a parte, così aggiungerne uno non sposta i collegamenti degli altri.
+   */
   steps: [
     {
       emoji: '📜',
       name: 'Leggi il regolamento',
       text: 'Poche regole, chiare: rispetto, fair play e ordine nei canali. Restando nel server le accetti.',
+      channelId: '1547733991405387849',
+    },
+    {
+      emoji: '🎯',
+      name: 'Richiedi i tuoi ruoli',
+      text:
+        'Verifica il tuo rank con il link di tracker.gg e prenditi i ruoli che giochi ' +
+        '(Duelist, Initiator, Controller, Sentinel). Servono per entrare nelle code.',
+      channelId: '1553343914960883802',
     },
     {
       emoji: '📲',
       name: 'Seguici sui social',
       text: 'Clip, annunci, tornei e dirette: tutti i nostri canali ufficiali sono raccolti qui.',
+      channelId: '1548054289262583838',
     },
   ],
 
-  rolesTitle: '🎮  Scegli i tuoi giochi',
-  rolesHint: 'Clicca un bottone per assegnarti il ruolo. Riclicca per rimuoverlo.',
+  rolesTitle: '🎮  Prendi il ruolo Valorant',
+  rolesHint: 'Clicca il bottone per assegnartelo. Riclicca per rimuoverlo.',
 
   roles: [
     {
       id: '1548053779943788564',
       label: 'Valorant',
-      emoji: '🔴', // sostituisci con <:valorant:ID> dopo aver caricato l'emoji
+      emoji: '<:valorant_round:1548245738557939784>',
       style: 'danger',
     },
-    {
-      id: '1548053832666447984',
-      label: 'Counter-Strike',
-      emoji: '🟡', // sostituisci con <:cs:ID> dopo aver caricato l'emoji
-      style: 'primary',
-    },
   ],
+
+  // Chiusura in grande, subito sopra il piè di pagina.
+  closing:
+    '## ⚡  VIENI SUBITO A GIOCARE\n' +
+    'Le nostre code ti aspettano: prendi il ruolo, verifica il rank e scendi in campo.',
 
   footer: 'Per qualsiasi problema apri un ticket: lo staff risponde a ogni convocazione.',
 };

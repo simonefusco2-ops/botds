@@ -19,11 +19,9 @@ const SETTINGS_KEY = 'benvenuto_message';
 
 /** I riferimenti <#id> vengono resi da Discord come link blu cliccabili al canale. */
 function buildSections() {
-  const channelLinks = [benvenuto.rulesChannelId, benvenuto.socialChannelId];
-
-  return benvenuto.steps.map((step, index) => ({
+  return benvenuto.steps.map((step) => ({
     name: `${step.emoji}  ${step.name}`,
-    value: `${step.text}\n> ➜ <#${channelLinks[index]}>`,
+    value: step.channelId ? `${step.text}\n> ➜ <#${step.channelId}>` : step.text,
   }));
 }
 
@@ -73,7 +71,7 @@ module.exports = {
         { name: benvenuto.rolesTitle, value: `-# ${benvenuto.rolesHint}` },
       ],
       separateSections: true,
-      footnote: benvenuto.footer,
+      footnote: benvenuto.closing ? `${benvenuto.closing}\n\n-# ${benvenuto.footer}` : benvenuto.footer,
       rows: [buildRoleRow()],
     });
 
