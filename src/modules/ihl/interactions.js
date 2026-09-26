@@ -106,13 +106,20 @@ async function handle(client, interaction) {
     }
 
     if (outcome.settled) {
-      return interaction.reply({ content: '✅ Maggioranza raggiunta: risultato registrato.', ephemeral: true });
+      return interaction.reply({
+        content: outcome.cancelled
+          ? '🚫 Maggioranza raggiunta: partita annullata, nessun ELO assegnato.'
+          : '✅ Maggioranza raggiunta: risultato registrato.',
+        ephemeral: true,
+      });
     }
 
     return interaction.reply({
       content: outcome.tie
         ? '🗳️ Voto registrato, ma siete in parità: se non cambia idea nessuno servirà lo staff con `/ihl risultato`.'
-        : `🗳️ Voto registrato per il **Team ${rest[1].toUpperCase()}**. Puoi cambiarlo ripremendo l'altro bottone.`,
+        : rest[1] === 'x'
+          ? '🗳️ Voto registrato per **annullare** la partita. Puoi cambiarlo premendo un altro bottone.'
+          : `🗳️ Voto registrato per il **Team ${rest[1].toUpperCase()}**. Puoi cambiarlo premendo un altro bottone.`,
       ephemeral: true,
     });
   }

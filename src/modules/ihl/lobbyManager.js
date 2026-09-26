@@ -997,8 +997,15 @@ async function castVote(client, lobbyId, userId, choice) {
   const votes = { ...lobby.votes, [userId]: choice };
   const updated = lobbyRepository.update(lobbyId, { votes });
 
-  const { a, b } = countVotes(updated);
+  const { a, b, x } = countVotes(updated);
   const needed = votesNeeded(updated);
+
+  // Qualcuno ha quittato o la partita non si può giocare: annullarla vale
+  // quanto vincerla, stessa maggioranza. Nessun ELO assegnato.
+  if (x >= needed) {
+    await cancelLobby(client, lobbyId, `🚫 **Partita annullata dai giocatori** (${x} voti su ${updated.players.length}).`);
+    return { settled: true, cancelled: true };
+  }
 
   if (a >= needed || b >= needed) {
     await finishMatch(client, lobbyId, a >= needed ? 'a' : 'b');
@@ -1078,7 +1085,7 @@ async function cleanupMatchChannels(client, lobby, reason = 'Partita IHL conclus
  * Annulla una partita. Se era già conclusa, l'ELO assegnato viene restituito a
  * tutti i partecipanti; se era ancora in corso, semplicemente non viene assegnato.
  */
-async function cancelLobby(client, lobbyId) {
+async function cancelLobby(client, lobbyId, result = '🚫 **Partita annullata dallo staff.**') {
   const lobby = lobbyRepository.find(lobbyId);
   if (!lobby) return null;
 
@@ -1086,10 +1093,12 @@ async function cancelLobby(client, lobbyId) {
 
   const refunded = ihlRepository.voidMatch(lobbyId);
 
-  await cleanupMatchChannels(client, lobby, 'Partita IHL annullata');
+  // Chiusa prima del primo await: due voti di annullamento arrivati insieme
+  // altrimenti la annullerebbero due volte.
   const updated = lobbyRepository.update(lobbyId, { state: 'closed' });
 
-  await renderNotice(client, updated, { result: '🚫 **Partita annullata dallo staff.**' });
+  await cleanupMatchChannels(client, lobby, 'Partita IHL annullata');
+  await renderNotice(client, updated, { result });
 
   if (refunded.length) await ihlLeaderboard.refresh(client, lobby.league);
 

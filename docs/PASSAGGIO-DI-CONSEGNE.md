@@ -49,6 +49,7 @@ BAN MAPPE     dopo il draft, a turno, su tutte le 7 mappe attive
 LIVE          due stanze vocali, squadre spostate dentro
 VOTO          i 10 votano il vincitore nel canale della partita: **prima squadra a
               6 voti**, nessuna scadenza (le partite possono durare ore)
+              oppure **Annulla**: anche lì a 6 voti, partita annullata e nessun ELO
 CHIUSURA      ELO aggiornato, classifica riscritta, canali cancellati
 ```
 

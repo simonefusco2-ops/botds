@@ -118,7 +118,8 @@ function remainingMaps(lobby) {
 
 function countVotes(lobby) {
   const votes = Object.values(lobby.votes || {});
-  return { a: votes.filter((v) => v === 'a').length, b: votes.filter((v) => v === 'b').length };
+  const count = (choice) => votes.filter((v) => v === choice).length;
+  return { a: count('a'), b: count('b'), x: count('x') };
 }
 
 /** Quanti voti servono per assegnare l'ELO: la maggioranza dei partecipanti. */
@@ -271,7 +272,10 @@ function buildMatchEmbed(lobby, extra = {}) {
           `⚔️ **Attacco:** ${TEAM_LABELS[side.attack]}  ·  🛡️ **Difesa:** ${TEAM_LABELS[side.defense]}\n\n` +
           `Finita la partita votate il vincitore qui sotto. **La prima squadra che arriva a ` +
           `${votesNeeded(lobby)} voti vince**: l'ELO viene assegnato in quel momento, non serve ` +
-          'che votino tutti.\n-# Nessuna scadenza: votate quando avete finito, anche fra ore.',
+          'che votino tutti.\n' +
+          `Se qualcuno quitta o non si può giocare, votate **Annulla**: a ${votesNeeded(lobby)} voti ` +
+          'la partita si annulla e nessuno perde o guadagna ELO.\n' +
+          '-# Nessuna scadenza: votate quando avete finito, anche fra ore.',
     );
 
     embed.addFields(
@@ -280,6 +284,9 @@ function buildMatchEmbed(lobby, extra = {}) {
     );
 
     if (lobby.state === 'live') {
+      const { x } = countVotes(lobby);
+      if (x) embed.addFields({ name: `🚫 Per annullare — ${x} voti`, value: `-# ne servono ${votesNeeded(lobby)}` });
+
       const pending = pendingVoters(lobby);
       embed.addFields({
         name: `🗳️ Non hanno ancora votato — ${pending.length}`,
@@ -366,7 +373,7 @@ function buildMatchComponents(lobby) {
   }
 
   if (lobby.state === 'live') {
-    const { a, b } = countVotes(lobby);
+    const { a, b, x } = countVotes(lobby);
     return [
       new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -379,6 +386,11 @@ function buildMatchComponents(lobby) {
           .setLabel(`Ha vinto Team B (${b})`)
           .setEmoji('🔵')
           .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`ihl_vote:${lobby.id}:x`)
+          .setLabel(`Annulla partita (${x})`)
+          .setEmoji('🚫')
+          .setStyle(ButtonStyle.Secondary),
       ),
     ];
   }
