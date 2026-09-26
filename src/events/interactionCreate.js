@@ -24,7 +24,24 @@ module.exports = {
     try {
       if (interaction.isChatInputCommand()) {
         const command = client.commands.get(interaction.commandName);
-        if (!command) return;
+
+        /**
+         * Comando registrato su Discord ma assente nel processo in esecuzione.
+         * Succede quando si registra dal codice nuovo senza riavviare il bot:
+         * prima qui si usciva in silenzio e Discord mostrava soltanto
+         * "L'applicazione non ha risposto", che non dice niente a nessuno.
+         */
+        if (!command) {
+          logger.warn(`Comando /${interaction.commandName} non caricato in questo processo.`);
+          await interaction.reply({
+            content:
+              `⚠️ Il comando \`/${interaction.commandName}\` risulta registrato ma il bot non lo conosce: ` +
+              'probabilmente è stato aggiornato il codice senza riavviarlo. Avvisa lo staff.',
+            ephemeral: true,
+          });
+          return;
+        }
+
         await command.execute(interaction, client);
         return;
       }
