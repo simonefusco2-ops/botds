@@ -31,7 +31,7 @@ function leagueOf(interaction) {
   return leagues.find(interaction.options.getString('lega'));
 }
 
-const STAFF_ONLY = ['pannello', 'classifica', 'annulla', 'elo-modifica', 'risultato', 'sostituisci'];
+const STAFF_ONLY = ['pannello', 'classifica', 'annulla', 'elo-modifica', 'risultato', 'sostituisci', 'sblocca'];
 
 const STATE_LABELS = {
   queue: 'in coda',
@@ -165,6 +165,14 @@ module.exports = {
     )
     .addSubcommand((sub) =>
       sub
+        .setName('sblocca')
+        .setDescription('Rimette in pari una partita bloccata senza annullarla (staff)')
+        .addIntegerOption((opt) =>
+          opt.setName('codice').setDescription('Numero della partita; se omesso usa quella di questo canale'),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
         .setName('annulla')
         .setDescription('Annulla una partita e rimuove le vocali (staff)')
         .addIntegerOption((opt) =>
@@ -279,6 +287,29 @@ module.exports = {
       await lobbyManager.finishMatch(client, lobby.id, winner);
       return interaction.editReply({
         content: `✅ Partita **#${lobby.id}** chiusa con vittoria **Team ${winner.toUpperCase()}**.`,
+      });
+    }
+
+    if (subcommand === 'sblocca') {
+      // Di solito lo si lancia dal canale della partita: lì il codice è superfluo.
+      const code =
+        interaction.options.getInteger('codice') ??
+        lobbyRepository.listActive().find((entry) => entry.text_channel_id === interaction.channelId)?.id;
+
+      if (!code) {
+        return interaction.reply({
+          content: '⚠️ Indica il `codice` della partita, oppure lancia il comando dal suo canale.',
+          ephemeral: true,
+        });
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      const outcome = await lobbyManager.unstickLobby(client, code);
+      if (outcome.error) return interaction.editReply({ content: `⚠️ ${outcome.error}` });
+
+      return interaction.editReply({
+        content: `🔧 Partita **#${code}** rimessa in pari: ${outcome.done.join(', ')}.`,
       });
     }
 

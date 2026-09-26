@@ -97,6 +97,7 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 | `/ihl partite` | le partite in corso |
 | `/ihl risultato codice squadra` | forza il vincitore |
 | `/ihl sostituisci codice esce entra` | cambio giocatore dopo i 7 minuti |
+| `/ihl sblocca [codice]` | rimette in pari una partita bloccata (scheda, timer, vocali) senza annullarla |
 | `/ihl annulla [codice]` | annulla una lobby |
 
 **Pannelli e regolamenti**

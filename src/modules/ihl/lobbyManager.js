@@ -993,6 +993,69 @@ async function cancelLobby(client, lobbyId) {
   return { lobby, refunded };
 }
 
+/** Riarma il timer della fase: allo scadere decide il bot, come in partita. */
+function rearmPhaseTimer(client, lobby) {
+  if (lobby.state === 'side') {
+    scheduleTimeout(client, lobby.id, ihlConfig.timers.sideChoice, () =>
+      chooseSide(client, lobby.id, pickRandom(['attack', 'defense']), true),
+    );
+  } else if (lobby.state === 'draft') {
+    scheduleTimeout(client, lobby.id, ihlConfig.timers.pick, () => autoPick(client, lobby.id));
+  } else if (lobby.state === 'ban') {
+    scheduleTimeout(client, lobby.id, ihlConfig.timers.mapBan, () => autoBan(client, lobby.id));
+  }
+}
+
+/**
+ * /ihl sblocca: rimette in pari una partita con il suo stato salvato, senza
+ * riavviare il bot e senza perdere niente. La partita resta nella fase in cui
+ * si trova; si rifà solo quello che doveva succedere e non è successo.
+ */
+async function unstickLobby(client, lobbyId) {
+  const lobby = lobbyRepository.find(lobbyId);
+  if (!lobby) return { error: `Nessuna partita con codice \`${lobbyId}\`.` };
+  if (lobby.state === 'queue') return { error: `La \`#${lobbyId}\` è ancora una coda: non c'è niente da sbloccare.` };
+  if (lobby.state === 'closed') return { error: `La partita \`#${lobbyId}\` è già conclusa.` };
+
+  const done = [];
+
+  // Il check-in si rivaluta da capo: se ci sono tutti e dieci, parte.
+  if (lobby.state === 'checkin') {
+    await handleCheckinChange(client, lobby.id);
+    done.push('check-in ricontrollato');
+    return { lobby: lobbyRepository.find(lobby.id), done };
+  }
+
+  if (lobby.state === 'live') {
+    // Un voto arrivato alla maggioranza mentre la scheda era bloccata.
+    const { a, b } = countVotes(lobby);
+    const needed = votesNeeded(lobby);
+    if (a >= needed || b >= needed) {
+      await finishMatch(client, lobby.id, a >= needed ? 'a' : 'b');
+      done.push(`voti già alla maggioranza: vince il Team ${a >= needed ? 'A' : 'B'}`);
+      return { lobby: lobbyRepository.find(lobby.id), done };
+    }
+
+    // Se la scheda era bloccata, anche mappa e lati potrebbero non essere arrivati.
+    await announceSides(client, lobby);
+    done.push('mappa e lati annunciati');
+
+    // Le vocali delle squadre non sono mai nate: si creano ora.
+    if (!lobby.voice_a_id && !lobby.voice_b_id) {
+      await setupVoiceChannels(client, lobby);
+      done.push('vocali delle squadre create');
+    }
+  } else {
+    rearmPhaseTimer(client, lobby);
+    done.push('timer della fase riarmato');
+  }
+
+  await renderMatch(client, lobby);
+  done.push('scheda ripubblicata');
+
+  return { lobby: lobbyRepository.find(lobby.id), done };
+}
+
 /**
  * I timer vivono in memoria: dopo un riavvio vanno riarmati, altrimenti una
  * lobby resterebbe appesa a una fase che nessuno chiude. Le schede si
@@ -1013,15 +1076,7 @@ async function resumeLobbies(client) {
       continue;
     }
 
-    if (lobby.state === 'side') {
-      scheduleTimeout(client, lobby.id, ihlConfig.timers.sideChoice, () =>
-        chooseSide(client, lobby.id, pickRandom(['attack', 'defense']), true),
-      );
-    } else if (lobby.state === 'draft') {
-      scheduleTimeout(client, lobby.id, ihlConfig.timers.pick, () => autoPick(client, lobby.id));
-    } else if (lobby.state === 'ban') {
-      scheduleTimeout(client, lobby.id, ihlConfig.timers.mapBan, () => autoBan(client, lobby.id));
-    }
+    rearmPhaseTimer(client, lobby);
 
     await renderMatch(client, lobby).catch((err) =>
       logger.error(`IHL lobby ${lobby.id}: scheda non ripubblicata dopo il riavvio`, err),
@@ -1043,6 +1098,7 @@ module.exports = {
   startPicks,
   chooseSide,
   banMap,
+  unstickLobby,
   pickPlayer,
   castVote,
   finishMatch,
