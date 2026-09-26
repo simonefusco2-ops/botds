@@ -9,6 +9,7 @@
  */
 const logger = require('../utils/logger');
 const iplAccess = require('../modules/rank/iplAccess');
+const notify = require('../modules/rank/notify');
 
 /**
  * L'accesso alle IPL dipende dai ruoli, quindi va ricontrollato ogni volta che
@@ -25,8 +26,20 @@ module.exports = {
       if (uguali) return;
     }
 
+    // Come stava prima, per capire dopo cosa è cambiato davvero.
+    const prima = notify.snapshot(oldMember);
+
     await iplAccess.sync(newMember).catch((err) => {
       logger.error(`Errore nel controllo dell'accesso IPL per ${newMember.id}`, err);
     });
+
+    // E glielo diciamo: chi riceve un rank a mano dallo staff non vede nessuna
+    // risposta del bot, e senza avviso non sa che gli manca ancora un passo.
+    const avviso = await notify.announce(newMember, prima).catch((err) => {
+      logger.error(`Errore nell'avviso sui ruoli per ${newMember.id}`, err);
+      return null;
+    });
+
+    if (avviso) logger.info(`Ruoli: avviso "${avviso}" mandato a ${newMember.id}.`);
   },
 };

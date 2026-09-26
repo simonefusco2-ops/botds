@@ -23,6 +23,7 @@ const { COLORS } = require('../../utils/embeds');
 const { buildCard } = require('../../utils/cards');
 const { applyEmoji } = require('../../utils/emoji');
 const iplAccess = require('./iplAccess');
+const notify = require('./notify');
 
 /**
  * Pannello "Richiesta rank e ruoli".
@@ -116,10 +117,17 @@ async function toggleRole(interaction, roleKey) {
   }
 
   const has = interaction.member.roles.cache.has(role.id);
+  let member = interaction.member;
+
+  // L'evento sui ruoli arriva subito dopo la modifica: zittiamo l'avviso in
+  // privato prima di toccare qualcosa, perché qui la risposta a schermo dice già
+  // tutto e un DM identico sarebbe solo rumore.
+  notify.silence(member.id);
 
   try {
-    if (has) await interaction.member.roles.remove(role);
-    else await interaction.member.roles.add(role);
+    // add/remove restituiscono il membro già aggiornato: usiamo quello per la
+    // lista dei requisiti, invece di fidarci della cache di prima del clic.
+    member = has ? await member.roles.remove(role) : await member.roles.add(role);
   } catch (err) {
     logger.warn(`Ruoli: ${entry.label} non assegnato a ${interaction.user.id}: ${err.message}`);
     return interaction.reply({
@@ -130,15 +138,16 @@ async function toggleRole(interaction, roleKey) {
   }
 
   // Il ruolo di gioco è metà dei requisiti: l'accesso IPL va ricalcolato subito.
-  const accesso = await iplAccess.sync(interaction.member);
+  await iplAccess.sync(member);
 
-  const nota = accesso.league
-    ? `\n🎟️ Hai l'accesso **IPL ${accesso.league.toUpperCase()}**.`
-    : `\n-# Per le IPL ti manca ${iplAccess.missing(interaction.member).join(' e ')}.`;
-
+  // La risposta arriva sulla stessa schermata del pannello: qui la lista dei due
+  // passi serve più che in DM, perché è il momento in cui la persona sta ancora
+  // guardando i bottoni e può sistemare quello che manca.
   return interaction.reply({
     content:
-      (has ? `➖ Ruolo **${entry.label}** rimosso.` : `➕ Ruolo **${entry.label}** assegnato.`) + nota,
+      (has ? `➖ Ruolo **${entry.label}** rimosso.` : `➕ Ruolo **${entry.label}** assegnato.`) +
+      '\n\n' +
+      iplAccess.checklist(member),
     flags: MessageFlags.Ephemeral,
   });
 }

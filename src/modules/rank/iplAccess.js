@@ -101,4 +101,38 @@ function missing(member) {
   return mancanze;
 }
 
-module.exports = { sync, entitlement, missing, rankOf, gameRolesOf };
+/**
+ * La lista dei due requisiti, con la spunta su quelli già fatti.
+ *
+ * È il messaggio che il bot ripete a ogni clic: chi prende il rank e si ferma
+ * lì vede subito la croce accanto al ruolo di gioco, e cosa premere per
+ * sistemarla. Vale anche in DM, dove non c'è il pannello sotto gli occhi.
+ */
+function checklist(member) {
+  const { league, rank, games } = entitlement(member);
+
+  const ruoli = games.length
+    ? `**${games.map((game) => game.label).join(', ')}**`
+    : `premi uno dei bottoni **${ruoliConfig.roles.map((role) => role.label).join(' / ')}**`;
+
+  const rankRiga = rank
+    ? `${rank.emoji} **${rank.name}**`
+    : `non verificato — premi **${ruoliConfig.button.label}**`;
+
+  const esito = league
+    ? `🎟️ **Accesso IPL ${league.toUpperCase()} attivo**: puoi entrare nelle code.`
+    : `🔒 **Accesso IPL ancora chiuso**: ti manca ${missing(member).join(' e ')}.`;
+
+  return (
+    `${games.length ? '✅' : '❌'} **Passo 1 · Ruolo di gioco** — ${ruoli}\n` +
+    `${rank ? '✅' : '❌'} **Passo 2 · Rank verificato** — ${rankRiga}\n` +
+    esito
+  );
+}
+
+/** Dove sta il pannello, per i messaggi che arrivano da altrove (DM compresi). */
+function panelLink() {
+  return `<#${ruoliConfig.rolesChannelId}>`;
+}
+
+module.exports = { sync, entitlement, missing, rankOf, gameRolesOf, checklist, panelLink };
