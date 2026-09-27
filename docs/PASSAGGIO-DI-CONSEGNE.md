@@ -119,7 +119,7 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 
 **Notifiche e utilità**
 `/twitch aggiungi|rimuovi|lista|prova` · `/social pannello|aggiungi|rimuovi|lista|controlla|prova`
-· `/inviti [utente]` · `/embed [tagga] [menziona]` · `/embed-modifica`
+· `/inviti [utente]` · `/clear quantita [utente]` · `/embed [tagga] [menziona]` · `/embed-modifica`
 
 ---
 
