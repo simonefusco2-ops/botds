@@ -186,7 +186,31 @@ const voidMatch = db.transaction((lobbyId) => {
   return rows;
 });
 
+const adjustEloStmt = db.prepare(`
+  UPDATE ihl_players SET elo = MAX(?, elo + ?), updated_at = datetime('now')
+  WHERE league = ? AND discord_id = ?
+`);
+
+/**
+ * Rimborso per troll: la partita si annulla per tutti (come voidMatch), poi chi
+ * ha trollato perde `penalty` e i vincitori prendono comunque `winnerBonus`.
+ * Chi ha perso torna esattamente a prima della partita. Tutto in transazione, e
+ * una partita già annullata non si può rimborsare una seconda volta.
+ */
+const trollRefund = db.transaction((lobbyId, trollId, penalty, winnerBonus) => {
+  const rows = voidMatch(lobbyId);
+  if (!rows.length) return [];
+
+  return rows.map((row) => {
+    const refund = -(row.elo_after - row.elo_before);
+    const extra = row.discord_id === trollId ? -penalty : row.won ? winnerBonus : 0;
+    if (extra) adjustEloStmt.run(ihlConfig.elo.floor, extra, row.league, row.discord_id);
+    return { ...row, refund, extra };
+  });
+});
+
 module.exports = {
+  trollRefund,
   ensure,
   get,
   getMany,

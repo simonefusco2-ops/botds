@@ -41,7 +41,7 @@ src/
   commands/   un file per comando slash
   events/     un file per evento Discord (ready, interactionCreate, voiceStateUpdate, …)
   modules/
-    ihl/      In-House League: code, draft, ban mappe, voto, classifica, leghe
+    ihl/      In-House League: code, draft, ban mappe, voto, classifica, leghe, sanzioni
     rank/     verifica rank, ruoli di gioco, accesso IPL, insegne, stato vocale
     tickets/  pratiche (apertura, chiusura, transcript)
     social/   notifiche RSS          twitch/   notifiche live

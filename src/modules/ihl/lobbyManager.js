@@ -17,6 +17,7 @@ const eloService = require('./eloService');
 const ihlLeaderboard = require('./leaderboard');
 const leagues = require('./leagues');
 const badges = require('../rank/badges');
+const sanctions = require('./sanctions');
 const {
   buildQueueEmbed,
   buildQueueComponents,
@@ -316,6 +317,16 @@ async function joinQueue(client, interaction, leagueId) {
     return interaction.reply({ content: '⚠️ La lobby è già partita: attendi la prossima.', ephemeral: true });
   }
 
+  const suspension = sanctions.activeSuspension(interaction.user.id);
+  if (suspension) {
+    return interaction.reply({
+      content:
+        `⛔ Sei **sospeso dalle code** fino a <t:${suspension.until}:f> (<t:${suspension.until}:R>).\n` +
+        `-# Motivazione: ${suspension.reason || 'non indicata'}`,
+      ephemeral: true,
+    });
+  }
+
   // Una persona alla volta in una sola partita: senza questo controllo si
   // potrebbe finire in due lobby insieme e non presentarsi in nessuna delle due.
   const busy = busyIn(interaction.user.id);
@@ -538,6 +549,8 @@ async function openMatch(client, lobby) {
     logger.warn(`IHL lobby ${lobby.id}: senza vocale di ritrovo si parte direttamente.`);
     return startPicks(client, updated);
   }
+
+  await sanctions.postClipNotice(text, updated);
 
   // Senza await: dieci DM richiedono qualche secondo e il check-in non li aspetta.
   dmCheckin(client, updated, updated.players).catch((err) => logger.error(`IHL lobby ${lobby.id}: DM del check-in`, err));

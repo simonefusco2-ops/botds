@@ -16,6 +16,7 @@ const leagues = require('../modules/ihl/leagues');
 const ihlLeaderboard = require('../modules/ihl/leaderboard');
 const lobbyManager = require('../modules/ihl/lobbyManager');
 const { COLORS } = require('../utils/embeds');
+const sanctions = require('../modules/ihl/sanctions');
 
 /** L'opzione con cui si sceglie il campionato. */
 function leagueOption(opt, required = false) {
@@ -31,7 +32,7 @@ function leagueOf(interaction) {
   return leagues.find(interaction.options.getString('lega'));
 }
 
-const STAFF_ONLY = ['pannello', 'classifica', 'annulla', 'elo-modifica', 'risultato', 'sostituisci', 'sblocca', 'rimuovi'];
+const STAFF_ONLY = ['pannello', 'classifica', 'annulla', 'elo-modifica', 'risultato', 'sostituisci', 'sblocca', 'rimuovi', 'sospendi', 'revoca', 'troll'];
 
 const STATE_LABELS = {
   queue: 'in coda',
@@ -171,6 +172,34 @@ module.exports = {
     )
     .addSubcommand((sub) =>
       sub
+        .setName('sospendi')
+        .setDescription('Sospende un giocatore dalle code, con annuncio nei richiami (staff)')
+        .addUserOption((opt) => opt.setName('giocatore').setDescription('Chi sospendere').setRequired(true))
+        .addStringOption((opt) =>
+          opt.setName('durata').setDescription('Es. 30m, 12h, 3g, 1g12h').setRequired(true).setMaxLength(20),
+        )
+        .addStringOption((opt) =>
+          opt.setName('motivo').setDescription('Motivazione, pubblicata nei richiami').setRequired(true).setMaxLength(500),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('revoca')
+        .setDescription('Revoca la sospensione dalle code di un giocatore (staff)')
+        .addUserOption((opt) => opt.setName('giocatore').setDescription('Chi riammettere').setRequired(true)),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('troll')
+        .setDescription('Rimborso per troll: annulla l\'ELO della partita, −30 al troll, +10 ai vincitori (staff)')
+        .addIntegerOption((opt) => opt.setName('codice').setDescription('Numero della partita').setRequired(true))
+        .addUserOption((opt) => opt.setName('giocatore').setDescription('Chi ha trollato').setRequired(true))
+        .addStringOption((opt) =>
+          opt.setName('motivo').setDescription('Motivazione, pubblicata nei richiami').setRequired(true).setMaxLength(500),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
         .setName('sblocca')
         .setDescription('Rimette in pari una partita bloccata senza annullarla (staff)')
         .addIntegerOption((opt) =>
@@ -293,6 +322,60 @@ module.exports = {
       await lobbyManager.finishMatch(client, lobby.id, winner);
       return interaction.editReply({
         content: `✅ Partita **#${lobby.id}** chiusa con vittoria **Team ${winner.toUpperCase()}**.`,
+      });
+    }
+
+    if (subcommand === 'sospendi') {
+      const target = interaction.options.getUser('giocatore', true);
+      const seconds = sanctions.parseDuration(interaction.options.getString('durata', true));
+      if (!seconds) {
+        return interaction.reply({
+          content: '⚠️ Durata non valida. Esempi: `30m`, `12h`, `3g`, `1g12h` (massimo un anno).',
+          ephemeral: true,
+        });
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+      const { until, removedFrom } = await sanctions.suspend(client, {
+        userId: target.id,
+        seconds,
+        reason: interaction.options.getString('motivo', true),
+        staffId: interaction.user.id,
+      });
+
+      const busy = lobbyManager.busyIn(target.id);
+      return interaction.editReply({
+        content:
+          `⛔ ${target} sospeso dalle code per **${sanctions.formatDuration(seconds)}**, fino a <t:${until}:f>.` +
+          (removedFrom.length ? `\n-# Tolto dalla coda ${removedFrom.map((id) => `#${id}`).join(', ')}.` : '') +
+          (busy ? `\n-# È ancora nella partita #${busy.id}: la sospensione vale dalla prossima coda.` : ''),
+      });
+    }
+
+    if (subcommand === 'revoca') {
+      const target = interaction.options.getUser('giocatore', true);
+      await interaction.deferReply({ ephemeral: true });
+      const count = await sanctions.revoke(client, { userId: target.id, staffId: interaction.user.id });
+      return interaction.editReply({
+        content: count ? `✅ Sospensione di ${target} revocata.` : `⚠️ ${target} non ha sospensioni attive.`,
+      });
+    }
+
+    if (subcommand === 'troll') {
+      const target = interaction.options.getUser('giocatore', true);
+      await interaction.deferReply({ ephemeral: true });
+
+      const outcome = await sanctions.trollRefund(client, {
+        lobbyId: interaction.options.getInteger('codice', true),
+        trollId: target.id,
+        reason: interaction.options.getString('motivo', true),
+        staffId: interaction.user.id,
+      });
+      if (outcome.error) return interaction.editReply({ content: `⚠️ ${outcome.error}` });
+
+      return interaction.editReply({
+        content: '✅ Rimborso applicato. Per tenerlo anche fuori dalle code usa `/ihl sospendi`.',
+        embeds: [outcome.embed],
       });
     }
 

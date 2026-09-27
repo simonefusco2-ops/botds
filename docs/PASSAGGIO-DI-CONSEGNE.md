@@ -38,6 +38,7 @@ Due leghe separate, con code, classifiche ed ELO indipendenti:
 CODA          il pannello apre le code; 10 posti, un giocatore per una sola partita
   ↓           (al decimo il bot crea subito la coda successiva)
 CHECK-IN      canale testuale privato della partita + stanza vocale di check-in;
+              nel canale l'avviso sull'obbligo di registrare la partita (clip);
               ognuno riceve un DM con il bottone per entrare nel check-in;
               chi è già in vocale viene trascinato dentro. Dopo 7 minuti lo staff
               può sostituire chi non si presenta (/ihl sostituisci)
@@ -105,6 +106,9 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 | `/ihl partite` | le partite in corso |
 | `/ihl risultato codice squadra` | forza il vincitore |
 | `/ihl sostituisci codice esce entra` | cambio giocatore dopo i 7 minuti |
+| `/ihl sospendi giocatore durata motivo` | sospende dalle code (es. `3g`), annuncio nei richiami e DM |
+| `/ihl revoca giocatore` | toglie la sospensione |
+| `/ihl troll codice giocatore motivo` | partita annullata per tutti, −30 al troll, +10 ai vincitori |
 | `/ihl rimuovi giocatore` | toglie qualcuno dalla coda (chi esce dal server viene tolto da solo) |
 | `/ihl sblocca [codice]` | rimette in pari una partita bloccata (scheda, timer, vocali) senza annullarla |
 | `/ihl annulla [codice]` | annulla una lobby |
@@ -152,6 +156,7 @@ bot, porta `API_PORT` (default 3000).
 - [ ] `HENRIK_API_KEY` nel `.env` — e **rigenerare la chiave**, è già passata in chat
 - [ ] `npm run prova-rank` per validare la lettura del rank dalla VPS
 - [ ] il ruolo del bot va **sopra** i ruoli dei rank, quelli IPL e i separatori, o non li assegna
+- [ ] ID della **stanza richiami** in `config/sanzioni.config.js` (`richiamiChannelId`)
 - [ ] ID del **separatore staff** in `config/separatori.config.js` (`staff.roleId`)
 - [ ] permesso **«Imposta stato canale vocale»** per i rank in vocale
 - [ ] ripubblicare i pannelli delle due leghe e le classifiche

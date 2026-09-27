@@ -132,6 +132,23 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- Sanzioni della IHL: sospensioni dalle code e rimborsi per troll. Restano
+  -- anche quando scadono o vengono revocate, come storico dei richiami.
+  CREATE TABLE IF NOT EXISTS ihl_sanctions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    discord_id TEXT NOT NULL,
+    league TEXT,
+    lobby_id INTEGER,
+    until INTEGER,
+    reason TEXT,
+    staff_id TEXT,
+    revoked INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_ihl_sanctions_player ON ihl_sanctions(discord_id);
+
   CREATE TABLE IF NOT EXISTS social_feeds (
     feed_url TEXT PRIMARY KEY,
     platform TEXT NOT NULL,
