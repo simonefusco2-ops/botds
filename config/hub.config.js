@@ -73,6 +73,14 @@ module.exports = {
       text:
         'In caso di problemi raccogli le prove e contatta i moderatori senza alimentare discussioni.',
     },
+    {
+      emoji: '🎬',
+      name: 'VIII · ABILITA I REPLAY',
+      subtitle: 'Chi crea la lobby, attiva la registrazione',
+      text:
+        'Chi crea la partita personalizzata deve **abilitare i replay** prima di iniziare. ' +
+        'Servono allo staff per verificare ogni segnalazione: una lobby senza replay può essere invalidata.',
+    },
   ],
 
   // Blocco finale, prima del bottone.
