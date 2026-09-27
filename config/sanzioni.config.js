@@ -36,7 +36,7 @@ module.exports = {
    */
   clip: {
     enabled: true,
-    roleId: null,
+    roleId: '1553763552483999844',
     title: '🎥  OBBLIGO DI REGISTRAZIONE',
     text:
       '{giocatori}: avete l\'**obbligo di clip**. Dovete **registrare l\'intera partita**, dal primo ' +
