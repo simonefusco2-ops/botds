@@ -113,7 +113,7 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 | `/ihl annulla [codice]` | annulla una lobby |
 
 **Pannelli e regolamenti**
-`/pannello-ruoli` · `/pannello-ipl` · `/regolamento-hub` · `/regolamento-streamer`
+`/pannello-ruoli` · `/pannello-ipl` · `/pannello-notifiche` · `/regolamento-hub` · `/regolamento-streamer`
 · `/regolamento` · `/benvenuto` · `/ticket-panel` · `/roster divisione:<…>` ·
 `/setup-channels`
 

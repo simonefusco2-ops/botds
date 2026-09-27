@@ -44,7 +44,7 @@ src/
     ihl/      In-House League: code, draft, ban mappe, voto, classifica, leghe, sanzioni
     rank/     verifica rank, ruoli di gioco, accesso IPL, insegne, stato vocale
     tickets/  pratiche (apertura, chiusura, transcript)
-    social/   notifiche RSS          twitch/   notifiche live
+    social/   notifiche RSS          twitch/   notifiche live e pannello del ruolo
     memberLog/ ingressi e inviti     welcome/  benvenuto
     api/      server HTTP e API per il sito
     separators/ ruoli separatori: a tutti, e quello staff solo allo staff

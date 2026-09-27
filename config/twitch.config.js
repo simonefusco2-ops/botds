@@ -19,6 +19,9 @@ const LIVE_ROLE_ID = '1553840021436506322';
  *  - roleIds:   ruoli da taggare; null = TWITCH_MENTION del .env
  */
 module.exports = {
+  // Letto anche da /pannello-notifiche, che dà e toglie questo ruolo.
+  liveRoleId: LIVE_ROLE_ID,
+
   groups: {
     generale: {
       label: 'Generale',

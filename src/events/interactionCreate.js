@@ -15,6 +15,7 @@ const {
 } = require('../modules/embedBuilder/embedBuilderService');
 const { CUSTOM_ID_PREFIX: ROLE_BUTTON_PREFIX, handleRoleButton } = require('../modules/welcome/roleButtons');
 const ihlInteractions = require('../modules/ihl/interactions');
+const liveRolePanel = require('../modules/twitch/liveRolePanel');
 const rankRequest = require('../modules/rank/rankRequest');
 const logger = require('../utils/logger');
 
@@ -93,6 +94,9 @@ module.exports = {
             return;
           case ROLE_BUTTON_PREFIX:
             await handleRoleButton(interaction, argument);
+            return;
+          case liveRolePanel.PREFIX:
+            await liveRolePanel.handle(interaction, argument);
             return;
           default:
             return;
