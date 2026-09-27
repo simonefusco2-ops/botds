@@ -72,9 +72,13 @@ async function handle(client, interaction) {
 
   if (action === 'ihl_leave') return lobbyManager.leaveQueue(client, interaction);
 
-  // Nessun deferUpdate: il vincitore aggiorna il messaggio con interaction.update.
-  if (action === 'ihl_duel') return lobbyManager.pressDuel(client, interaction, Number(rest[0]));
-  if (action === 'ihl_duel_ready') return lobbyManager.pressReady(client, interaction, Number(rest[0]));
+  // Nessun deferUpdate: la mossa aggiorna il messaggio con interaction.update.
+  if (action === 'ihl_rps') return lobbyManager.pressRps(client, interaction, Number(rest[0]), rest[1]);
+
+  // Bottoni del vecchio duello rimasti in messaggi già pubblicati.
+  if (action === 'ihl_duel' || action === 'ihl_duel_ready') {
+    return interaction.reply({ content: '⚠️ Questa sfida non è più attiva.', ephemeral: true });
+  }
 
   if (action === 'ihl_side') {
     const lobby = lobbyFrom(rest[0]);

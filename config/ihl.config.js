@@ -104,32 +104,31 @@ module.exports = {
   },
 
   /**
-   * Duello di riflessi fra i due capitani, al posto del lancio della moneta:
-   * decide chi apre il draft. Prima entrambi premono PRONTO (entro
-   * `readyTimeout` secondi: chi non lo fa perde, se non lo fa nessuno decide
-   * la moneta). Poi, dopo un'attesa casuale, compare il bottone SPARA,
-   * e vince chi lo preme per primo; chi preme prima del segnale perde. Se
-   * nessuno spara entro `timeout` secondi decide la moneta.
+   * Sasso carta forbici fra i due capitani, al posto del lancio della moneta:
+   * decide chi apre il draft. Ognuno sceglie in segreto; quando hanno scelto
+   * entrambi il bot svela le mosse. Pari: si rigioca, fino a `maxRounds` round,
+   * poi decide la moneta. Ogni round dura `timeout` secondi: chi non sceglie
+   * perde, e se non sceglie nessuno decide la moneta.
    * Con `enabled: false` si torna al lancio della moneta.
+   * Segnaposto: {a} {b} {statoA} {statoB} {vincitore} {perdente} {mosse} {round}.
    */
-  duel: {
+  rps: {
     enabled: true,
-    minDelay: 1,
-    maxDelay: 3,
-    timeout: 10,
-    readyTimeout: 60,
-    title: '🔫 **DUELLO** · {a} vs {b}',
-    askReady: 'Premete **Pronto** tutti e due: appena lo siete parte il duello.',
-    readyButton: 'Pronto',
-    readyStatus: '{a} {statoA}  ·  {b} {statoB}',
-    ready: 'Preparatevi… sparate solo quando il bottone diventa **SPARA!**',
-    waitButton: 'Aspetta…',
-    fireButton: 'SPARA!',
-    win: '🏆 {vincitore} ha sparato per primo ({tempo} s): apre il draft.',
-    falseStart: '💥 {perdente} ha sparato prima del segnale! {vincitore} apre il draft.',
-    noShot: '🪙 Nessuno ha sparato: decide la moneta. {vincitore} apre il draft.',
-    notReady: '⌛ {perdente} non si è messo pronto in tempo: {vincitore} apre il draft.',
-    nobodyReady: '🪙 Nessuno dei due si è messo pronto: decide la moneta. {vincitore} apre il draft.',
+    timeout: 60,
+    maxRounds: 5,
+    moves: {
+      sasso: { label: 'Sasso', emoji: '✊', beats: 'forbici' },
+      carta: { label: 'Carta', emoji: '✋', beats: 'sasso' },
+      forbici: { label: 'Forbici', emoji: '✌️', beats: 'carta' },
+    },
+    title: '✊✋✌️ **SASSO CARTA FORBICI** · {a} vs {b}',
+    ask: 'Scegliete **in segreto**: chi vince apre il draft.',
+    status: '{a} {statoA}  ·  {b} {statoB}',
+    tie: '🤝 Pari ({mosse}): si rigioca. Round {round}.',
+    win: '🏆 {mosse}: vince {vincitore}, che apre il draft.',
+    onlyOne: '⌛ {perdente} non ha scelto in tempo: {vincitore} apre il draft.',
+    nobody: '🪙 Nessuno ha scelto: decide la moneta. {vincitore} apre il draft.',
+    tooManyTies: '🪙 Troppi pareggi ({mosse}): decide la moneta. {vincitore} apre il draft.',
   },
 
   // Canale dove finisce la cronaca delle partite: "partita avviata", il

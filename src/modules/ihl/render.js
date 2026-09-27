@@ -34,7 +34,7 @@ const leagues = require('./leagues');
 
 const STATE_TITLES = {
   checkin: '🎧  CHECK-IN',
-  duel: '🔫  DUELLO FRA CAPITANI',
+  duel: '✊  SASSO CARTA FORBICI',
   side: '🧭  SCELTA DEL LATO',
   ban: '🗺️  BAN DELLE MAPPE',
   draft: '📋  SCELTA DEI GIOCATORI',
@@ -235,7 +235,7 @@ function buildMatchEmbed(lobby, extra = {}) {
   if (lobby.state === 'duel') {
     embed.setDescription(
       `👑 Capitani: <@${lobby.captain_a}> e <@${lobby.captain_b}>\n\n` +
-        '🔫 Duello di riflessi qui sotto: chi spara per primo apre il draft.',
+        '✊✋✌️ Sasso carta forbici qui sotto: chi vince apre il draft.',
     );
     return embed;
   }

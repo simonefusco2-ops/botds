@@ -752,7 +752,7 @@ async function applyPlayerPermissions(client, lobby, outId, inId) {
 
 /**
  * I due ELO più alti fanno i capitani, ma chi sceglie per primo lo decide il
- * duello di riflessi (o la moneta). Chi vince apre il draft; l'altro apre il
+ * sasso carta forbici (o la moneta). Chi vince apre il draft; l'altro apre il
  * veto e, con un numero pari di ban, sceglie anche il lato. Così nessuno
  * prende tutto.
  */
@@ -783,7 +783,7 @@ async function startPicks(client, lobby) {
 
   await renderMatch(client, updated);
 
-  if (!ihlConfig.duel?.enabled) {
+  if (!ihlConfig.rps?.enabled) {
     const first = pickRandom([captainA, captainB]);
     const channel = await client.channels.fetch(updated.text_channel_id).catch(() => null);
     await channel
@@ -800,12 +800,12 @@ async function startPicks(client, lobby) {
   return startDuel(client, updated);
 }
 
-// --- duello di riflessi -------------------------------------------------------
+// --- sasso carta forbici fra capitani ----------------------------------------
 
 /**
- * Duelli in corso, per lobby: il messaggio e l'istante del segnale. Stanno in
- * memoria perché durano secondi; se il bot si riavvia nel mezzo, alla ripresa
- * decide la moneta (vedi resumeLobbies).
+ * Sfide in corso, per lobby: il messaggio, il round e le mosse segrete. Stanno
+ * in memoria perché durano poco; se il bot si riavvia nel mezzo, alla ripresa
+ * decide la moneta (vedi resumeLobbies). Lo stato della lobby resta 'duel'.
  */
 const duels = new Map();
 
@@ -813,136 +813,125 @@ function duelText(template, values) {
   return Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, value), template);
 }
 
-/** Il bottone del momento: Pronto, poi Aspetta…, poi SPARA. */
-function duelComponents(lobbyId, phase) {
-  const d = ihlConfig.duel;
-  const button = new ButtonBuilder().setCustomId(`ihl_duel:${lobbyId}`);
-
-  if (phase === 'ready') {
-    button.setCustomId(`ihl_duel_ready:${lobbyId}`).setLabel(d.readyButton).setEmoji('✋').setStyle(ButtonStyle.Success);
-  } else if (phase === 'fire') {
-    button.setLabel(d.fireButton).setEmoji('🔫').setStyle(ButtonStyle.Danger);
-  } else {
-    button.setLabel(d.waitButton).setEmoji('⏳').setStyle(ButtonStyle.Secondary);
+function rpsComponents(lobbyId) {
+  const row = new ActionRowBuilder();
+  for (const [id, move] of Object.entries(ihlConfig.rps.moves)) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`ihl_rps:${lobbyId}:${id}`)
+        .setLabel(move.label)
+        .setEmoji(move.emoji)
+        .setStyle(ButtonStyle.Secondary),
+    );
   }
-
-  return [new ActionRowBuilder().addComponents(button)];
+  return [row];
 }
 
-function readyContent(lobby, duel) {
-  const d = ihlConfig.duel;
-  const mark = (id) => (duel.ready.has(id) ? '✅' : '⬜');
-  const status = duelText(d.readyStatus, {
+/** Il messaggio pubblico: chi ha già scelto, mai cosa. */
+function rpsContent(lobby, duel, note = '') {
+  const r = ihlConfig.rps;
+  const mark = (id) => (duel.choices[id] ? '✅' : '⬜');
+  const status = duelText(r.status, {
     a: `<@${lobby.captain_a}>`,
     b: `<@${lobby.captain_b}>`,
     statoA: mark(lobby.captain_a),
     statoB: mark(lobby.captain_b),
   });
-  return `${duel.header}\n${d.askReady}\n${status}`;
+  return [duel.header, note, r.ask, status].filter(Boolean).join('\n');
+}
+
+/** "✊ @A vs ✌️ @B": le mosse svelate, nell'ordine dei capitani. */
+function revealMoves(lobby, duel) {
+  const show = (id) => `${ihlConfig.rps.moves[duel.choices[id]]?.emoji || '❔'} <@${id}>`;
+  return `${show(lobby.captain_a)} vs ${show(lobby.captain_b)}`;
+}
+
+/** Ogni round ha il suo tempo: chi non sceglie perde, se nessuno sceglie decide la moneta. */
+function armRpsTimer(client, lobby, duel) {
+  scheduleTimeout(client, lobby.id, ihlConfig.rps.timeout, async () => {
+    if (duels.get(lobby.id) !== duel) return;
+    const chosen = Object.keys(duel.choices);
+    if (chosen.length === 1) return resolveDuel(client, lobby.id, chosen[0], 'onlyOne');
+    return resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'nobody');
+  });
 }
 
 async function startDuel(client, lobby) {
-  const d = ihlConfig.duel;
+  const r = ihlConfig.rps;
   const channel = await client.channels.fetch(lobby.text_channel_id).catch(() => null);
-  const header = duelText(d.title, { a: `<@${lobby.captain_a}>`, b: `<@${lobby.captain_b}>` });
-  const duel = { message: null, header, phase: 'ready', ready: new Set(), signalAt: null };
+  const header = duelText(r.title, { a: `<@${lobby.captain_a}>`, b: `<@${lobby.captain_b}>` });
+  const duel = { message: null, header, round: 1, choices: {} };
 
   const message = await channel
     ?.send({
-      content: readyContent(lobby, duel),
-      components: duelComponents(lobby.id, 'ready'),
+      content: rpsContent(lobby, duel),
+      components: rpsComponents(lobby.id),
       allowedMentions: { users: [lobby.captain_a, lobby.captain_b] },
     })
     .catch(() => null);
 
-  // Senza messaggio non c'è duello: decide la moneta.
-  if (!message) return resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'noShot');
+  // Senza messaggio non c'è sfida: decide la moneta.
+  if (!message) return resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'nobody');
 
   duel.message = message;
   duels.set(lobby.id, duel);
-
-  // Chi non si mette pronto non può tenere ferma la partita.
-  scheduleTimeout(client, lobby.id, d.readyTimeout, async () => {
-    if (duels.get(lobby.id) !== duel || duel.phase !== 'ready') return;
-    const [only] = [...duel.ready];
-    if (only) return resolveDuel(client, lobby.id, only, 'notReady');
-    return resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'nobodyReady');
-  });
+  armRpsTimer(client, lobby, duel);
 }
 
-/** Click su Pronto. Con entrambi pronti parte l'attesa casuale prima di SPARA. */
-async function pressReady(client, interaction, lobbyId) {
+/**
+ * Un capitano sceglie. La mossa resta segreta finché non ha scelto anche
+ * l'altro, e fino ad allora si può cambiare. Il confronto avviene in modo
+ * sincrono, prima di ogni await: due scelte simultanee non chiudono il round
+ * due volte.
+ */
+async function pressRps(client, interaction, lobbyId, move) {
   const lobby = lobbyRepository.find(lobbyId);
   const duel = duels.get(lobbyId);
+  const r = ihlConfig.rps;
 
-  if (!lobby || lobby.state !== 'duel' || !duel || duel.phase !== 'ready') {
-    return interaction.reply({ content: '⚠️ Il duello è già partito o finito.', ephemeral: true });
+  if (!lobby || lobby.state !== 'duel' || !duel) {
+    return interaction.reply({ content: '⚠️ La sfida è già finita.', ephemeral: true });
   }
 
   const id = interaction.user.id;
   if (id !== lobby.captain_a && id !== lobby.captain_b) {
-    return interaction.reply({ content: '⛔ Il duello è solo fra i due capitani.', ephemeral: true });
+    return interaction.reply({ content: '⛔ La sfida è solo fra i due capitani.', ephemeral: true });
+  }
+  if (!r.moves[move]) return interaction.reply({ content: '⚠️ Mossa non valida.', ephemeral: true });
+
+  duel.choices[id] = move;
+  const secret = `${r.moves[move].emoji} Hai scelto **${r.moves[move].label}**. Puoi cambiare finché l'altro non sceglie.`;
+
+  if (Object.keys(duel.choices).length < 2) {
+    await interaction.update({ content: rpsContent(lobby, duel), components: rpsComponents(lobbyId) }).catch(() => {});
+    return interaction.followUp({ content: secret, ephemeral: true }).catch(() => {});
   }
 
-  // Deciso in modo sincrono: due "pronto" simultanei fanno partire il duello una volta sola.
-  duel.ready.add(id);
-  if (duel.ready.size < 2) {
-    return interaction.update({ content: readyContent(lobby, duel), components: duelComponents(lobbyId, 'ready') });
+  const other = id === lobby.captain_a ? lobby.captain_b : lobby.captain_a;
+  const mine = duel.choices[id];
+  const theirs = duel.choices[other];
+  const moves = revealMoves(lobby, duel);
+
+  if (mine !== theirs) {
+    const winner = r.moves[mine].beats === theirs ? id : other;
+    return resolveDuel(client, lobbyId, winner, 'win', moves, interaction);
   }
 
-  duel.phase = 'wait';
-  const d = ihlConfig.duel;
-  const delay = d.minDelay + Math.random() * Math.max(0, d.maxDelay - d.minDelay);
-
-  scheduleTimeout(client, lobbyId, delay, async () => {
-    if (duels.get(lobbyId) !== duel) return;
-
-    // Armato PRIMA di mostrare il bottone: un click che arriva mentre la
-    // modifica viaggia è già valido, non una falsa partenza.
-    duel.phase = 'fire';
-    duel.signalAt = Date.now();
-    scheduleTimeout(client, lobbyId, d.timeout, () =>
-      resolveDuel(client, lobbyId, pickRandom([lobby.captain_a, lobby.captain_b]), 'noShot'),
-    );
-    await duel.message.edit({ components: duelComponents(lobbyId, 'fire') }).catch(() => {});
-  });
-
-  return interaction.update({ content: `${duel.header}\n${d.ready}`, components: duelComponents(lobbyId, 'wait') });
-}
-
-/**
- * Click sul bottone del duello. Tutto il verdetto si decide in modo sincrono,
- * prima di ogni await: due capitani che premono nello stesso istante non
- * possono vincere entrambi.
- */
-async function pressDuel(client, interaction, lobbyId) {
-  const lobby = lobbyRepository.find(lobbyId);
-  const duel = duels.get(lobbyId);
-
-  if (!lobby || lobby.state !== 'duel' || !duel) {
-    return interaction.reply({ content: '⚠️ Il duello è già finito.', ephemeral: true });
+  // Pari: si rigioca, ma non all'infinito.
+  if (duel.round >= r.maxRounds) {
+    return resolveDuel(client, lobbyId, pickRandom([lobby.captain_a, lobby.captain_b]), 'tooManyTies', moves, interaction);
   }
 
-  const shooter = interaction.user.id;
-  if (shooter !== lobby.captain_a && shooter !== lobby.captain_b) {
-    return interaction.reply({ content: '⛔ Il duello è solo fra i due capitani.', ephemeral: true });
-  }
+  duel.round += 1;
+  duel.choices = {};
+  armRpsTimer(client, lobby, duel);
 
-  if (duel.phase === 'ready') {
-    return interaction.reply({ content: '✋ Prima dovete essere pronti tutti e due.', ephemeral: true });
-  }
-
-  const other = shooter === lobby.captain_a ? lobby.captain_b : lobby.captain_a;
-  const early = !duel.signalAt;
-  const winner = early ? other : shooter;
-  const seconds = early ? null : ((Date.now() - duel.signalAt) / 1000).toFixed(2).replace('.', ',');
-
-  const result = resolveDuel(client, lobbyId, winner, early ? 'falseStart' : 'win', seconds, interaction);
-  return result;
+  const note = duelText(r.tie, { mosse: moves, round: duel.round });
+  return interaction.update({ content: rpsContent(lobby, duel, note), components: rpsComponents(lobbyId) }).catch(() => {});
 }
 
 /** Chiude il duello con un vincitore e fa partire il draft. */
-async function resolveDuel(client, lobbyId, winner, outcome, seconds = null, interaction = null) {
+async function resolveDuel(client, lobbyId, winner, outcome, moves = '', interaction = null) {
   const lobby = lobbyRepository.find(lobbyId);
   if (!lobby || lobby.state !== 'duel') return;
 
@@ -951,10 +940,10 @@ async function resolveDuel(client, lobbyId, winner, outcome, seconds = null, int
   clearTimer(lobbyId);
 
   const loser = winner === lobby.captain_a ? lobby.captain_b : lobby.captain_a;
-  const line = duelText(ihlConfig.duel[outcome], {
+  const line = duelText(ihlConfig.rps[outcome], {
     vincitore: `<@${winner}>`,
     perdente: `<@${loser}>`,
-    tempo: seconds ?? '',
+    mosse: moves,
   });
 
   // Il passaggio al draft avviene qui, ancora in modo sincrono.
@@ -1362,7 +1351,7 @@ async function unstickLobby(client, lobbyId) {
   }
 
   if (lobby.state === 'duel') {
-    await resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'noShot');
+    await resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'nobody');
     done.push('duello deciso con la moneta');
     return { lobby: lobbyRepository.find(lobby.id), done };
   }
@@ -1419,7 +1408,7 @@ async function resumeLobbies(client) {
 
     // Un duello interrotto dal riavvio non si può riprendere: decide la moneta.
     if (lobby.state === 'duel') {
-      await resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'noShot');
+      await resolveDuel(client, lobby.id, pickRandom([lobby.captain_a, lobby.captain_b]), 'nobody');
       continue;
     }
 
@@ -1448,8 +1437,7 @@ module.exports = {
   startPicks,
   chooseSide,
   banMap,
-  pressDuel,
-  pressReady,
+  pressRps,
   unstickLobby,
   pickPlayer,
   castVote,
