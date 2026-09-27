@@ -10,9 +10,9 @@
 const db = require('../db');
 
 const addStmt = db.prepare(`
-  INSERT INTO twitch_streamers (login, display_name, added_by)
-  VALUES (?, ?, ?)
-  ON CONFLICT(login) DO UPDATE SET display_name = excluded.display_name
+  INSERT INTO twitch_streamers (login, display_name, added_by, category)
+  VALUES (?, ?, ?, ?)
+  ON CONFLICT(login) DO UPDATE SET display_name = excluded.display_name, category = excluded.category
 `);
 
 const removeStmt = db.prepare('DELETE FROM twitch_streamers WHERE login = ?');
@@ -21,8 +21,8 @@ const findStmt = db.prepare('SELECT * FROM twitch_streamers WHERE login = ?');
 const setLiveStmt = db.prepare('UPDATE twitch_streamers SET is_live = 1, last_stream_id = ? WHERE login = ?');
 const setOfflineStmt = db.prepare('UPDATE twitch_streamers SET is_live = 0 WHERE login = ?');
 
-function add(login, displayName, addedBy) {
-  addStmt.run(login, displayName, addedBy);
+function add(login, displayName, addedBy, category = 'generale') {
+  addStmt.run(login, displayName, addedBy, category);
 }
 
 function remove(login) {

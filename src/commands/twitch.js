@@ -11,6 +11,9 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const twitchApi = require('../modules/twitch/twitchApi');
 const twitchWatcher = require('../modules/twitch/twitchWatcher');
 const twitchRepository = require('../database/repositories/twitchRepository');
+const twitchConfig = require('../../config/twitch.config');
+
+const GROUP_CHOICES = Object.entries(twitchConfig.groups).map(([value, group]) => ({ name: group.label, value }));
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -23,6 +26,12 @@ module.exports = {
         .setDescription('Aggiunge uno streamer alle notifiche')
         .addStringOption((opt) =>
           opt.setName('canale').setDescription('Nome del canale Twitch o link completo').setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName('tipo')
+            .setDescription('Streamer IPL: annuncio nel canale IPL, tag solo a IPL PRO e OPEN')
+            .addChoices(...GROUP_CHOICES),
         ),
     )
     .addSubcommand((sub) =>
@@ -51,7 +60,11 @@ module.exports = {
       }
 
       const list = streamers
-        .map((s) => `• **${s.display_name || s.login}** (https://twitch.tv/${s.login})${s.is_live ? ' 🔴 in diretta' : ''}`)
+        .map(
+          (s) =>
+            `• **${s.display_name || s.login}** (https://twitch.tv/${s.login}) · ${twitchWatcher.groupOf(s.category).label}` +
+            (s.is_live ? ' 🔴 in diretta' : ''),
+        )
         .join('\n');
 
       return interaction.reply({ content: `📺 Streamer monitorati:\n${list}`, ephemeral: true });
@@ -60,7 +73,7 @@ module.exports = {
     if (!twitchWatcher.isConfigured()) {
       return interaction.reply({
         content:
-          '⚠️ Twitch non è configurato: servono `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` e `TWITCH_ANNOUNCE_CHANNEL_ID` nel file `.env`.',
+          '⚠️ Twitch non è configurato: servono `TWITCH_CLIENT_ID` e `TWITCH_CLIENT_SECRET` nel file `.env`.',
         ephemeral: true,
       });
     }
@@ -91,9 +104,14 @@ module.exports = {
     }
 
     if (subcommand === 'aggiungi') {
-      twitchRepository.add(login, user.display_name, interaction.user.id);
+      const category = interaction.options.getString('tipo') || 'generale';
+      const group = twitchWatcher.groupOf(category);
+      twitchRepository.add(login, user.display_name, interaction.user.id, category);
       return interaction.editReply({
-        content: `✅ **${user.display_name}** aggiunto: riceverete una notifica a ogni sua diretta.`,
+        content:
+          `✅ **${user.display_name}** aggiunto come **${group.label}**: riceverete una notifica a ogni sua diretta.` +
+          (group.channelId ? `\n-# Annunci in <#${group.channelId}>` : '') +
+          (group.roleIds?.length ? `, tag a ${group.roleIds.map((id) => `<@&${id}>`).join(' ')}.` : ''),
       });
     }
 
@@ -110,8 +128,9 @@ module.exports = {
           started_at: new Date().toISOString(),
         },
         user,
+        twitchRepository.find(login)?.category || 'generale',
       );
-      return interaction.editReply({ content: '✅ Notifica di prova inviata nel canale annunci.' });
+      return interaction.editReply({ content: '✅ Notifica di prova inviata nel canale del suo gruppo.' });
     }
   },
 };

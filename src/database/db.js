@@ -166,6 +166,12 @@ if (!ticketColumns.some((column) => column.name === 'type')) {
   db.exec("ALTER TABLE tickets ADD COLUMN type TEXT NOT NULL DEFAULT 'supporto'");
 }
 
+// Il gruppo dello streamer (generale, IPL…) decide canale e tag della live.
+const twitchColumns = db.prepare('PRAGMA table_info(twitch_streamers)').all().map((column) => column.name);
+if (!twitchColumns.includes('category')) {
+  db.exec("ALTER TABLE twitch_streamers ADD COLUMN category TEXT NOT NULL DEFAULT 'generale'");
+}
+
 const lobbyColumns = db.prepare('PRAGMA table_info(ihl_lobbies)').all().map((column) => column.name);
 if (!lobbyColumns.includes('map_pool')) {
   db.exec("ALTER TABLE ihl_lobbies ADD COLUMN map_pool TEXT NOT NULL DEFAULT '[]'");

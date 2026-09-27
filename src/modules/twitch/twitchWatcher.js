@@ -13,15 +13,26 @@ const logger = require('../../utils/logger');
 const twitchApi = require('./twitchApi');
 const twitchRepository = require('../../database/repositories/twitchRepository');
 const { buildTwitchLiveEmbed } = require('../../utils/embeds');
+const twitchConfig = require('../../../config/twitch.config');
 
 let running = false;
 
+// Il canale annunci non è più obbligatorio: i gruppi possono avere il proprio.
 function isConfigured() {
-  return Boolean(config.twitchClientId && config.twitchClientSecret && config.twitchAnnounceChannelId);
+  return Boolean(config.twitchClientId && config.twitchClientSecret);
+}
+
+function groupOf(category) {
+  return twitchConfig.groups[category] || twitchConfig.groups.generale;
 }
 
 /** @everyone e @here passano entrambi dal parse "everyone"; un ID invece è un ruolo. */
-function buildMention() {
+function buildMention(group) {
+  if (group?.roleIds?.length) {
+    const roles = group.roleIds.filter(Boolean);
+    return { content: roles.map((id) => `<@&${id}>`).join(' '), allowedMentions: { parse: [], roles } };
+  }
+
   const mention = config.twitchMention;
   if (!mention || mention === 'nessuna') return { content: null, allowedMentions: { parse: [] } };
   if (mention === 'everyone') return { content: '@everyone', allowedMentions: { parse: ['everyone'] } };
@@ -29,14 +40,16 @@ function buildMention() {
   return { content: `<@&${mention}>`, allowedMentions: { roles: [mention] } };
 }
 
-async function announce(client, stream, user) {
-  const channel = await client.channels.fetch(config.twitchAnnounceChannelId).catch(() => null);
+async function announce(client, stream, user, category = 'generale') {
+  const group = groupOf(category);
+  const channelId = group.channelId || config.twitchAnnounceChannelId;
+  const channel = channelId ? await client.channels.fetch(channelId).catch(() => null) : null;
   if (!channel) {
-    logger.warn('Canale annunci Twitch non trovato.');
+    logger.warn(`Canale annunci Twitch del gruppo "${category}" non trovato.`);
     return;
   }
 
-  const mention = buildMention();
+  const mention = buildMention(group);
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setLabel('Guarda la live')
@@ -76,7 +89,7 @@ async function poll(client) {
       if (streamer.last_stream_id === stream.id) continue;
 
       const user = await twitchApi.getUserByLogin(stream.user_login).catch(() => null);
-      await announce(client, stream, user);
+      await announce(client, stream, user, streamer.category);
       twitchRepository.setLive(streamer.login, stream.id);
       logger.info(`Annunciata la live di ${stream.user_login}`);
     }
@@ -89,7 +102,7 @@ async function poll(client) {
 
 function start(client) {
   if (!isConfigured()) {
-    logger.info('Notifiche Twitch disattivate (TWITCH_CLIENT_ID/SECRET o canale annunci mancanti).');
+    logger.info('Notifiche Twitch disattivate (TWITCH_CLIENT_ID/SECRET mancanti).');
     return;
   }
 
@@ -101,4 +114,4 @@ function start(client) {
   logger.info(`Notifiche Twitch attive: controllo ogni ${intervalMs / 1000}s.`);
 }
 
-module.exports = { start, poll, announce, isConfigured };
+module.exports = { start, poll, announce, isConfigured, groupOf };
