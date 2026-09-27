@@ -110,8 +110,8 @@ module.exports = {
       return interaction.editReply({
         content:
           `✅ **${user.display_name}** aggiunto come **${group.label}**: riceverete una notifica a ogni sua diretta.` +
-          (group.channelId ? `\n-# Annunci in <#${group.channelId}>` : '') +
-          (group.roleIds?.length ? `, tag a ${group.roleIds.map((id) => `<@&${id}>`).join(' ')}.` : ''),
+          `\n-# Annunci ${group.channelId ? `in <#${group.channelId}>` : 'nel canale annunci'}` +
+          (group.roleIds?.length ? `, tag a ${group.roleIds.map((id) => `<@&${id}>`).join(' ')}.` : '.'),
       });
     }
 

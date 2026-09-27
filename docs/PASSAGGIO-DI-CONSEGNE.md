@@ -135,6 +135,7 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 | Quattro ruoli di gioco | Duelist, Initiator, Controller, Sentinel | `config/ruoli.config.js` |
 | Ruolo obbligo di clip | `1553763552483999844` | `config/sanzioni.config.js` |
 | Canale live streamer IPL | `1553829536268030123` | `config/twitch.config.js` |
+| Ruolo notifiche live (tutti gli streamer) | `1553840021436506322` | `config/twitch.config.js` |
 | Stanza richiami | `1553738245152448663` | `config/sanzioni.config.js` |
 | Separatori community / rank / ruoli | `1553405950826778684` / `1553403291013218425` / `1553351503027376210` | `config/separatori.config.js` |
 
