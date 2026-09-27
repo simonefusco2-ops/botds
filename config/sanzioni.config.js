@@ -16,7 +16,7 @@
  * l'avviso solo in DM a chi l'ha ricevuta.
  */
 module.exports = {
-  richiamiChannelId: null,
+  richiamiChannelId: '1553738245152448663',
 
   // Durata massima di una sospensione, in giorni.
   maxDays: 365,
