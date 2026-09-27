@@ -29,17 +29,20 @@ module.exports = {
   },
 
   /**
-   * Avviso pubblicato nel canale di ogni partita appena si apre, taggando i
-   * dieci giocatori. Segnaposto nel testo: {partita}.
+   * Avviso pubblicato nel canale di ogni partita appena si apre, taggando solo
+   * i giocatori che hanno il ruolo `roleId` (obbligo di clip). Se nella partita
+   * non c'è nessuno con quel ruolo, o `roleId` è null, il messaggio non parte.
+   * Segnaposto nel testo: {partita}, {giocatori}.
    */
   clip: {
     enabled: true,
+    roleId: null,
     title: '🎥  OBBLIGO DI REGISTRAZIONE',
     text:
-      'Ognuno di voi deve **registrare l\'intera partita**, dal primo all\'ultimo round, con ' +
-      '**NVIDIA** (ShadowPlay / GeForce Experience / NVIDIA App) o **AMD** (Adrenalin / ReLive).\n\n' +
-      '🔎 **Ogni giocatore ha il diritto di chiedere la clip** di una kill sospetta: chi la riceve ' +
-      'deve fornirla allo staff.\n' +
+      '{giocatori}: avete l\'**obbligo di clip**. Dovete **registrare l\'intera partita**, dal primo ' +
+      'all\'ultimo round, con **NVIDIA** (ShadowPlay / NVIDIA App) o **AMD** (Adrenalin / ReLive).\n\n' +
+      '🔎 **Gli altri giocatori hanno il diritto di chiedervi la clip** di una kill sospetta, e ' +
+      'dovete fornirla allo staff.\n' +
       '⚠️ Chi non registra, o si rifiuta di consegnare la clip, può essere **sanzionato**.',
     footer: 'Partita #{partita} · Tenete la registrazione finché la partita non è chiusa e verificata',
   },

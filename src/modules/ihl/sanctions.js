@@ -169,23 +169,30 @@ async function trollRefund(client, { lobbyId, trollId, reason, staffId }) {
 
 // --- obbligo di registrazione -------------------------------------------------
 
-/** L'avviso sulle clip nel canale della partita, taggando i dieci. */
+/**
+ * L'avviso sulle clip nel canale della partita, solo per chi ha il ruolo
+ * "obbligo di clip". Nessuno con il ruolo, nessun messaggio.
+ */
 async function postClipNotice(channel, lobby) {
   const clip = sanzioniConfig.clip;
-  if (!clip?.enabled || !channel) return;
+  if (!clip?.enabled || !clip.roleId || !channel) return;
 
+  const obliged = [];
+  for (const id of lobby.players) {
+    const member = await channel.guild.members.fetch(id).catch(() => null);
+    if (member?.roles.cache.has(clip.roleId)) obliged.push(id);
+  }
+  if (!obliged.length) return;
+
+  const tags = obliged.map((id) => `<@${id}>`).join(' ');
   const embed = new EmbedBuilder()
     .setColor(COLORS.gold)
     .setTitle(clip.title)
-    .setDescription(clip.text.replaceAll('{partita}', lobby.id))
+    .setDescription(clip.text.replaceAll('{partita}', lobby.id).replaceAll('{giocatori}', tags))
     .setFooter({ text: clip.footer.replaceAll('{partita}', lobby.id) });
 
   await channel
-    .send({
-      content: lobby.players.map((id) => `<@${id}>`).join(' '),
-      embeds: [embed],
-      allowedMentions: { users: lobby.players },
-    })
+    .send({ content: tags, embeds: [embed], allowedMentions: { users: obliged } })
     .catch((err) => logger.warn(`IHL lobby ${lobby.id}: avviso clip non pubblicato: ${err.message}`));
 }
 

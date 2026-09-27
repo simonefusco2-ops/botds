@@ -38,7 +38,7 @@ Due leghe separate, con code, classifiche ed ELO indipendenti:
 CODA          il pannello apre le code; 10 posti, un giocatore per una sola partita
   ↓           (al decimo il bot crea subito la coda successiva)
 CHECK-IN      canale testuale privato della partita + stanza vocale di check-in;
-              nel canale l'avviso sull'obbligo di registrare la partita (clip);
+              nel canale l'avviso clip, solo a chi ha il ruolo "obbligo di clip";
               ognuno riceve un DM con il bottone per entrare nel check-in;
               chi è già in vocale viene trascinato dentro. Dopo 7 minuti lo staff
               può sostituire chi non si presenta (/ihl sostituisci)
@@ -157,6 +157,7 @@ bot, porta `API_PORT` (default 3000).
 - [ ] `HENRIK_API_KEY` nel `.env` — e **rigenerare la chiave**, è già passata in chat
 - [ ] `npm run prova-rank` per validare la lettura del rank dalla VPS
 - [ ] il ruolo del bot va **sopra** i ruoli dei rank, quelli IPL e i separatori, o non li assegna
+- [ ] ID del ruolo **obbligo di clip** in `config/sanzioni.config.js` (`clip.roleId`)
 - [ ] ID del **separatore staff** in `config/separatori.config.js` (`staff.roleId`)
 - [ ] permesso **«Imposta stato canale vocale»** per i rank in vocale
 - [ ] ripubblicare i pannelli delle due leghe e le classifiche
