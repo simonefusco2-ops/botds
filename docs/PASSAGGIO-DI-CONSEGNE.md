@@ -119,7 +119,7 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 
 **Notifiche e utilità**
 `/twitch aggiungi [tipo:Generale|Streamer IPL]|rimuovi|lista|prova` · `/social pannello|aggiungi|rimuovi|lista|controlla|prova`
-· `/inviti [utente]` · `/clear quantita [utente]` · `/embed [tagga] [menziona]` · `/embed-modifica`
+· `/inviti [utente]` · `/clear quantita [utente]` · `/sondaggio domanda risposte [durata] [multipla] [tagga] [menziona]` · `/embed [tagga] [menziona]` · `/embed-modifica`
 
 ---
 
