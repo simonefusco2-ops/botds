@@ -39,6 +39,13 @@ module.exports = {
     '1553920307981590719', // Captain 3
   ],
 
+  // Se i due capitani hanno tier diversi il draft lo apre quello col tier più
+  // basso, per compensare, e sasso carta forbici si salta. Stesso tier: si gioca.
+  // Segnaposto: {primo} {tierPrimo} {altro} {tierAltro}.
+  tierFirstPick:
+    '⚖️ **Capitani di tier diverso**\n' +
+    '{altro} ({tierAltro}) contro {primo} ({tierPrimo}): per bilanciare, **{primo} apre il draft**.',
+
   /**
    * Le leghe.
    *

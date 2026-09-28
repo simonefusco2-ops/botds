@@ -816,6 +816,31 @@ async function startPicks(client, lobby) {
 
   await renderMatch(client, updated);
 
+  // Tier diversi: il capitano più forte è già avvantaggiato, quindi il draft lo
+  // apre l'altro, senza sfida. Stesso tier: decide sasso carta forbici.
+  if (tiers[captainA] !== tiers[captainB]) {
+    const first = tiers[captainA] > tiers[captainB] ? captainA : captainB;
+    const other = first === captainA ? captainB : captainA;
+    const tierName = (id) => {
+      const roleId = ihlConfig.captainTierRoleIds[tiers[id]];
+      return roleId ? `<@&${roleId}>` : 'senza ruolo capitano';
+    };
+
+    const channel = await client.channels.fetch(updated.text_channel_id).catch(() => null);
+    await channel
+      ?.send({
+        content: ihlConfig.tierFirstPick
+          .replaceAll('{primo}', `<@${first}>`)
+          .replaceAll('{tierPrimo}', tierName(first))
+          .replaceAll('{altro}', `<@${other}>`)
+          .replaceAll('{tierAltro}', tierName(other)),
+        // Si tagga solo chi deve scegliere: i ruoli nel testo restano muti.
+        allowedMentions: { users: [first] },
+      })
+      .catch(() => {});
+    return startDraft(client, lobby.id, first);
+  }
+
   if (!ihlConfig.rps?.enabled) {
     const first = pickRandom([captainA, captainB]);
     const channel = await client.channels.fetch(updated.text_channel_id).catch(() => null);
