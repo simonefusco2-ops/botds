@@ -56,7 +56,8 @@ LIVE          due stanze vocali, squadre spostate dentro
 VOTO          i 10 votano il vincitore nel canale della partita: **prima squadra a
               6 voti**, nessuna scadenza (le partite possono durare ore)
               oppure **Annulla**: anche lì a 6 voti, partita annullata e nessun ELO
-CHIUSURA      ELO aggiornato, classifica riscritta, canali cancellati
+CHIUSURA      ELO aggiornato (somma delle squadre: pari ±25, favorita forte
+              +10 / −40, massimo 50 a testa), classifica riscritta, canali cancellati
 ```
 
 Ogni fase vive **dentro il canale della partita**. Il canale delle code resta

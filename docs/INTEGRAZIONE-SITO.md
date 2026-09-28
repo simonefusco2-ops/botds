@@ -60,8 +60,10 @@ leghe sono marcate `archivio` e non appartengono a nessuna delle due.
 ## 4. Come funziona la classifica
 
 - Ogni giocatore parte da **1000 ELO** alla prima coda.
-- A fine partita si applica un **Elo classico**: si confronta la media ELO delle
-  due squadre, con **K = 32**. Chi batte una squadra più forte guadagna di più.
+- A fine partita si applica un **Elo a squadre**: si confronta la **somma** dell'ELO
+  dei cinque di ogni squadra (K = 50, scala 1660). Due squadre pari valgono ±25;
+  con 1000 punti di differenza la favorita fa +10 / −40 e la sfavorita +40 / −10.
+  Tutti e cinque prendono la stessa variazione; mai più di 50, mai meno di 1.
 - Il punteggio **non scende mai sotto 100**.
 - Ogni partita ha un **codice numerico** (`match_id`). Lo staff può annullarla:
   in quel caso a tutti i dieci giocatori viene **restituito esattamente il delta**

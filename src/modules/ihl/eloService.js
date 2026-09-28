@@ -10,25 +10,39 @@
 const ihlConfig = require('../../../config/ihl.config');
 const ihlRepository = require('../../database/repositories/ihlRepository');
 
-function average(values) {
-  if (!values.length) return ihlConfig.elo.starting;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+function total(values) {
+  return values.reduce((sum, value) => sum + value, 0);
 }
 
-/** Probabilità di vittoria attesa secondo la formula Elo. */
-function expectedScore(ratingA, ratingB) {
-  return 1 / (1 + 10 ** ((ratingB - ratingA) / 400));
+/** Probabilità che la squadra A vinca, dai totali ELO delle due squadre. */
+function expectedScore(totalA, totalB) {
+  return 1 / (1 + 10 ** ((totalB - totalA) / ihlConfig.elo.scale));
+}
+
+/** Punti a chi vince: mai sopra kFactor, mai sotto minDelta. */
+function gain(expectedOfWinner) {
+  const { kFactor, minDelta } = ihlConfig.elo;
+  return Math.min(kFactor, Math.max(minDelta, Math.round(kFactor * (1 - expectedOfWinner))));
 }
 
 /**
- * Calcola la variazione di punti confrontando la media delle due squadre:
- * battere una squadra più forte vale di più, perderci contro costa meno.
+ * Cosa si gioca ogni squadra prima di cominciare: quanto prende se vince e
+ * quanto perde se perde. È simmetrico: la vittoria di A vale la sconfitta di B.
  */
-function computeDelta(teamAElos, teamBElos, winner) {
-  const expectedA = expectedScore(average(teamAElos), average(teamBElos));
-  const scoreA = winner === 'a' ? 1 : 0;
+function stakes(teamAElos, teamBElos) {
+  const totalA = total(teamAElos);
+  const totalB = total(teamBElos);
+  const expectedA = expectedScore(totalA, totalB);
 
-  const deltaA = Math.round(ihlConfig.elo.kFactor * (scoreA - expectedA));
+  const aWins = gain(expectedA);
+  const bWins = gain(1 - expectedA);
+  return { totalA, totalB, a: { win: aWins, lose: bWins }, b: { win: bWins, lose: aWins } };
+}
+
+/** La variazione per le due squadre, dato il vincitore. */
+function computeDelta(teamAElos, teamBElos, winner) {
+  const s = stakes(teamAElos, teamBElos);
+  const deltaA = winner === 'a' ? s.a.win : -s.a.lose;
   return { deltaA, deltaB: -deltaA };
 }
 
@@ -58,4 +72,4 @@ function applyMatchResult(league, teamA, teamB, winner) {
   return changes;
 }
 
-module.exports = { expectedScore, computeDelta, applyMatchResult };
+module.exports = { expectedScore, stakes, computeDelta, applyMatchResult };

@@ -260,10 +260,21 @@ async function publishMatch(client, lobby, extra = {}) {
   const guild = channel.guild;
 
   const withBadges = { ...lobby, badges: await badges.forIds(guild, lobby.players) };
-  const withNames =
+  const named =
     lobby.state === 'draft'
       ? { ...withBadges, names: await resolveNames(guild, lobby.players) }
       : withBadges;
+
+  // Squadre complete: sulla scheda si vede quanto vale vincere e perdere.
+  const withNames = ['ban', 'side', 'live'].includes(lobby.state)
+    ? {
+        ...named,
+        stakes: eloService.stakes(
+          ihlRepository.getMany(lobby.league, lobby.team_a).map((p) => p.elo),
+          ihlRepository.getMany(lobby.league, lobby.team_b).map((p) => p.elo),
+        ),
+      }
+    : named;
 
   const payload = {
     embeds: [buildMatchEmbed(withNames, extra)],

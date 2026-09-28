@@ -83,6 +83,13 @@ function sides(lobby) {
 
 const TEAM_LABELS = { a: '🔴 Team A', b: '🔵 Team B' };
 
+/** "🔴 Team A (7500): vittoria +10 · sconfitta −40", una riga per squadra. */
+function stakesLines(stakes) {
+  if (!stakes) return '';
+  const line = (team, totalElo, s) => `${TEAM_LABELS[team]} (${totalElo}): vittoria **+${s.win}** · sconfitta **−${s.lose}**`;
+  return `💰 **In palio**\n${line('a', stakes.totalA, stakes.a)}\n${line('b', stakes.totalB, stakes.b)}\n`;
+}
+
 /**
  * La squadra con il capitano in evidenza.
  *
@@ -253,7 +260,8 @@ function buildMatchEmbed(lobby, extra = {}) {
 
     embed.setDescription(
       `🗺️ **Mappa:** ${lobby.chosen_map}\n\n` +
-        `Tocca a <@${lobby.turn}> scegliere **da che lato inizia la sua squadra**: non ha fatto l'ultimo ban.\n` +
+        stakesLines(lobby.stakes) +
+        `\nTocca a <@${lobby.turn}> scegliere **da che lato inizia la sua squadra**: non ha fatto l'ultimo ban.\n` +
         '-# Alla scadenza del tempo decide il bot.',
     );
     embed.addFields(teamField(lobby, 'a'), teamField(lobby, 'b'));
@@ -264,7 +272,8 @@ function buildMatchEmbed(lobby, extra = {}) {
     const left = remainingMaps(lobby);
     embed.setDescription(
       `Squadre fatte. Turno di <@${lobby.turn}>: **banna una mappa**.\n\n` +
-        `${mapList(lobby)}\n` +
+        stakesLines(lobby.stakes) +
+        `\n${mapList(lobby)}\n` +
         `-# 🔴 già bannate · restano ${left.length} mappe`,
     );
   }
@@ -290,6 +299,8 @@ function buildMatchEmbed(lobby, extra = {}) {
       extra.result ||
         `**Mappa:** ${lobby.chosen_map}\n` +
           `⚔️ **Attacco:** ${TEAM_LABELS[side.attack]}  ·  🛡️ **Difesa:** ${TEAM_LABELS[side.defense]}\n\n` +
+          stakesLines(lobby.stakes) +
+          '\n' +
           `Finita la partita votate il vincitore qui sotto. **La prima squadra che arriva a ` +
           `${votesNeeded(lobby)} voti vince**: l'ELO viene assegnato in quel momento, non serve ` +
           'che votino tutti.\n' +

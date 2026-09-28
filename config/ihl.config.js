@@ -98,9 +98,22 @@ module.exports = {
     { name: 'Sunset', emoji: '🌇' },
   ],
 
+  /**
+   * ELO a squadre: si confronta la SOMMA dell'ELO dei cinque di ogni squadra.
+   *
+   * Punti a chi vince = kFactor × (1 − probabilità che aveva di vincere); chi
+   * perde toglie gli stessi punti. Due squadre pari valgono ±25; la favorita
+   * vince poco e perde tanto, la sfavorita il contrario. kFactor è il tetto.
+   *
+   * `scale` dice quanto pesa la differenza fra i totali: con 1660, 1000 punti
+   * di differenza (7500 contro 6500) fanno +10 / −40 alla favorita.
+   * `minDelta`: anche la favorita schiacciante prende almeno questo.
+   */
   elo: {
     starting: 1000,
-    kFactor: 32,
+    kFactor: 50,
+    scale: 1660,
+    minDelta: 1,
     floor: 100, // nessuno scende sotto questa soglia
   },
 
