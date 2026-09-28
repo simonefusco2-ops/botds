@@ -756,10 +756,32 @@ async function applyPlayerPermissions(client, lobby, outId, inId) {
  * veto e, con un numero pari di ban, sceglie anche il lato. Così nessuno
  * prende tutto.
  */
+/**
+ * Il tier da capitano di ogni giocatore: 0 per Captain 1, 1 per Captain 2… e
+ * uno oltre l'ultimo per chi non ne ha. Chi non si riesce a leggere conta
+ * come senza tier.
+ */
+async function captainTiers(client, lobby) {
+  const tierRoles = ihlConfig.captainTierRoleIds || [];
+  const guild = tierRoles.length ? await client.guilds.fetch(lobby.guild_id).catch(() => null) : null;
+  const tiers = {};
+
+  for (const id of lobby.players) {
+    const member = guild ? await guild.members.fetch(id).catch(() => null) : null;
+    const tier = tierRoles.findIndex((roleId) => member?.roles.cache.has(roleId));
+    tiers[id] = tier === -1 ? tierRoles.length : tier;
+  }
+
+  return tiers;
+}
+
 async function startPicks(client, lobby) {
+  const tiers = await captainTiers(client, lobby);
+
+  // Prima il tier da capitano, poi l'ELO.
   const ranked = ihlRepository
     .getMany(lobby.league, lobby.players)
-    .sort((a, b) => b.elo - a.elo)
+    .sort((a, b) => tiers[a.discord_id] - tiers[b.discord_id] || b.elo - a.elo)
     .map((player) => player.discord_id);
 
   const [captainA, captainB] = ranked;

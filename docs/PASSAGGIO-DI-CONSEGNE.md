@@ -42,6 +42,8 @@ CHECK-IN      canale testuale privato della partita + stanza vocale di check-in;
               ognuno riceve un DM con il bottone per entrare nel check-in;
               chi è già in vocale viene trascinato dentro. Dopo 7 minuti lo staff
               può sostituire chi non si presenta (/ihl sostituisci)
+CAPITANI      i due con il tier più alto: Captain 1 → 2 → 3; a parità, o
+              senza ruolo capitano, decide l'ELO
 SFIDA         sasso carta forbici fra i capitani, mosse segrete: chi vince apre
               il draft; pari → si rigioca (max 5 round, poi moneta); 60 s a
               round, chi non sceglie perde (config/ihl.config.js, `rps`)
@@ -136,6 +138,7 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 | Ruolo obbligo di clip | `1553763552483999844` | `config/sanzioni.config.js` |
 | Canale live streamer IPL | `1553829536268030123` | `config/twitch.config.js` |
 | Ruolo notifiche live (tutti gli streamer) | `1553840021436506322` | `config/twitch.config.js` |
+| Captain 1 / 2 / 3 | `1553920340265271337` / `1553920330857447474` / `1553920307981590719` | `config/ihl.config.js` |
 | Stanza richiami | `1553738245152448663` | `config/sanzioni.config.js` |
 | Separatori community / rank / ruoli | `1553405950826778684` / `1553403291013218425` / `1553351503027376210` | `config/separatori.config.js` |
 

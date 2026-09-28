@@ -28,6 +28,18 @@ module.exports = {
   queueSize: 10,
 
   /**
+   * Ruoli da capitano, dal tier più alto al più basso. In ogni partita sono
+   * capitani i due giocatori con il tier migliore; a parità di tier, e per chi
+   * non ne ha nessuno, decide l'ELO. Senza ruoli da capitano in partita si
+   * torna ai due ELO più alti.
+   */
+  captainTierRoleIds: [
+    '1553920340265271337', // Captain 1
+    '1553920330857447474', // Captain 2
+    '1553920307981590719', // Captain 3
+  ],
+
+  /**
    * Le leghe.
    *
    * Ognuna ha il suo pannello, la sua classifica, il suo ELO e le sue partite:
