@@ -34,44 +34,67 @@ function lossFactor(elo) {
   return band ? band.factor : 1;
 }
 
-/** Quanto perde un singolo giocatore, dalla sconfitta di squadra e dal suo ELO. */
-function personalLoss(teamLoss, elo) {
-  return Math.max(ihlConfig.elo.minDelta, Math.round(teamLoss * lossFactor(elo)));
+/**
+ * Correzione rispetto alla lobby: chi è sopra la media delle dieci persone
+ * vince meno e perde di più, chi è sotto il contrario. Così un giocatore forte
+ * non sale facile giocando in lobby più deboli. Entro ±max.
+ */
+function lobbyShift(elo, lobbyAverage) {
+  const { spread, max } = ihlConfig.elo.lobbyAdjust || {};
+  if (!spread) return 0;
+  return Math.max(-max, Math.min(max, (elo - lobbyAverage) / spread));
+}
+
+/** Il tetto vale anche per il singolo, dopo fasce e correzione di lobby. */
+function bounded(value) {
+  const { kFactor, minDelta } = ihlConfig.elo;
+  return Math.min(kFactor, Math.max(minDelta, Math.round(value)));
+}
+
+/** Quanto vince un singolo giocatore, dalla vittoria di squadra e dalla sua posizione nella lobby. */
+function personalGain(teamGain, elo, lobbyAverage) {
+  return bounded(teamGain * (1 - lobbyShift(elo, lobbyAverage)));
+}
+
+/** Quanto perde un singolo giocatore: fascia di ELO e posizione nella lobby insieme. */
+function personalLoss(teamLoss, elo, lobbyAverage) {
+  return bounded(teamLoss * lossFactor(elo) * (1 + lobbyShift(elo, lobbyAverage)));
+}
+
+function range(values) {
+  return { min: Math.min(...values), max: Math.max(...values) };
 }
 
 /**
- * Cosa si gioca ogni squadra prima di cominciare: quanto prende se vince e,
- * per la sconfitta, il minimo e il massimo fra i suoi giocatori (dipende dalla
- * fascia di ognuno).
+ * Cosa si gioca ogni squadra prima di cominciare: per vittoria e sconfitta il
+ * minimo e il massimo fra i suoi giocatori, perché dipendono da ognuno.
  */
 function stakes(teamAElos, teamBElos) {
   const totalA = total(teamAElos);
   const totalB = total(teamBElos);
   const expectedA = expectedScore(totalA, totalB);
+  const average = (totalA + totalB) / (teamAElos.length + teamBElos.length);
 
   const aWins = gain(expectedA);
   const bWins = gain(1 - expectedA);
 
-  const range = (teamLoss, elos) => {
-    const losses = elos.map((elo) => personalLoss(teamLoss, elo));
-    return { min: Math.min(...losses), max: Math.max(...losses) };
-  };
+  const side = (elos, teamGain, teamLoss) => ({
+    win: range(elos.map((elo) => personalGain(teamGain, elo, average))),
+    lose: range(elos.map((elo) => personalLoss(teamLoss, elo, average))),
+  });
 
-  return {
-    totalA,
-    totalB,
-    a: { win: aWins, lose: range(bWins, teamAElos) },
-    b: { win: bWins, lose: range(aWins, teamBElos) },
-  };
+  return { totalA, totalB, a: side(teamAElos, aWins, bWins), b: side(teamBElos, bWins, aWins) };
 }
 
 /** Applica il risultato a tutti i giocatori e restituisce il dettaglio per il riepilogo. */
 function applyMatchResult(league, teamA, teamB, winner) {
   const playersA = ihlRepository.getMany(league, teamA);
   const playersB = ihlRepository.getMany(league, teamB);
+  const all = [...playersA, ...playersB];
 
   const expectedA = expectedScore(total(playersA.map((p) => p.elo)), total(playersB.map((p) => p.elo)));
-  // Punti di squadra: chi vince li prende tutti, chi perde li perde scalati per fascia.
+  const average = total(all.map((p) => p.elo)) / all.length;
+  // Punti di squadra, poi ognuno li riceve corretti per fascia e posizione nella lobby.
   const teamGain = winner === 'a' ? gain(expectedA) : gain(1 - expectedA);
 
   const changes = [];
@@ -79,7 +102,9 @@ function applyMatchResult(league, teamA, teamB, winner) {
   for (const [team, players] of [['a', playersA], ['b', playersB]]) {
     const won = team === winner;
     for (const player of players) {
-      const delta = won ? teamGain : -personalLoss(teamGain, player.elo);
+      const delta = won
+        ? personalGain(teamGain, player.elo, average)
+        : -personalLoss(teamGain, player.elo, average);
       ihlRepository.applyResult(league, player.discord_id, delta, won);
       changes.push({ discordId: player.discord_id, before: player.elo, delta, team });
     }

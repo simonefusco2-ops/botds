@@ -132,6 +132,11 @@ module.exports = {
       { below: 1400, factor: 1 },
       { factor: 1.2 },
     ],
+    // Correzione rispetto alla media delle dieci persone della lobby. Con
+    // spread 500, chi è 100 punti sopra la media vince il 20% in meno e perde
+    // il 20% in più; chi è sotto, il contrario. Mai oltre ±max (30%).
+    // spread: null la spegne.
+    lobbyAdjust: { spread: 500, max: 0.3 },
     floor: 100, // nessuno scende sotto questa soglia
   },
 
