@@ -59,7 +59,8 @@ VOTO          i 10 votano il vincitore nel canale della partita: **prima squadra
               oppure **Annulla**: anche lì a 6 voti, partita annullata e nessun ELO
 CHIUSURA      ELO aggiornato (somma delle squadre, tetto 30: pari +15; la
               sconfitta pesa per fascia di ELO, 60% sotto 1100 … 120% oltre
-              1400), classifica riscritta, canali cancellati
+              1400; chi è sopra la media della lobby vince meno e perde di più,
+              ±30% al massimo), classifica riscritta, canali cancellati
 ```
 
 Ogni fase vive **dentro il canale della partita**. Il canale delle code resta
