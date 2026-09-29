@@ -61,9 +61,11 @@ leghe sono marcate `archivio` e non appartengono a nessuna delle due.
 
 - Ogni giocatore parte da **1000 ELO** alla prima coda.
 - A fine partita si applica un **Elo a squadre**: si confronta la **somma** dell'ELO
-  dei cinque di ogni squadra (K = 50, scala 1660). Due squadre pari valgono ±25;
-  con 1000 punti di differenza la favorita fa +10 / −40 e la sfavorita +40 / −10.
-  Tutti e cinque prendono la stessa variazione; mai più di 50, mai meno di 1.
+  dei cinque di ogni squadra (K = 30, scala 1660). Due squadre pari valgono 15.
+  Chi vince prende tutti la stessa cifra; chi perde perde una parte che dipende dal
+  proprio ELO, come nelle ranked: sotto 1100 il 60%, fino a 1250 l'80%, fino a
+  1400 il 100%, oltre il 120%. Per questo in una partita vincite e perdite non si
+  pareggiano sempre.
 - Il punteggio **non scende mai sotto 100**.
 - Ogni partita ha un **codice numerico** (`match_id`). Lo staff può annullarla:
   in quel caso a tutti i dieci giocatori viene **restituito esattamente il delta**

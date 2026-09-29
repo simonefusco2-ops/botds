@@ -115,12 +115,23 @@ module.exports = {
    * `scale` dice quanto pesa la differenza fra i totali: con 1660, 1000 punti
    * di differenza (7500 contro 6500) fanno +10 / −40 alla favorita.
    * `minDelta`: anche la favorita schiacciante prende almeno questo.
+   *
+   * `lossBands`: come nelle ranked, la sconfitta pesa in base all'ELO di chi
+   * perde (prima della partita): sotto 1100 costa il 60%, fino a 1250 l'80%,
+   * fino a 1400 il 100%, oltre il 120%. La vittoria vale uguale per tutti.
+   * L'ultima fascia non ha `below` e prende tutto il resto.
    */
   elo: {
     starting: 1000,
-    kFactor: 50,
+    kFactor: 30,
     scale: 1660,
     minDelta: 1,
+    lossBands: [
+      { below: 1100, factor: 0.6 },
+      { below: 1250, factor: 0.8 },
+      { below: 1400, factor: 1 },
+      { factor: 1.2 },
+    ],
     floor: 100, // nessuno scende sotto questa soglia
   },
 

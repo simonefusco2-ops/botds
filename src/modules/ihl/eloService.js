@@ -26,8 +26,23 @@ function gain(expectedOfWinner) {
 }
 
 /**
- * Cosa si gioca ogni squadra prima di cominciare: quanto prende se vince e
- * quanto perde se perde. È simmetrico: la vittoria di A vale la sconfitta di B.
+ * Come nelle ranked: più sei in alto, più una sconfitta costa. Il fattore
+ * dipende dall'ELO di chi perde prima della partita; la vittoria non cambia.
+ */
+function lossFactor(elo) {
+  const band = ihlConfig.elo.lossBands.find((entry) => entry.below == null || elo < entry.below);
+  return band ? band.factor : 1;
+}
+
+/** Quanto perde un singolo giocatore, dalla sconfitta di squadra e dal suo ELO. */
+function personalLoss(teamLoss, elo) {
+  return Math.max(ihlConfig.elo.minDelta, Math.round(teamLoss * lossFactor(elo)));
+}
+
+/**
+ * Cosa si gioca ogni squadra prima di cominciare: quanto prende se vince e,
+ * per la sconfitta, il minimo e il massimo fra i suoi giocatori (dipende dalla
+ * fascia di ognuno).
  */
 function stakes(teamAElos, teamBElos) {
   const totalA = total(teamAElos);
@@ -36,14 +51,18 @@ function stakes(teamAElos, teamBElos) {
 
   const aWins = gain(expectedA);
   const bWins = gain(1 - expectedA);
-  return { totalA, totalB, a: { win: aWins, lose: bWins }, b: { win: bWins, lose: aWins } };
-}
 
-/** La variazione per le due squadre, dato il vincitore. */
-function computeDelta(teamAElos, teamBElos, winner) {
-  const s = stakes(teamAElos, teamBElos);
-  const deltaA = winner === 'a' ? s.a.win : -s.a.lose;
-  return { deltaA, deltaB: -deltaA };
+  const range = (teamLoss, elos) => {
+    const losses = elos.map((elo) => personalLoss(teamLoss, elo));
+    return { min: Math.min(...losses), max: Math.max(...losses) };
+  };
+
+  return {
+    totalA,
+    totalB,
+    a: { win: aWins, lose: range(bWins, teamAElos) },
+    b: { win: bWins, lose: range(aWins, teamBElos) },
+  };
 }
 
 /** Applica il risultato a tutti i giocatori e restituisce il dettaglio per il riepilogo. */
@@ -51,25 +70,22 @@ function applyMatchResult(league, teamA, teamB, winner) {
   const playersA = ihlRepository.getMany(league, teamA);
   const playersB = ihlRepository.getMany(league, teamB);
 
-  const { deltaA, deltaB } = computeDelta(
-    playersA.map((p) => p.elo),
-    playersB.map((p) => p.elo),
-    winner,
-  );
+  const expectedA = expectedScore(total(playersA.map((p) => p.elo)), total(playersB.map((p) => p.elo)));
+  // Punti di squadra: chi vince li prende tutti, chi perde li perde scalati per fascia.
+  const teamGain = winner === 'a' ? gain(expectedA) : gain(1 - expectedA);
 
   const changes = [];
 
-  for (const player of playersA) {
-    ihlRepository.applyResult(league, player.discord_id, deltaA, winner === 'a');
-    changes.push({ discordId: player.discord_id, before: player.elo, delta: deltaA, team: 'a' });
-  }
-
-  for (const player of playersB) {
-    ihlRepository.applyResult(league, player.discord_id, deltaB, winner === 'b');
-    changes.push({ discordId: player.discord_id, before: player.elo, delta: deltaB, team: 'b' });
+  for (const [team, players] of [['a', playersA], ['b', playersB]]) {
+    const won = team === winner;
+    for (const player of players) {
+      const delta = won ? teamGain : -personalLoss(teamGain, player.elo);
+      ihlRepository.applyResult(league, player.discord_id, delta, won);
+      changes.push({ discordId: player.discord_id, before: player.elo, delta, team });
+    }
   }
 
   return changes;
 }
 
-module.exports = { expectedScore, stakes, computeDelta, applyMatchResult };
+module.exports = { expectedScore, stakes, lossFactor, applyMatchResult };

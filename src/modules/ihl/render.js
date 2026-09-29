@@ -86,7 +86,9 @@ const TEAM_LABELS = { a: '🔴 Team A', b: '🔵 Team B' };
 /** "🔴 Team A (7500): vittoria +10 · sconfitta −40", una riga per squadra. */
 function stakesLines(stakes) {
   if (!stakes) return '';
-  const line = (team, totalElo, s) => `${TEAM_LABELS[team]} (${totalElo}): vittoria **+${s.win}** · sconfitta **−${s.lose}**`;
+  // La sconfitta dipende dalla fascia di ognuno: se non è uguale per tutti si mostra il range.
+  const loss = ({ min, max }) => (min === max ? `**−${max}**` : `da **−${min}** a **−${max}**`);
+  const line = (team, totalElo, s) => `${TEAM_LABELS[team]} (${totalElo}): vittoria **+${s.win}** · sconfitta ${loss(s.lose)}`;
   return `💰 **In palio**\n${line('a', stakes.totalA, stakes.a)}\n${line('b', stakes.totalB, stakes.b)}\n`;
 }
 
