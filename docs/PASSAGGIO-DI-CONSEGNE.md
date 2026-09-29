@@ -44,8 +44,7 @@ CHECK-IN      canale testuale privato della partita + stanza vocale di check-in;
               può sostituire chi non si presenta (/ihl sostituisci)
 CAPITANI      i due con il tier più alto: Captain 1 → 2 → 3; a parità, o
               senza ruolo capitano, decide l'ELO
-SFIDA         tier diversi → apre il draft il capitano col tier più basso;
-              stesso tier → sasso carta forbici fra i capitani, mosse segrete: chi vince apre
+SFIDA         sasso carta forbici fra i capitani, mosse segrete: chi vince apre
               il draft; pari → si rigioca (max 5 round, poi moneta); 60 s a
               round, chi non sceglie perde (config/ihl.config.js, `rps`)
 DRAFT         i capitani si alternano scegliendo i giocatori; accanto a ogni nome
