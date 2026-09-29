@@ -22,7 +22,8 @@ module.exports = {
   title: '🔔  NOTIFICHE LIVE',
   intro:
     'Vuoi sapere quando i nostri **streamer** vanno in diretta su Twitch?\n' +
-    'Attiva le notifiche: ti taggheremo a ogni live, sia degli streamer **IPL** sia degli altri.',
+    'Attiva le notifiche: ti taggheremo a ogni live dei nostri streamer.\n' +
+    '-# Le live degli streamer **IPL** avvisano i giocatori della LEGA PRO.',
   footnote: 'Puoi disattivarle quando vuoi con lo stesso pannello.',
 
   buttons: {

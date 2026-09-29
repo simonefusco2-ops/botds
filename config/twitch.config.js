@@ -7,7 +7,9 @@
  * Copyright (c) 2026 Fusco. Tutti i diritti riservati.
  * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
  */
-// Il ruolo di chi vuole le notifiche delle live: vale per tutti i gruppi.
+const rankConfig = require('./rank.config');
+
+// Il ruolo di chi vuole le notifiche delle live degli streamer generali.
 const LIVE_ROLE_ID = '1553840021436506322';
 
 /**
@@ -31,7 +33,8 @@ module.exports = {
     ipl: {
       label: 'Streamer IPL',
       channelId: '1553829536268030123',
-      roleIds: [LIVE_ROLE_ID],
+      // Le live degli streamer IPL avvisano solo chi gioca la LEGA PRO.
+      roleIds: [rankConfig.iplRoleIds.pro],
     },
   },
 };
