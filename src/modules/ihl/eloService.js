@@ -72,6 +72,13 @@ function range(values) {
 function stakes(teamAElos, teamBElos) {
   const totalA = total(teamAElos);
   const totalB = total(teamBElos);
+
+  const fixed = ihlConfig.elo.fixedDelta;
+  if (fixed) {
+    const same = { win: { min: fixed, max: fixed }, lose: { min: fixed, max: fixed } };
+    return { totalA, totalB, a: same, b: same };
+  }
+
   const expectedA = expectedScore(totalA, totalB);
   const average = (totalA + totalB) / (teamAElos.length + teamBElos.length);
 
@@ -97,14 +104,15 @@ function applyMatchResult(league, teamA, teamB, winner) {
   // Punti di squadra, poi ognuno li riceve corretti per fascia e posizione nella lobby.
   const teamGain = winner === 'a' ? gain(expectedA) : gain(1 - expectedA);
 
+  const fixed = ihlConfig.elo.fixedDelta;
   const changes = [];
 
   for (const [team, players] of [['a', playersA], ['b', playersB]]) {
     const won = team === winner;
     for (const player of players) {
-      const delta = won
-        ? personalGain(teamGain, player.elo, average)
-        : -personalLoss(teamGain, player.elo, average);
+      let delta;
+      if (fixed) delta = won ? fixed : -fixed;
+      else delta = won ? personalGain(teamGain, player.elo, average) : -personalLoss(teamGain, player.elo, average);
       ihlRepository.applyResult(league, player.discord_id, delta, won);
       changes.push({ discordId: player.discord_id, before: player.elo, delta, team });
     }

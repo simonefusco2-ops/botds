@@ -60,15 +60,8 @@ leghe sono marcate `archivio` e non appartengono a nessuna delle due.
 ## 4. Come funziona la classifica
 
 - Ogni giocatore parte da **1000 ELO** alla prima coda.
-- A fine partita si applica un **Elo a squadre**: si confronta la **somma** dell'ELO
-  dei cinque di ogni squadra (K = 30, scala 1660). Due squadre pari valgono 15.
-  Chi vince prende tutti la stessa cifra; chi perde perde una parte che dipende dal
-  proprio ELO, come nelle ranked: sotto 1100 il 60%, fino a 1250 l'80%, fino a
-  1400 il 100%, oltre il 120%. In più ognuno è corretto rispetto alla media delle
-  dieci persone della lobby: chi è sopra vince meno e perde di più (20% ogni 100
-  punti, massimo 30%). Nessuno supera 30 a partita. Per questo in una partita
-  vincite e perdite non si pareggiano sempre, e i cinque di una squadra possono
-  ricevere cifre diverse.
+- A fine partita **chi vince prende +25 e chi perde −25**, tutti e dieci uguali,
+  senza bilanciamenti.
 - Il punteggio **non scende mai sotto 100**.
 - Ogni partita ha un **codice numerico** (`match_id`). Lo staff può annullarla:
   in quel caso a tutti i dieci giocatori viene **restituito esattamente il delta**

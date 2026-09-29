@@ -115,6 +115,12 @@ module.exports = {
    */
   elo: {
     starting: 1000,
+
+    // Punti fissi: chi vince prende questo, chi perde lo perde, per tutti e
+    // senza bilanciamenti. Con null si torna al calcolo qui sotto (somma delle
+    // squadre, fasce e correzione di lobby).
+    fixedDelta: 25,
+
     kFactor: 30,
     scale: 1660,
     minDelta: 1,
