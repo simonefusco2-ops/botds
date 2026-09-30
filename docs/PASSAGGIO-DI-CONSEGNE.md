@@ -36,6 +36,7 @@ Due leghe separate, con code, classifiche ed ELO indipendenti:
 
 ```
 CODA          il pannello apre le code; 10 posti, un giocatore per una sola partita
+              la coda è anonima: si vede quanti sono, non chi (anonymousQueue)
   ↓           (al decimo il bot crea subito la coda successiva)
 CHECK-IN      canale testuale privato della partita + stanza vocale di check-in;
               nel canale l'avviso clip, solo a chi ha il ruolo "obbligo di clip";

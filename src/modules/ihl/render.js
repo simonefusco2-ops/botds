@@ -152,7 +152,12 @@ function buildQueueEmbed(lobby) {
     .setColor(COLORS.gold)
     .setTitle(`${league.emoji}  CODA IN FORMAZIONE  ·  ${league.name}`)
     .setDescription(
-      `**${lobby.players.length}/${ihlConfig.queueSize}** in coda\n\n${mentions(lobby.players, lobby.badges, 4096)}`,
+      `**${lobby.players.length}/${ihlConfig.queueSize}** in coda\n\n` +
+        // Coda anonima: si vede quanti sono, non chi. Chi c'è lo sa dalla risposta al suo click.
+        (ihlConfig.anonymousQueue
+          ? `${'🟩'.repeat(lobby.players.length)}${'⬛'.repeat(Math.max(0, ihlConfig.queueSize - lobby.players.length))}\n` +
+            '-# I nomi restano nascosti fino all\'apertura della partita.'
+          : mentions(lobby.players, lobby.badges, 4096)),
     )
     .setFooter({ text: `Coda #${lobby.id} · al decimo giocatore si apre la stanza della partita` })
     .setTimestamp();

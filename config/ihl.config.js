@@ -27,6 +27,10 @@ module.exports = {
 
   queueSize: 10,
 
+  // Coda anonima: la scheda mostra solo quanti sono in coda, non chi. I nomi
+  // si vedono quando la partita si apre, nel suo canale privato.
+  anonymousQueue: true,
+
   /**
    * Ordine del draft: quante scelte di fila fa ogni capitano, a partire da chi
    * apre. 1-2-2-2-1 = chi apre sceglie 1, l'altro 2, chi apre 2, l'altro 2, chi
