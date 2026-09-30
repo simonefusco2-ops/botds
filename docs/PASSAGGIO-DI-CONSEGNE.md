@@ -66,7 +66,7 @@ finiscono nel canale storico `1553153529361989683`. La stanza testuale della
 partita la vedono solo i dieci e lo staff. Le vocali (check-in e squadre) le vedono
 tutti, così il server sembra popolato, ma ci entra solo chi gioca: nelle vocali
 delle squadre solo quella squadra. Nascono in fondo alla categoria
-`1547745773452533814`.
+`1554517629958619206`.
 
 ---
 
@@ -132,7 +132,7 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 | --- | --- | --- |
 | Canale ruoli e rank | `1553343914960883802` | `config/ruoli.config.js` |
 | Storico partite | `1553153529361989683` | `config/ihl.config.js` |
-| Categoria stanze IHL | `1547745773452533814` | `config/ihl.config.js` |
+| Categoria stanze IHL | `1554517629958619206` | `config/ihl.config.js` |
 | IPL PRO / IPL OPEN | `1553355794320326736` / `1553024176129048656` | `config/rank.config.js` |
 | Nove ruoli dei rank | da Ferro a Radiante | `config/rank.config.js` |
 | Quattro ruoli di gioco | Duelist, Initiator, Controller, Sentinel | `config/ruoli.config.js` |

@@ -53,6 +53,17 @@ const {
  */
 const BOTTOM = 999;
 
+/**
+ * Lo staff vede tutte le stanze della partita. I ruoli che hanno già un loro
+ * permesso nella stanza (`already`) si saltano: due permessi per lo stesso ruolo
+ * nella stessa richiesta non servono e rischiano il rifiuto di Discord.
+ */
+function staffViewOverwrites(already = []) {
+  return (ihlConfig.staffViewRoleIds || [])
+    .filter((id) => !already.includes(id))
+    .map((id) => ({ id, allow: [PermissionFlagsBits.ViewChannel] }));
+}
+
 /** Timer in attesa, per chiave: la fase corrente e l'attesa del check-in. */
 const timers = new Map();
 
@@ -499,6 +510,7 @@ async function openMatch(client, lobby) {
         { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
         { id: client.user.id, allow: [...allow, PermissionFlagsBits.ManageChannels] },
         ...ihlConfig.managerRoleIds.map((id) => ({ id, allow })),
+        ...staffViewOverwrites(ihlConfig.managerRoleIds),
         ...lobby.players.map((id) => ({ id, allow })),
       ],
     })
@@ -534,6 +546,7 @@ async function openMatch(client, lobby) {
           id,
           allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.ViewChannel],
         })),
+        ...staffViewOverwrites(ihlConfig.managerRoleIds),
         ...lobby.players.map((id) => ({
           id,
           allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.ViewChannel],
@@ -1211,6 +1224,7 @@ async function setupVoiceChannels(client, lobby) {
             id: client.user.id,
             allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.MoveMembers],
           },
+          ...staffViewOverwrites(),
           ...team.map((id) => ({ id, allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.ViewChannel] })),
         ],
       })

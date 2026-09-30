@@ -192,7 +192,11 @@ module.exports = {
   // Categoria che ospita tutte le stanze temporanee della IHL: le due vocali
   // delle squadre e il testuale del voto di ogni partita. Se la lasci vuota
   // viene usata TEMP_VC_CATEGORY_ID del .env.
-  categoryId: '1547745773452533814',
+  categoryId: '1554517629958619206',
+
+  // Ruoli che vedono SEMPRE tutte le stanze temporanee delle partite (testuale,
+  // check-in e vocali delle squadre), anche senza giocare.
+  staffViewRoleIds: ['1547733990235045978'], // Staff IVPITER
 
   voice: {
     teamAName: '🔴 Team A',
