@@ -141,6 +141,7 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 | Ruolo notifiche live (streamer generali; gli IPL taggano IPL PRO) | `1553840021436506322` | `config/twitch.config.js` |
 | Captain 1 / 2 / 3 | `1553920340265271337` / `1553920330857447474` / `1553920307981590719` | `config/ihl.config.js` |
 | Stanza richiami | `1553738245152448663` | `config/sanzioni.config.js` |
+| Ruolo Valorant (dato a tutti in automatico) | `1548053779943788564` | `config/separatori.config.js` |
 | Separatori community / rank / ruoli | `1553405950826778684` / `1553403291013218425` / `1553351503027376210` | `config/separatori.config.js` |
 
 Gli altri (staff, categorie ticket, canali di log) stanno nel `.env` sulla VPS;

@@ -11,16 +11,18 @@
  * Ruoli separatori: le intestazioni che dividono la lista dei ruoli nel profilo.
  *
  * Quelli in `everyone` li ha ogni membro del server, da subito e a prescindere
- * da rank e ruoli di gioco. Il separatore staff lo ha solo chi ha almeno uno
- * dei `staff.roleIds`, e viene tolto a chi li perde.
+ * da rank e ruoli di gioco: i separatori e il ruolo Valorant. Se qualcuno li
+ * toglie, tornano al primo cambio di ruoli. Il separatore staff lo ha solo chi
+ * ha almeno uno dei `staff.roleIds`, e viene tolto a chi li perde.
  *
- * Il ruolo del bot deve stare SOPRA tutti i separatori, o Discord rifiuta.
+ * Il ruolo del bot deve stare SOPRA tutti questi ruoli, o Discord rifiuta.
  */
 module.exports = {
   everyone: [
     { name: 'Separatore community', roleId: '1553405950826778684' },
     { name: 'Separatore rank', roleId: '1553403291013218425' },
     { name: 'Separatore ruoli', roleId: '1553351503027376210' },
+    { name: 'Valorant', roleId: '1548053779943788564' },
   ],
 
   staff: {
