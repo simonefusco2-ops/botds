@@ -285,7 +285,11 @@ function buildMatchEmbed(lobby, extra = {}) {
     const picked = [...lobby.team_a, ...lobby.team_b];
     const available = lobby.players.filter((id) => !picked.includes(id));
 
-    embed.setDescription(`Turno di <@${lobby.turn}>: **scegli un giocatore**.`);
+    const left = lobby.picksLeft || 1;
+    embed.setDescription(
+      `Turno di <@${lobby.turn}>: **scegli ${left > 1 ? `${left} giocatori, uno alla volta` : 'un giocatore'}**.\n` +
+        (ihlConfig.draftPattern?.length ? `-# Ordine del draft: ${ihlConfig.draftPattern.join('-')}.` : ''),
+    );
     embed.addFields(teamField(lobby, 'a'), teamField(lobby, 'b'), {
       name: `🎯 Ancora da scegliere — ${available.length}`,
       value: inline(available, lobby.badges),

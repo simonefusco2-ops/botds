@@ -262,7 +262,7 @@ async function publishMatch(client, lobby, extra = {}) {
   const withBadges = { ...lobby, badges: await badges.forIds(guild, lobby.players) };
   const named =
     lobby.state === 'draft'
-      ? { ...withBadges, names: await resolveNames(guild, lobby.players) }
+      ? { ...withBadges, names: await resolveNames(guild, lobby.players), picksLeft: picksLeftInTurn(lobby) }
       : withBadges;
 
   // Squadre complete: sulla scheda si vede quanto vale vincere e perdere.
@@ -1091,6 +1091,43 @@ async function autoBan(client, lobbyId) {
 
 // --- fase 5: draft ----------------------------------------------------------
 
+/**
+ * L'ordine delle scelte del draft, capitano per capitano. Con `draftPattern`
+ * 1-2-2-2-1 chi apre (F) e l'altro (O) scelgono F·OO·FF·OO·F: chi apre prende il
+ * primo giocatore, ma l'altro risponde subito con due. Se lo schema non copre
+ * tutte le scelte, il resto si alterna.
+ */
+function draftOrder(lobby) {
+  const first = lobby.first_pick || lobby.captain_a;
+  const other = first === lobby.captain_a ? lobby.captain_b : lobby.captain_a;
+  const picks = lobby.players.length - 2;
+
+  const order = [];
+  (ihlConfig.draftPattern || []).forEach((count, i) => {
+    for (let n = 0; n < count; n += 1) order.push(i % 2 === 0 ? first : other);
+  });
+  while (order.length < picks) order.push(order.length % 2 === 0 ? first : other);
+  return order.slice(0, picks);
+}
+
+/** Di chi è la prossima scelta, da quante ne sono già state fatte. */
+function draftTurn(lobby) {
+  const picked = lobby.team_a.length + lobby.team_b.length - 2;
+  return draftOrder(lobby)[picked] || null;
+}
+
+/** Quante scelte di fila restano a chi è di turno: 2 nei blocchi doppi. */
+function picksLeftInTurn(lobby) {
+  const order = draftOrder(lobby);
+  let index = lobby.team_a.length + lobby.team_b.length - 2;
+  let count = 0;
+  while (order[index] && order[index] === lobby.turn) {
+    count += 1;
+    index += 1;
+  }
+  return count;
+}
+
 async function pickPlayer(client, lobbyId, playerId, automatic = false) {
   const lobby = lobbyRepository.find(lobbyId);
   if (!lobby || lobby.state !== 'draft') return;
@@ -1123,14 +1160,8 @@ async function pickPlayer(client, lobbyId, playerId, automatic = false) {
     return renderMatch(client, updated);
   }
 
-  // Passa all'altro capitano, a meno che la sua squadra sia già completa.
-  const nextIsA = !toTeamA;
-  const nextTurn =
-    (nextIsA ? teamA.length : teamB.length) >= half
-      ? lobby.turn
-      : nextIsA
-        ? lobby.captain_a
-        : lobby.captain_b;
+  // Il turno segue l'ordine del draft (1-2-2-2-1), non una semplice alternanza.
+  const nextTurn = draftTurn({ ...lobby, team_a: teamA, team_b: teamB });
 
   const updated = lobbyRepository.update(lobbyId, { team_a: teamA, team_b: teamB, turn: nextTurn });
 

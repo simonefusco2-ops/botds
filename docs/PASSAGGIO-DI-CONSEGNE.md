@@ -47,7 +47,8 @@ CAPITANI      i due con il tier più alto: Captain 1 → 2 → 3; a parità, o
 SFIDA         sasso carta forbici fra i capitani, mosse segrete: chi vince apre
               il draft; pari → si rigioca (max 5 round, poi moneta); 60 s a
               round, chi non sceglie perde (config/ihl.config.js, `rps`)
-DRAFT         i capitani si alternano scegliendo i giocatori; accanto a ogni nome
+DRAFT         i capitani scelgono i giocatori con ordine 1-2-2-2-1 (chi apre ne
+              prende 1, poi 2 a testa, chi apre chiude con 1); accanto a ogni nome
               compaiono le emoji del rank e dei ruoli di gioco
 BAN MAPPE     a turno su tutte le 7 mappe attive; apre l'altro capitano
 LATO          come su FACEIT: attacco o difesa li sceglie chi NON ha fatto

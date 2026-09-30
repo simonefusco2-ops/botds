@@ -28,6 +28,13 @@ module.exports = {
   queueSize: 10,
 
   /**
+   * Ordine del draft: quante scelte di fila fa ogni capitano, a partire da chi
+   * apre. 1-2-2-2-1 = chi apre sceglie 1, l'altro 2, chi apre 2, l'altro 2, chi
+   * apre 1. Così chi apre non si porta via i due giocatori migliori.
+   */
+  draftPattern: [1, 2, 2, 2, 1],
+
+  /**
    * Ruoli da capitano, dal tier più alto al più basso. In ogni partita sono
    * capitani i due giocatori con il tier migliore; a parità di tier, e per chi
    * non ne ha nessuno, decide l'ELO. Senza ruoli da capitano in partita si
