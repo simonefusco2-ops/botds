@@ -92,10 +92,9 @@ async function handleMessage(client, message) {
   const author = message.member?.displayName || message.author.username;
   const verdict = await gemini.classify({ author, text: message.content.slice(0, 1500) }, context, hits);
 
-  if (verdict.verdetto === 'ok') {
-    logger.info(`Moderazione: messaggio di ${message.author.id} segnalato (${hits.join(', ')}) ma giudicato ok.`);
-    return verdict;
-  }
+  // Una riga per ogni sospetto: è l'unico modo di capire dai log dove si ferma.
+  logger.info(`Moderazione: messaggio di ${message.author.id} in #${message.channel.name || message.channel.id} segnalato (${hits.join(', ')}) → ${verdict.verdetto}${verdict.fallback ? ` [${verdict.motivo}]` : ''}.`);
+  if (verdict.verdetto === 'ok') return verdict;
 
   if (verdict.verdetto === 'dubbio') {
     await sendReview(client, message, verdict, hits);
@@ -168,6 +167,7 @@ async function syncWarnRoles(guild, userId) {
  * perde. Senza questo giro il ruolo resterebbe finché nessuno lo tocca.
  */
 function startRoleSweep(client, guild) {
+  logger.info(`Moderazione: ${modConfig.enabled ? 'attiva' : 'SPENTA (enabled: false)'}, Gemini ${process.env.GEMINI_API_KEY ? `configurato (${modConfig.gemini.model})` : 'NON configurato: GEMINI_API_KEY manca nel .env'}.`);
   const roleIds = modConfig.warns.roleIds || [];
   if (!roleIds.length || !guild) return;
 
