@@ -100,9 +100,13 @@ module.exports = [
     emoji: '🚨',
     style: 'danger',
     description: 'Hai raggiunto il limite di warn',
+    // Al posto del saluto standard: qui non c'è una richiesta da registrare.
+    greeting: '{user}, hai raggiunto il limite di **warn** e sei in **timeout**.',
     intro:
-      'Hai raggiunto il limite di **warn**: qui sotto trovi il motivo di ognuno. ' +
-      'Scrivi pure la tua versione, lo staff la legge prima di decidere.',
+      'Qui sotto trovi il motivo di ognuno. Lo staff valuta e decide: ' +
+      'l\'esito ti arriverà in questa stanza.',
+    // La persona vede la pratica ma non ci scrive: decide solo lo staff.
+    readOnly: true,
     categoryId: null,
     staffRoleId: '1547733990235045978', // Staff IVPITER
     hidden: true,

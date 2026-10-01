@@ -45,13 +45,17 @@ module.exports = {
   contextSize: 10,
 
   gemini: {
-    // Il modello si può cambiare anche dal .env con GEMINI_MODEL.
-    model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    // Si provano in ordine: se uno è sovraccarico (503), al limite (429) o non
+    // risponde in tempo, si passa subito al successivo. I "lite" con il
+    // ragionamento al minimo rispondono in 1-3 secondi; 3.5 Flash ne metteva
+    // 8-15 e sul piano gratuito era spesso sovraccarico. GEMINI_MODEL nel .env
+    // mette un modello in cima alla lista.
+    models: [process.env.GEMINI_MODEL, 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite'].filter(Boolean),
     // Il piano gratuito ha un limite di richieste al minuto: oltre questo
     // numero il messaggio va allo staff come dubbio invece di aspettare.
-    maxPerMinute: 8,
-    // Gemini 3.5 Flash risponde in 7-13 secondi: il margine evita di scartare risposte buone.
-    timeoutMs: 30000,
+    maxPerMinute: 15,
+    // Per ogni modello: oltre, si passa al successivo.
+    timeoutMs: 8000,
   },
 
   warns: {
@@ -91,7 +95,7 @@ module.exports = {
       // disabilità usate come insulto
       'mongoloide', 'handicappat[oiae]', 'ritardat[oiae]', 'retard(?:ed)?', 'spastic[oi]',
       // odio organizzato
-      'heil hitler', 'sieg heil', '1488', 'gas (?:the|agli) ', 'camer[ae] a gas', 'nazist[ai] di merda',
+      'heil hitler', 'sieg heil', '1488', 'gas (?:the|agli) [a-z]+', 'camer[ae] a gas', 'nazist[ai] di merda',
       // minacce e autolesionismo
       'kys', 'kill yourself', 'ammazzat[ie]', 'suicidat[ie]', 'impiccat[ie]', 'ti ammazzo',
       'ti uccido', 'ti vengo a prendere', 'so dove abiti',
@@ -99,5 +103,18 @@ module.exports = {
       'pedofil[oi]', 'child porn', 'cp link',
     ],
     squashed: ['negro', 'negri', 'nigger', 'nigga', 'frocio', 'ricchione', 'heilhitler'],
+
+    /**
+     * Insulti che non possono essere uno scherzo: cancellati all'istante e
+     * warn, senza aspettare Gemini. Stesso testo normalizzato di `words`.
+     * Qui vanno solo frasi inequivocabili: per tutto il resto decide Gemini.
+     */
+    immediate: [
+      { re: '(?:sporc|lurid|schifos|fottut)[oiae] (?:negr[oiae]|negher|zingar[oiae]|ebre[oi]|froci[oe]?|ricchion[ei])', categoria: 'razzismo' },
+      { re: '(?:negr[oiae]|negher|nigg?[ae]r?s?|zingar[oiae]|ebre[oi]|terron[ei]) (?:di merda|del cazzo|schifos[oiae]|bastard[oiae]|maledett[oiae])', categoria: 'razzismo' },
+      { re: '(?:froci[oe]?|ricchion[ei]|culatton[ei]|finocchi[oi]) (?:di merda|del cazzo|schifos[oiae]|bastard[oiae]|maledett[oiae])', categoria: 'omofobia' },
+      { re: 'scimmi[ae] (?:nera|negra)|torna(?:te)? in africa', categoria: 'razzismo' },
+      { re: 'heil hitler|sieg heil|gas (?:the|agli) [a-z]+|camer[ae] a gas', categoria: 'odio' },
+    ],
   },
 };

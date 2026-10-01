@@ -30,6 +30,18 @@ const squashed = (modConfig.prefilter.squashed || []).map(
   (w) => new RegExp(`(?:^|[^a-z])${[...w.toLowerCase()].join('[^a-z]*')}(?=$|[^a-z])`, 'i'),
 );
 
+const immediate = (modConfig.prefilter.immediate || []).map(({ re, categoria }) => ({
+  re: new RegExp(`(?:^|[^a-z])(?:${re})(?=$|[^a-z])`, 'i'),
+  categoria,
+}));
+
+/** La categoria del primo insulto inequivocabile trovato, o null: si cancella senza Gemini. */
+function immediateHit(text) {
+  // Spazi multipli e simboli fra le parole non devono bastare ad aggirarlo.
+  const plain = normalize(text).replace(/[^a-z]+/g, ' ');
+  return immediate.find(({ re }) => re.test(plain))?.categoria || null;
+}
+
 /**
  * Le espressioni sospette trovate nel messaggio, o un array vuoto. Il testo si
  * controlla normalizzato; le parole più gravi anche spezzate da spazi o simboli.
@@ -52,4 +64,4 @@ function scan(text) {
   return [...hits];
 }
 
-module.exports = { scan, normalize };
+module.exports = { scan, normalize, immediateHit };

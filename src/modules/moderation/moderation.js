@@ -85,12 +85,20 @@ function isStaff(member) {
 async function handleMessage(client, message) {
   if (!isWatched(message)) return null;
 
-  const hits = prefilter.scan(message.content);
-  if (!hits.length) return null;
-
-  const context = await contextOf(message);
-  const author = message.member?.displayName || message.author.username;
-  const verdict = await gemini.classify({ author, text: message.content.slice(0, 1500) }, context, hits);
+  // Insulto inequivocabile: via subito, senza i secondi di attesa di Gemini.
+  const severe = prefilter.immediateHit(message.content);
+  let hits;
+  let verdict;
+  if (severe) {
+    hits = ['insulto inequivocabile'];
+    verdict = { verdetto: 'elimina', categoria: severe, motivo: `Insulto d'odio (${severe}).` };
+  } else {
+    hits = prefilter.scan(message.content);
+    if (!hits.length) return null;
+    const context = await contextOf(message);
+    const author = message.member?.displayName || message.author.username;
+    verdict = await gemini.classify({ author, text: message.content.slice(0, 1500) }, context, hits);
+  }
 
   // Una riga per ogni sospetto: è l'unico modo di capire dai log dove si ferma.
   logger.info(`Moderazione: messaggio di ${message.author.id} in #${message.channel.name || message.channel.id} segnalato (${hits.join(', ')}) → ${verdict.verdetto}${verdict.fallback ? ` [${verdict.motivo}]` : ''}.`);
@@ -167,7 +175,7 @@ async function syncWarnRoles(guild, userId) {
  * perde. Senza questo giro il ruolo resterebbe finché nessuno lo tocca.
  */
 function startRoleSweep(client, guild) {
-  logger.info(`Moderazione: ${modConfig.enabled ? 'attiva' : 'SPENTA (enabled: false)'}, Gemini ${process.env.GEMINI_API_KEY ? `configurato (${modConfig.gemini.model})` : 'NON configurato: GEMINI_API_KEY manca nel .env'}.`);
+  logger.info(`Moderazione: ${modConfig.enabled ? 'attiva' : 'SPENTA (enabled: false)'}, Gemini ${process.env.GEMINI_API_KEY ? `configurato (${modConfig.gemini.models.join(' → ')})` : 'NON configurato: GEMINI_API_KEY manca nel .env'}.`);
   const roleIds = modConfig.warns.roleIds || [];
   if (!roleIds.length || !guild) return;
 
@@ -241,7 +249,8 @@ async function addWarn(client, guild, user, { reason, category = null, content =
   const active = warnRepository.active(guild.id, user.id, expireDays);
   const count = active.length;
 
-  await user
+  // DM, log, annuncio e ruolo non dipendono l'uno dall'altro: partono insieme.
+  const dm = user
     .send({
       embeds: [
         new EmbedBuilder()
@@ -256,7 +265,7 @@ async function addWarn(client, guild, user, { reason, category = null, content =
     })
     .catch(() => {});
 
-  await sendLog(client, {
+  const log = sendLog(client, {
     embeds: [
       new EmbedBuilder()
         .setColor(COLORS.danger)
@@ -273,8 +282,7 @@ async function addWarn(client, guild, user, { reason, category = null, content =
     allowedMentions: { parse: [] },
   });
 
-  await announcePublic(client, user, count, reason);
-  await syncWarnRoles(guild, user.id);
+  await Promise.all([dm, log, announcePublic(client, user, count, reason), syncWarnRoles(guild, user.id)]);
 
   if (count >= threshold) await escalate(client, guild, user, active);
   return { count, active };
@@ -318,7 +326,7 @@ async function escalate(client, guild, user, active) {
         (timedOut ? `Sei in **timeout per ${timeoutHours} ore** mentre lo staff decide.` : 'Lo staff ora decide cosa fare.') +
         `\n\n${short(list, 3500)}`,
     )
-    .setFooter({ text: 'Spiega pure la tua versione qui: lo staff la leggerà prima di decidere.' })
+    .setFooter({ text: 'Decide lo staff con i bottoni qui sotto.' })
     .setTimestamp();
 
   const row = new ActionRowBuilder().addComponents(

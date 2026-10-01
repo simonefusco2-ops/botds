@@ -84,42 +84,61 @@ async function classify(target, context, hits) {
     `Messaggio da giudicare:\n[${target.author}] ${target.text}\n\n` +
     `Il filtro ha segnalato: ${hits.join(', ')}`;
 
+  const { models } = modConfig.gemini;
+  let last = null;
+  for (const model of models) {
+    const result = await ask(model, prompt);
+    if (result.verdetto) return result;
+    last = result;
+    // Sovraccarico, limite, errore di Google o tempo scaduto: si prova il prossimo modello.
+    // Gli altri errori (chiave sbagliata, richiesta rifiutata) non cambiano cambiando modello.
+    if (!result.retry) break;
+  }
+  return { verdetto: 'dubbio', categoria: 'altro', motivo: last?.motivo || 'Gemini non disponibile.', fallback: true };
+}
+
+/** Una chiamata a un modello: il verdetto, oppure { motivo, retry } se non è arrivato. */
+async function ask(model, prompt) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), modConfig.gemini.timeoutMs);
 
+  const generationConfig = { temperature: 0, responseMimeType: 'application/json', responseSchema: SCHEMA };
+  // Il ragionamento è ciò che rende lenti i modelli 3.x: per un sì/no basta il minimo.
+  if (/^gemini-3/.test(model)) generationConfig.thinkingConfig = { thinkingLevel: 'minimal' };
+
   try {
-    const res = await fetch(`${ENDPOINT}/${modConfig.gemini.model}:generateContent`, {
+    const res = await fetch(`${ENDPOINT}/${model}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM }] },
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         safetySettings: SAFETY,
-        generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: SCHEMA },
+        generationConfig,
       }),
       signal: controller.signal,
     });
 
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      // 404: il modello non esiste più o il nome è sbagliato. 429: limite del piano gratuito.
-      logger.warn(`Moderazione: Gemini ha risposto ${res.status} (${modConfig.gemini.model}): ${body.slice(0, 200)}`);
-      return { verdetto: 'dubbio', categoria: 'altro', motivo: `Gemini non disponibile (errore ${res.status}).`, fallback: true };
+      // 404: il modello non esiste più o il nome è sbagliato. 429: limite del piano gratuito. 503: sovraccarico.
+      logger.warn(`Moderazione: Gemini ha risposto ${res.status} (${model}): ${body.slice(0, 200)}`);
+      return { motivo: `Gemini non disponibile (errore ${res.status}).`, retry: res.status === 404 || res.status === 429 || res.status >= 500 };
     }
 
     const data = await res.json();
     const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
     if (!text) {
       const reason = data.promptFeedback?.blockReason || data.candidates?.[0]?.finishReason || 'risposta vuota';
-      return { verdetto: 'dubbio', categoria: 'altro', motivo: `Gemini non ha dato un verdetto (${reason}).`, fallback: true };
+      return { motivo: `Gemini non ha dato un verdetto (${reason}).`, retry: true };
     }
 
     const parsed = JSON.parse(text);
     if (!['ok', 'dubbio', 'elimina'].includes(parsed.verdetto)) throw new Error(`verdetto non valido: ${parsed.verdetto}`);
     return { verdetto: parsed.verdetto, categoria: parsed.categoria || 'altro', motivo: String(parsed.motivo || '').slice(0, 300) };
   } catch (err) {
-    logger.warn(`Moderazione: chiamata a Gemini fallita: ${err.message}`);
-    return { verdetto: 'dubbio', categoria: 'altro', motivo: 'Gemini non ha risposto in tempo.', fallback: true };
+    logger.warn(`Moderazione: chiamata a Gemini fallita (${model}): ${err.message}`);
+    return { motivo: 'Gemini non ha risposto in tempo.', retry: true };
   } finally {
     clearTimeout(timer);
   }

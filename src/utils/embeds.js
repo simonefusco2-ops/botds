@@ -54,8 +54,10 @@ function buildTicketControlEmbed(user, type) {
     .setAuthor({ name: 'Pratica aperta', iconURL: user.displayAvatarURL() })
     .setTitle(`${type.emoji}  ${type.label}`)
     .setDescription(
-      `Benvenuto ${user}, la tua richiesta è stata **registrata**.\n` +
-        'Lo staff è stato convocato e ti risponderà in questa stanza.',
+      type.greeting
+        ? type.greeting.replace('{user}', `${user}`)
+        : `Benvenuto ${user}, la tua richiesta è stata **registrata**.\n` +
+            'Lo staff è stato convocato e ti risponderà in questa stanza.',
     )
     .addFields({ name: 'Cosa serve sapere', value: type.intro })
     .setThumbnail(user.displayAvatarURL({ size: 256 }))

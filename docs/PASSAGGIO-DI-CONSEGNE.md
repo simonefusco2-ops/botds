@@ -115,11 +115,13 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 
 **Moderazione** (permesso Modera membri)
 `/warn utente motivo` · `/warns utente` · `/unwarn utente [numero]`. Il bot filtra
-ogni messaggio con un elenco locale di parole (`config/moderazione.config.js`); solo
-i sospetti vanno a Gemini con gli ultimi 10 messaggi del canale, che decide ok /
+ogni messaggio con un elenco locale di parole (`config/moderazione.config.js`). Gli
+insulti inequivocabili (`prefilter.immediate`: "negro di merda", "sporco negro",
+"heil hitler"…) si cancellano all'istante senza Gemini; gli altri sospetti vanno a
+Gemini (3.1 Flash Lite, poi gli altri della lista se è sovraccarico; 1-4 s) con gli ultimi 10 messaggi del canale, che decide ok /
 dubbio / elimina. Elimina = messaggio cancellato e warn; dubbio = log con bottoni
 per lo staff. Al 3° warn in 30 giorni: timeout 24 h e ticket con i bottoni della
-decisione (archivia, azzera, timeout 7 giorni, ban). Ogni warn è annunciato nella
+decisione (archivia, azzera, timeout 7 giorni, ban); la persona lo legge ma non ci scrive. Ogni warn è annunciato nella
 stanza richiami (senza il testo cancellato) e dà il ruolo Warn 1 / Warn 2, che
 scende da solo quando i warn scadono o vengono revocati. Log privati in `1547745415934386217`.
 
@@ -166,7 +168,7 @@ bot, porta `API_PORT` (default 3000).
 ## 7. Cosa resta da fare
 
 **Da fare sulla VPS (non è codice)**
-- [ ] `GEMINI_API_KEY` nel `.env` (gratis da aistudio.google.com); modello `gemini-3.5-flash`
+- [ ] `GEMINI_API_KEY` nel `.env` (gratis da aistudio.google.com); modelli in `config/moderazione.config.js` (`gemini.models`)
 - [ ] dire nel regolamento che i messaggi sospetti vengono analizzati da un servizio esterno (Google Gemini)
 - [ ] `HENRIK_API_KEY` nel `.env` — e **rigenerare la chiave**, è già passata in chat
 - [ ] `npm run prova-rank` per validare la lettura del rank dalla VPS
