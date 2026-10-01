@@ -119,7 +119,9 @@ ogni messaggio con un elenco locale di parole (`config/moderazione.config.js`); 
 i sospetti vanno a Gemini con gli ultimi 10 messaggi del canale, che decide ok /
 dubbio / elimina. Elimina = messaggio cancellato e warn; dubbio = log con bottoni
 per lo staff. Al 3° warn in 30 giorni: timeout 24 h e ticket con i bottoni della
-decisione (archivia, azzera, timeout 7 giorni, ban).
+decisione (archivia, azzera, timeout 7 giorni, ban). Ogni warn è annunciato nella
+stanza richiami (senza il testo cancellato) e dà il ruolo Warn 1 / Warn 2, che
+scende da solo quando i warn scadono o vengono revocati. Log privati in `1547745415934386217`.
 
 **Notifiche e utilità**
 `/twitch aggiungi [tipo:Generale|Streamer IPL]|rimuovi|lista|prova` · `/social pannello|aggiungi|rimuovi|lista|controlla|prova`
@@ -141,6 +143,8 @@ decisione (archivia, azzera, timeout 7 giorni, ban).
 | Canale live streamer IPL | `1553829536268030123` | `config/twitch.config.js` |
 | Ruolo notifiche live (streamer generali; gli IPL taggano IPL PRO) | `1553840021436506322` | `config/twitch.config.js` |
 | Captain 1 / 2 / 3 | `1553920340265271337` / `1553920330857447474` / `1553920307981590719` | `config/ihl.config.js` |
+| Ruoli Warn 1 / Warn 2 | `1553474640737865869` / `1554932223289852044` | `config/moderazione.config.js` |
+| Log privati della moderazione | `1547745415934386217` | `config/moderazione.config.js` |
 | Stanza richiami | `1553738245152448663` | `config/sanzioni.config.js` |
 | Ruolo Valorant (dato a tutti in automatico) | `1548053779943788564` | `config/separatori.config.js` |
 | Separatori community / rank / ruoli | `1553405950826778684` / `1553403291013218425` / `1553351503027376210` | `config/separatori.config.js` |
@@ -162,7 +166,7 @@ bot, porta `API_PORT` (default 3000).
 ## 7. Cosa resta da fare
 
 **Da fare sulla VPS (non è codice)**
-- [ ] `GEMINI_API_KEY` nel `.env` (gratis da aistudio.google.com) e ID del canale dei log staff in `config/moderazione.config.js` (`logChannelId`)
+- [ ] `GEMINI_API_KEY` nel `.env` (gratis da aistudio.google.com); modello `gemini-3.5-flash`
 - [ ] dire nel regolamento che i messaggi sospetti vengono analizzati da un servizio esterno (Google Gemini)
 - [ ] `HENRIK_API_KEY` nel `.env` — e **rigenerare la chiave**, è già passata in chat
 - [ ] `npm run prova-rank` per validare la lettura del rank dalla VPS

@@ -25,8 +25,11 @@ module.exports = {
   enabled: true,
 
   // Canale privato dello staff dove arrivano log, messaggi cancellati e dubbi.
-  // Finché è null i log vanno solo nella console del bot.
-  logChannelId: null,
+  logChannelId: '1547745415934386217',
+
+  // Stanza pubblica dei richiami: ogni warn viene annunciato qui, senza il
+  // testo del messaggio cancellato (quello resta nei log privati).
+  publicChannelId: '1553738245152448663',
 
   // Dove il bot non guarda: canali e categorie dello staff. I ticket sono
   // sempre esclusi, e così i messaggi dei ruoli qui sotto.
@@ -43,11 +46,12 @@ module.exports = {
 
   gemini: {
     // Il modello si può cambiare anche dal .env con GEMINI_MODEL.
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
     // Il piano gratuito ha un limite di richieste al minuto: oltre questo
     // numero il messaggio va allo staff come dubbio invece di aspettare.
     maxPerMinute: 8,
-    timeoutMs: 15000,
+    // Gemini 3.5 Flash risponde in 7-13 secondi: il margine evita di scartare risposte buone.
+    timeoutMs: 30000,
   },
 
   warns: {
@@ -56,6 +60,10 @@ module.exports = {
     // Al raggiungimento: timeout e ticket con la persona e lo staff.
     threshold: 3,
     timeoutHours: 24,
+    // Ruolo per ogni livello di warn attivi: chi ne ha 1 prende "Warn 1", chi ne
+    // ha 2 "Warn 2". Dal terzo resta "Warn 2" e si apre il ticket. Quando un
+    // warn scade o viene revocato il ruolo scende da solo.
+    roleIds: ['1553474640737865869', '1554932223289852044'],
     // Ruoli che possono usare i bottoni della decisione nel ticket e nei log.
     staffRoleIds: [
       '1551594248053198858', // Developer

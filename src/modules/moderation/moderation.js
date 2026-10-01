@@ -140,6 +140,78 @@ async function sendReview(client, message, verdict, hits) {
   return sendLog(client, { embeds: [embed], components: [row] });
 }
 
+// --- ruoli dei warn ---------------------------------------------------------------
+
+/**
+ * Il ruolo giusto per quanti warn attivi ha: Warn 1, Warn 2, e dal terzo resta
+ * l'ultimo. Toglie gli altri, così scadenze e revoche fanno scendere il ruolo.
+ */
+async function syncWarnRoles(guild, userId) {
+  const roleIds = modConfig.warns.roleIds || [];
+  if (!roleIds.length) return;
+
+  const member = await guild.members.fetch(userId).catch(() => null);
+  if (!member) return;
+
+  const count = warnRepository.active(guild.id, userId, modConfig.warns.expireDays).length;
+  const wanted = count ? roleIds[Math.min(count, roleIds.length) - 1] : null;
+
+  for (const roleId of roleIds) {
+    const has = member.roles.cache.has(roleId);
+    if (roleId === wanted && !has) await member.roles.add(roleId, `Warn attivi: ${count}`).catch((err) => logger.warn(`Moderazione: ruolo warn non dato a ${userId}: ${err.message}`));
+    if (roleId !== wanted && has) await member.roles.remove(roleId, `Warn attivi: ${count}`).catch((err) => logger.warn(`Moderazione: ruolo warn non tolto a ${userId}: ${err.message}`));
+  }
+}
+
+/**
+ * Una volta all'ora: chi ha un ruolo di warn ma i cui warn sono scaduti lo
+ * perde. Senza questo giro il ruolo resterebbe finché nessuno lo tocca.
+ */
+function startRoleSweep(client, guild) {
+  const roleIds = modConfig.warns.roleIds || [];
+  if (!roleIds.length || !guild) return;
+
+  const sweep = async () => {
+    const members = await guild.members.fetch().catch(() => null);
+    if (!members) return;
+    for (const member of members.values()) {
+      if (roleIds.some((id) => member.roles.cache.has(id))) await syncWarnRoles(guild, member.id);
+    }
+  };
+
+  sweep().catch((err) => logger.error('Moderazione: controllo dei ruoli warn fallito', err));
+  const timer = setInterval(() => sweep().catch(() => {}), 60 * 60 * 1000);
+  timer.unref?.();
+}
+
+/** Annuncio pubblico nella stanza dei richiami: chi, quale warn, perché. Niente testo cancellato. */
+async function announcePublic(client, user, count, reason) {
+  if (!modConfig.publicChannelId) return;
+  const channel = await client.channels.fetch(modConfig.publicChannelId).catch(() => null);
+  if (!channel) {
+    logger.warn(`Moderazione: stanza richiami ${modConfig.publicChannelId} non raggiungibile.`);
+    return;
+  }
+
+  const { threshold } = modConfig.warns;
+  await channel
+    .send({
+      content: `${user}`,
+      embeds: [
+        new EmbedBuilder()
+          .setColor(count >= threshold ? COLORS.danger : COLORS.gold)
+          .setTitle(`⚠️  WARN ${Math.min(count, threshold)}/${threshold}`)
+          .setDescription(
+            `**Utente:** ${user}\n**Motivo:** ${reason}` +
+              (count >= threshold ? '\n\n🚨 Limite raggiunto: la decisione passa allo staff.' : ''),
+          )
+          .setTimestamp(),
+      ],
+      allowedMentions: { users: [user.id] },
+    })
+    .catch((err) => logger.warn(`Moderazione: annuncio pubblico non inviato: ${err.message}`));
+}
+
 // --- warn -----------------------------------------------------------------------
 
 /**
@@ -194,6 +266,9 @@ async function addWarn(client, guild, user, { reason, category = null, content =
     ],
     allowedMentions: { parse: [] },
   });
+
+  await announcePublic(client, user, count, reason);
+  await syncWarnRoles(guild, user.id);
 
   if (count >= threshold) await escalate(client, guild, user, active);
   return { count, active };
@@ -322,6 +397,7 @@ async function handleDecision(interaction, action, userId) {
     } else if (action === 'clear') {
       const n = warnRepository.revokeAll(guild.id, userId);
       await member?.timeout(null, `Decisione di ${by.username}: warn azzerati`);
+      await syncWarnRoles(guild, userId);
       outcome = `🧹 **Warn azzerati** da ${by} (${n}) e timeout tolto.`;
     } else if (action === 'week') {
       await member?.timeout(7 * 24 * 3600 * 1000, `Decisione di ${by.username}: timeout 7 giorni`);
@@ -342,4 +418,4 @@ async function handleDecision(interaction, action, userId) {
   return undefined;
 }
 
-module.exports = { PREFIX, handleMessage, addWarn, handleButton, isWatched };
+module.exports = { PREFIX, handleMessage, addWarn, handleButton, isWatched, syncWarnRoles, startRoleSweep };

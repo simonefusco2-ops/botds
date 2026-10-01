@@ -10,6 +10,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const modConfig = require('../../config/moderazione.config');
 const warnRepository = require('../database/repositories/warnRepository');
+const { syncWarnRoles } = require('../modules/moderation/moderation');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -39,6 +40,7 @@ module.exports = {
     }
 
     const left = warnRepository.active(interaction.guildId, user.id, expireDays).length;
+    await syncWarnRoles(interaction.guild, user.id);
     return interaction.reply({
       content: `✅ Warn \`#${warn.id}\` di ${user} revocato. Ora è a **${left}/${threshold}**.`,
       ephemeral: true,

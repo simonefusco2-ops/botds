@@ -14,6 +14,7 @@ const twitchWatcher = require('../modules/twitch/twitchWatcher');
 const rssWatcher = require('../modules/social/rssWatcher');
 const ihlLobbyManager = require('../modules/ihl/lobbyManager');
 const separators = require('../modules/separators/separators');
+const moderation = require('../modules/moderation/moderation');
 
 module.exports = {
   name: 'ready',
@@ -31,6 +32,9 @@ module.exports = {
     await ihlLobbyManager.pruneQueues(client).catch((err) => {
       logger.error('Errore nel ripulire le code IHL', err);
     });
+
+    // I ruoli Warn 1/2 scendono da soli quando i warn scadono: controllo ogni ora.
+    moderation.startRoleSweep(client, guild);
 
     // Senza await: su tutto il server richiede tempo, e il resto non deve aspettare.
     if (guild) {
