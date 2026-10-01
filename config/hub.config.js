@@ -24,7 +24,7 @@ module.exports = {
 
   intro:
     'Qui si gioca sul serio, e sul serio ci si rispetta.\n' +
-    '**Leggi tutto prima di chiedere il ruolo IPL:** entrando nelle HUB accetti queste regole.',
+    '**Leggi tutto prima di prendere il ruolo IPL sul sito:** entrando nelle HUB accetti queste regole.',
 
   rules: [
     {
@@ -93,15 +93,15 @@ module.exports = {
     '### 🏅  LE DUE LEGHE\n' +
     '🎯 **LEGA OPEN** — porta aperta: si gioca fino a **Ascendente 3**, per chi vuole divertirsi e crescere.\n' +
     '🏆 **LEGA PRO** — da **Immortale 1** in su: livello alto, ritmo serio.\n' +
-    '-# In quale finisci lo decide il tuo rank verificato, non la tua parola.',
+    '-# In quale finisci lo decide il rank letto dal sito, non la tua parola.',
 
   request:
     '### 🎟️  COME SI ENTRA NELLE IPL\n' +
-    'Servono **due cose**, e le prendi entrambe in {canale}:\n' +
-    '> **1.** il **rank verificato**, incollando lì il link del tuo profilo **tracker.gg**\n' +
-    '> **2.** almeno un **ruolo di gioco** fra quelli disponibili\n\n' +
-    'Appena le hai tutte e due il bot ti assegna da solo l\'accesso: **IPL PRO** da Immortale in su, ' +
-    '**IPL OPEN** per tutti gli altri rank verificati. Non serve chiedere niente allo staff.',
+    '> **1.** vai su **[ivpiter.it](https://ivpiter.it)**\n' +
+    '> **2.** accedi con il tuo **account Discord**\n' +
+    '> **3.** il sito ti assegna **in automatico** i ruoli in base al tuo **rank**\n\n' +
+    'Ricevi così l\'accesso: **IPL PRO** da Immortale in su, **IPL OPEN** per tutti gli altri rank, ' +
+    'e con lui la sezione **IPL** del server, dove ti metti in coda. Non serve chiedere niente allo staff.',
 
   // Il pannello rimanda qui: è il canale della richiesta ruoli e rank.
   rolesChannelId: '1553343914960883802',

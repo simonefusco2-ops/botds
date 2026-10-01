@@ -23,40 +23,40 @@ module.exports = {
 
   intro:
     'Le **IPL** sono le nostre partite 5v5 organizzate dal bot: code, squadre, mappe ed ELO.\n' +
-    'Per entrarci servono **due cose**, nessuna delle quali si chiede allo staff: arrivano da sole.',
+    'Per giocare bastano **due passaggi**, e nessuno dei due si chiede allo staff.',
 
   sections: [
     {
-      name: '1️⃣  VERIFICA IL TUO RANK',
+      name: '1️⃣  PRENDI I RUOLI SUL SITO',
       value:
-        'Vai in {canale} e incolla il link del tuo profilo **tracker.gg**.\n' +
-        'Il bot legge il rank e ti assegna il ruolo corrispondente.\n' +
-        '-# Sotto {soglia} è immediato; da lì in su la richiesta passa dallo staff.',
+        'Vai su **[ivpiter.it](https://ivpiter.it)** e accedi con il tuo **account Discord**.\n' +
+        'Il sito legge il tuo rank e ti assegna **in automatico** i ruoli, compreso l\'accesso **IPL**.\n' +
+        '-# Con il ruolo IPL compare la sezione IPL del server, con le stanze delle partite.',
     },
     {
-      name: '2️⃣  SCEGLI I TUOI RUOLI DI GIOCO',
+      name: '2️⃣  VAI NELLA SEZIONE IPL E METTITI IN CODA',
       value:
-        'Sempre in {canale}, prendi almeno uno di questi:\n{ruoli}\n' +
-        '-# Puoi prenderne più di uno: servono ai capitani per bilanciare le squadre nel draft.',
+        'Apri la sezione **IPL** del server: lì trovi il canale delle code della tua lega.\n' +
+        'Quando le code sono **aperte** 🟢 premi **Entra in coda** e aspetta di essere in dieci.\n' +
+        '-# Quando sono chiuse 🔴 il bottone non c\'è: le apre lo staff negli orari di gioco.',
     },
   ],
 
   leagues:
     '### 🏅  LE DUE LEGHE\n' +
     '🏆 **IPL PRO** — da **Immortale** in su. Livello alto, ritmo serio.\n' +
-    '🎯 **IPL OPEN** — **aperta a tutti** gli altri rank, purché verificati.\n' +
-    '-# In quale entri lo decide il rank che hai verificato: non si sceglie.',
+    '🎯 **IPL OPEN** — **aperta a tutti** gli altri rank.\n' +
+    '-# In quale entri lo decide il rank letto dal sito: non si sceglie.',
 
   automatic:
-    '### ⚡  L\'ACCESSO ARRIVA DA SOLO\n' +
-    'Appena hai **un rank verificato** e **almeno un ruolo di gioco**, il bot ti assegna ' +
-    'da solo il ruolo di accesso — Pro oppure Open secondo il tuo rank. Non devi chiedere niente.\n' +
-    '-# Se togli il ruolo di gioco l\'accesso si toglie; se sali a Immortale passi da Open a Pro.',
+    '### ⚡  I RUOLI ARRIVANO DA SOLI\n' +
+    'Appena accedi al sito il ruolo di accesso — **Pro** oppure **Open** secondo il tuo rank — ' +
+    'ti viene assegnato da solo. Non devi chiedere niente a nessuno.',
 
   closing:
     '## 🔥  POI SI GIOCA\n' +
-    'Con l\'accesso in mano entra nel canale delle code, premi **Entra in coda** e aspetta i dieci. ' +
-    'Al decimo il bot fa tutto: check-in, squadre, mappa e stanze.',
+    'Al decimo in coda il bot fa tutto: ti manda un DM, apre il check-in, fa scegliere squadre e ' +
+    'mappa e prepara le stanze vocali.',
 
-  footer: 'Problemi con la verifica? Apri un ticket: lo staff controlla a mano.',
+  footer: 'Problemi con il sito o con i ruoli? Apri un ticket: lo staff controlla a mano.',
 };

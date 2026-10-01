@@ -11,6 +11,7 @@ const logger = require('../utils/logger');
 const iplAccess = require('../modules/rank/iplAccess');
 const notify = require('../modules/rank/notify');
 const separators = require('../modules/separators/separators');
+const rankConfig = require('../../config/rank.config');
 
 /**
  * L'accesso alle IPL dipende dai ruoli, quindi va ricontrollato ogni volta che
@@ -32,6 +33,10 @@ module.exports = {
     await separators.sync(newMember).catch((err) => {
       logger.error(`Errore nei separatori di ${newMember.id}`, err);
     });
+
+    // Con i ruoli IPL gestiti dal sito, i requisiti del bot (rank + ruolo di
+    // gioco) non contano più: niente sync e niente DM che li ricordano.
+    if (rankConfig.iplAccessByBot === false) return;
 
     // Come stava prima, per capire dopo cosa è cambiato davvero.
     const prima = notify.snapshot(oldMember);

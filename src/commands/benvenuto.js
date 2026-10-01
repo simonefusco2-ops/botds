@@ -13,6 +13,7 @@ const { COLORS } = require('../utils/embeds');
 const { buildCard } = require('../utils/cards');
 const { toReuploadable } = require('../utils/attachments');
 const { buildRoleRow } = require('../modules/welcome/roleButtons');
+const { buildSiteRow } = require('../utils/siteButton');
 const settingsRepository = require('../database/repositories/settingsRepository');
 
 const SETTINGS_KEY = 'benvenuto_message';
@@ -28,7 +29,7 @@ function buildSections() {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('benvenuto')
-    .setDescription('Pubblica o aggiorna il messaggio di benvenuto con i ruoli selezionabili')
+    .setDescription('Pubblica o aggiorna il messaggio di benvenuto')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addChannelOption((opt) =>
       opt
@@ -66,13 +67,12 @@ module.exports = {
       bannerRef: banner?.ref,
       title: benvenuto.title,
       body: benvenuto.intro,
-      sections: [
-        ...buildSections(),
-        { name: benvenuto.rolesTitle, value: `-# ${benvenuto.rolesHint}` },
-      ],
+      sections: [...buildSections(), { name: benvenuto.site.title, value: benvenuto.site.text }],
       separateSections: true,
       footnote: benvenuto.closing ? `${benvenuto.closing}\n\n-# ${benvenuto.footer}` : benvenuto.footer,
-      rows: [buildRoleRow()],
+      // Il bottone del sito; quelli dei ruoli solo se ne restano in config
+      // (una riga senza bottoni farebbe rifiutare tutto il messaggio).
+      rows: [buildSiteRow(), ...(benvenuto.roles.length ? [buildRoleRow()] : [])],
     });
 
     const payload = { ...card, files: banner ? [banner.file] : [] };

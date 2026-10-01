@@ -14,6 +14,7 @@ const rankConfig = require('../../config/rank.config');
 const { COLORS } = require('../utils/embeds');
 const { buildCard } = require('../utils/cards');
 const { toReuploadable } = require('../utils/attachments');
+const { buildSiteRow } = require('../utils/siteButton');
 const settingsRepository = require('../database/repositories/settingsRepository');
 
 const SETTINGS_KEY = 'ipl_panel_message';
@@ -88,6 +89,7 @@ module.exports = {
       separateSections: true,
       footnote:
         `${iplConfig.leagues}\n\n${iplConfig.automatic}\n\n${iplConfig.closing}\n\n-# ${iplConfig.footer}`,
+      rows: [buildSiteRow()],
     });
 
     const payload = { ...card, files: banner ? [banner.file] : [] };

@@ -54,6 +54,11 @@ module.exports = {
     open: '1553024176129048656',
   },
 
+  // Chi assegna i ruoli IPL. false = li dà il sito ivpiter.it in base al rank,
+  // e il bot non li tocca (né li dà né li toglie, e non manda DM sui requisiti).
+  // true = li gestisce il bot con le regole qui sopra.
+  iplAccessByBot: false,
+
   /**
    * I rank, dal più basso al più alto.
    *

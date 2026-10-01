@@ -54,6 +54,10 @@ function entitlement(member) {
 async function sync(member) {
   if (!member || member.user?.bot) return { changed: false, league: null };
 
+  // I ruoli IPL li assegna il sito: il bot non deve né darli né toglierli,
+  // altrimenti toglierebbe l'accesso a chi non ha un ruolo di gioco.
+  if (rankConfig.iplAccessByBot === false) return { changed: false, league: null, reason: 'gestito dal sito' };
+
   const { pro, open } = rankConfig.iplRoleIds || {};
   if (!pro && !open) return { changed: false, league: null, reason: 'ruoli IPL non configurati' };
 

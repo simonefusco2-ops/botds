@@ -73,24 +73,16 @@ delle squadre solo quella squadra. Nascono in fondo alla categoria
 
 ## 3. Come si entra nelle IPL
 
-Due requisiti, entrambi obbligatori. È il punto che la gente sbaglia più spesso,
-quindi il bot lo ripete in tre posti: nel pannello, nella risposta a ogni clic e
-in DM.
+Dal sito **ivpiter.it**: ci si collega con l'account Discord e il sito assegna in
+automatico i ruoli in base al rank, compreso l'accesso **IPL PRO** (da Immortale)
+o **IPL OPEN**. Con il ruolo IPL compare la sezione IPL del server, con le code.
 
-1. **Ruolo di gioco** — bottoni nel pannello `/pannello-ruoli`, canale
-   `1553343914960883802`. Se ne possono prendere più di uno.
-2. **Rank verificato** — si incolla il link del profilo tracker.gg. Sotto
-   **Ascendente** il bot assegna subito; da Ascendente in su apre una pratica e
-   decide lo staff (approvando, la pratica si chiude da sola e parte il DM).
+Il bot **non tocca** i ruoli IPL (`iplAccessByBot: false` in `config/rank.config.js`):
+non li dà, non li toglie e non manda DM sui requisiti. Rimettendolo a `true` torna
+il vecchio sistema del bot (rank verificato da tracker.gg + ruolo di gioco).
 
-Quando ci sono entrambi, il ruolo IPL arriva da solo (`src/modules/rank/iplAccess.js`).
-Vale anche al contrario: chi si toglie il ruolo di gioco perde l'accesso, e chi
-sale a Immortale passa da OPEN a PRO.
-
-**Un limite da sapere:** il link tracker.gg **non prova** che l'account sia suo,
-chiunque può incollare quello di un altro. La lettura automatica è un aiuto per lo
-staff, non una verifica d'identità. L'unica prova vera sarebbe **Riot RSO**, che
-richiede l'approvazione di Riot. Per questo dopo Ascendente decide una persona.
+I pannelli /benvenuto e /pannello-ipl hanno un bottone che apre il sito
+(`config/sito.config.js`); il regolamento HUB lo cita nel testo.
 
 ---
 

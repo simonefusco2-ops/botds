@@ -24,7 +24,7 @@ module.exports = {
 
   intro:
     'Sei entrato nella **Ivpiter Community**: qui si gioca, si compete e si cresce insieme.\n' +
-    'Tre passaggi e sei operativo.',
+    'Pochi passaggi e sei operativo.',
 
   /**
    * I passaggi del benvenuto. Ognuno rimanda al suo canale, che Discord rende
@@ -39,14 +39,6 @@ module.exports = {
       channelId: '1547733991405387849',
     },
     {
-      emoji: '🎯',
-      name: 'Richiedi i tuoi ruoli',
-      text:
-        'Verifica il tuo rank con il link di tracker.gg e prenditi i ruoli che giochi ' +
-        '(Duelist, Initiator, Controller, Sentinel). Servono per entrare nelle code.',
-      channelId: '1553343914960883802',
-    },
-    {
       emoji: '📲',
       name: 'Seguici sui social',
       text: 'Clip, annunci, tornei e dirette: tutti i nostri canali ufficiali sono raccolti qui.',
@@ -54,28 +46,32 @@ module.exports = {
     },
   ],
 
-  rolesTitle: '🎮  Prendi il ruolo Valorant',
-  rolesHint: 'Clicca il bottone per assegnartelo. Riclicca per rimuoverlo.',
+  /**
+   * La sezione del sito, al posto dei vecchi bottoni dei ruoli: i ruoli IPL e
+   * l'accesso alle stanze delle partite ora arrivano dal sito, in base al rank.
+   * Sotto il pannello c'è un bottone che apre il sito (config/sito.config.js).
+   */
+  site: {
+    title: '🌐  PRENDI I TUOI RUOLI SU IVPITER.IT',
+    text:
+      'Per avere il ruolo **IPL** e vedere le stanze delle partite passa dal nostro sito:\n' +
+      '> **1.** vai su **[ivpiter.it](https://ivpiter.it)**\n' +
+      '> **2.** accedi con il tuo **account Discord**\n' +
+      '> **3.** il sito ti assegna **in automatico** i ruoli in base al tuo **rank**\n' +
+      '-# Niente ticket e niente attese: appena accedi, i ruoli compaiono da soli.',
+  },
 
   /**
-   * Discord non ha bottoni neri né bottoni ridimensionabili: i colori sono
-   * cinque fissi e la larghezza dipende dalla lunghezza dell'etichetta.
-   * "secondary" è il grigio scuro, che sul tema scuro è la cosa più vicina al
-   * nero; l'etichetta lunga serve a farlo venire più largo.
+   * I vecchi bottoni dei ruoli. Vuoto: il ruolo Valorant lo danno a tutti i
+   * separatori automatici, e i ruoli IPL il sito. Un bottone rimasto in un
+   * messaggio vecchio risponde che il ruolo non è più disponibile.
    */
-  roles: [
-    {
-      id: '1548053779943788564',
-      label: 'Prendi il ruolo Valorant',
-      emoji: '<:valorant_round:1548245738557939784>',
-      style: 'secondary',
-    },
-  ],
+  roles: [],
 
   // Chiusura in grande, subito sopra il piè di pagina.
   closing:
     '## ⚡  VIENI SUBITO A GIOCARE\n' +
-    'Le nostre code ti aspettano: prendi il ruolo, verifica il rank e scendi in campo.',
+    'Collegati al sito, prendi i ruoli e scendi in campo nelle nostre code.',
 
   footer: 'Per qualsiasi problema apri un ticket: lo staff risponde a ogni convocazione.',
 };
