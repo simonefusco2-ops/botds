@@ -7,6 +7,7 @@
  * Copyright (c) 2026 Fusco. Tutti i diritti riservati.
  * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
  */
+const { Events } = require('discord.js');
 const config = require('../config');
 const logger = require('../utils/logger');
 const inviteTracker = require('../modules/memberLog/inviteTracker');
@@ -17,7 +18,8 @@ const separators = require('../modules/separators/separators');
 const moderation = require('../modules/moderation/moderation');
 
 module.exports = {
-  name: 'ready',
+  // In discord.js 14.22+ l'evento si chiama clientReady: 'ready' è deprecato.
+  name: Events.ClientReady,
   once: true,
   async execute(client) {
     logger.info(`Bot connesso come ${client.user.tag}`);

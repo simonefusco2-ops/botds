@@ -171,16 +171,22 @@ function startRoleSweep(client, guild) {
   const roleIds = modConfig.warns.roleIds || [];
   if (!roleIds.length || !guild) return;
 
+  // Niente guild.members.fetch(): Discord accetta una richiesta di tutti i membri
+  // alla volta, e all'avvio la fa già la sincronizzazione dei separatori. Basta
+  // la cache, che quella richiesta riempie e gli ingressi tengono aggiornata.
   const sweep = async () => {
-    const members = await guild.members.fetch().catch(() => null);
-    if (!members) return;
-    for (const member of members.values()) {
-      if (roleIds.some((id) => member.roles.cache.has(id))) await syncWarnRoles(guild, member.id);
+    const ids = new Set();
+    for (const id of roleIds) {
+      guild.roles.cache.get(id)?.members.forEach((member) => ids.add(member.id));
     }
+    for (const id of ids) await syncWarnRoles(guild, id);
   };
 
-  sweep().catch((err) => logger.error('Moderazione: controllo dei ruoli warn fallito', err));
-  const timer = setInterval(() => sweep().catch(() => {}), 60 * 60 * 1000);
+  const run = () => sweep().catch((err) => logger.error('Moderazione: controllo dei ruoli warn fallito', err));
+  // Il primo giro aspetta che la cache dei membri sia piena.
+  const first = setTimeout(run, 5 * 60 * 1000);
+  const timer = setInterval(run, 60 * 60 * 1000);
+  first.unref?.();
   timer.unref?.();
 }
 
