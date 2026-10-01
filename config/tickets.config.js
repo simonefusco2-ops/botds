@@ -92,4 +92,19 @@ module.exports = [
     categoryId: null,
     staffRoleId: null,
   },
+  {
+    // Aperto dalla moderazione al terzo warn, non dal pannello: dentro c'è
+    // l'elenco dei warn e i bottoni con cui lo staff decide.
+    id: 'warn',
+    label: 'Warn',
+    emoji: '🚨',
+    style: 'danger',
+    description: 'Hai raggiunto il limite di warn',
+    intro:
+      'Hai raggiunto il limite di **warn**: qui sotto trovi il motivo di ognuno. ' +
+      'Scrivi pure la tua versione, lo staff la legge prima di decidere.',
+    categoryId: null,
+    staffRoleId: '1547733990235045978', // Staff IVPITER
+    hidden: true,
+  },
 ];

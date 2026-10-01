@@ -113,6 +113,14 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 · `/regolamento` · `/benvenuto` · `/ticket-panel` · `/roster divisione:<…>` ·
 `/setup-channels`
 
+**Moderazione** (permesso Modera membri)
+`/warn utente motivo` · `/warns utente` · `/unwarn utente [numero]`. Il bot filtra
+ogni messaggio con un elenco locale di parole (`config/moderazione.config.js`); solo
+i sospetti vanno a Gemini con gli ultimi 10 messaggi del canale, che decide ok /
+dubbio / elimina. Elimina = messaggio cancellato e warn; dubbio = log con bottoni
+per lo staff. Al 3° warn in 30 giorni: timeout 24 h e ticket con i bottoni della
+decisione (archivia, azzera, timeout 7 giorni, ban).
+
 **Notifiche e utilità**
 `/twitch aggiungi [tipo:Generale|Streamer IPL]|rimuovi|lista|prova` · `/social pannello|aggiungi|rimuovi|lista|controlla|prova`
 · `/inviti [utente]` · `/clear quantita [utente]` · `/sondaggio domanda risposte [durata] [multipla] [tagga] [menziona]` · `/embed [tagga] [menziona]` · `/embed-modifica`
@@ -154,6 +162,8 @@ bot, porta `API_PORT` (default 3000).
 ## 7. Cosa resta da fare
 
 **Da fare sulla VPS (non è codice)**
+- [ ] `GEMINI_API_KEY` nel `.env` (gratis da aistudio.google.com) e ID del canale dei log staff in `config/moderazione.config.js` (`logChannelId`)
+- [ ] dire nel regolamento che i messaggi sospetti vengono analizzati da un servizio esterno (Google Gemini)
 - [ ] `HENRIK_API_KEY` nel `.env` — e **rigenerare la chiave**, è già passata in chat
 - [ ] `npm run prova-rank` per validare la lettura del rank dalla VPS
 - [ ] il ruolo del bot va **sopra** i ruoli dei rank, quelli IPL e i separatori, o non li assegna

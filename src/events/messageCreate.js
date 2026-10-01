@@ -9,6 +9,7 @@
  */
 const logger = require('../utils/logger');
 const rankRequest = require('../modules/rank/rankRequest');
+const moderation = require('../modules/moderation/moderation');
 
 /**
  * Serve alla verifica del rank: dentro una pratica IPL, un link a tracker.gg
@@ -20,6 +21,11 @@ module.exports = {
   async execute(message, client) {
     await rankRequest.handleMessage(client, message).catch((err) => {
       logger.error('Errore nella verifica del rank da messaggio', err);
+    });
+
+    // Moderazione: filtro locale su ogni messaggio, Gemini solo sui sospetti.
+    await moderation.handleMessage(client, message).catch((err) => {
+      logger.error('Errore nella moderazione automatica', err);
     });
   },
 };

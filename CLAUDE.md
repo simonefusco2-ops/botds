@@ -48,6 +48,7 @@ src/
     memberLog/ ingressi e inviti     welcome/  benvenuto
     api/      server HTTP e API per il sito
     separators/ ruoli separatori: a tutti, e quello staff solo allo staff
+    moderation/ filtro dei messaggi, verdetto di Gemini, warn e ticket al terzo
     embedBuilder/ /embed e /embed-modifica
   database/   db.js (schema + migrazioni) e repositories/ (una per tabella)
   utils/      cards.js (Components V2), embeds.js, emoji.js, attachments.js, logger.js

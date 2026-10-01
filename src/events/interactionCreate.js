@@ -17,6 +17,7 @@ const { CUSTOM_ID_PREFIX: ROLE_BUTTON_PREFIX, handleRoleButton } = require('../m
 const ihlInteractions = require('../modules/ihl/interactions');
 const liveRolePanel = require('../modules/twitch/liveRolePanel');
 const rankRequest = require('../modules/rank/rankRequest');
+const moderation = require('../modules/moderation/moderation');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -62,6 +63,12 @@ module.exports = {
       // Ruoli di gioco e verifica del rank: bottoni e menu del pannello ruoli.
       if (interaction.customId?.startsWith(rankRequest.PREFIX)) {
         await rankRequest.handle(client, interaction);
+        return;
+      }
+
+      // Moderazione: dubbi nei log e decisioni dello staff nei ticket dei warn.
+      if (interaction.customId?.startsWith(moderation.PREFIX)) {
+        await moderation.handleButton(client, interaction);
         return;
       }
 

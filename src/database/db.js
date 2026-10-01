@@ -149,6 +149,24 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_ihl_sanctions_player ON ihl_sanctions(discord_id);
 
+  -- Warn della moderazione, automatici o dati dallo staff. Restano anche quando
+  -- scadono o vengono revocati: contano solo quelli recenti e non revocati.
+  CREATE TABLE IF NOT EXISTS mod_warns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT NOT NULL,
+    discord_id TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    category TEXT,
+    content TEXT,
+    channel_id TEXT,
+    automatic INTEGER NOT NULL DEFAULT 1,
+    staff_id TEXT,
+    revoked INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_mod_warns_player ON mod_warns(discord_id);
+
   CREATE TABLE IF NOT EXISTS social_feeds (
     feed_url TEXT PRIMARY KEY,
     platform TEXT NOT NULL,
