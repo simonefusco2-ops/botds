@@ -41,23 +41,13 @@ module.exports = {
   },
 
   /**
-   * I ruoli che danno accesso alle IPL, assegnati da soli.
-   *
-   * Servono due cose insieme: almeno un ruolo di gioco (Duelist, Initiator,
-   * Controller o Sentinel) e un rank verificato. Chi ha Immortale o Radiante
-   * prende il Pro, tutti gli altri l'Open. Appena i requisiti smettono di
-   * essere soddisfatti il ruolo viene tolto, altrimenti resterebbe a chi si è
-   * levato il ruolo di gioco.
+   * I ruoli IPL PRO e OPEN. Li assegna il sito ivpiter.it in base al rank: il
+   * bot non li dà e non li toglie, li usa solo per i tag delle live Twitch IPL.
    */
   iplRoleIds: {
     pro: '1553355794320326736',
     open: '1553024176129048656',
   },
-
-  // Chi assegna i ruoli IPL. false = li dà il sito ivpiter.it in base al rank,
-  // e il bot non li tocca (né li dà né li toglie, e non manda DM sui requisiti).
-  // true = li gestisce il bot con le regole qui sopra.
-  iplAccessByBot: false,
 
   /**
    * I rank, dal più basso al più alto.

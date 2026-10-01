@@ -23,9 +23,6 @@ const leagues = require('../ihl/leagues');
 const trackerLink = require('./trackerLink');
 const rankProvider = require('./rankProvider');
 const rolePanel = require('./rolePanel');
-const iplAccess = require('./iplAccess');
-const notify = require('./notify');
-const ruoliConfig = require('../../../config/ruoli.config');
 const ticketManager = require('../tickets/ticketManager');
 const { COLORS } = require('../../utils/embeds');
 const { toButtonEmoji } = require('../../utils/emoji');
@@ -198,10 +195,7 @@ async function handlePick(interaction, ownerId) {
   return interaction.update({ embeds: [embed], components: buildComponents(ownerId, rank) });
 }
 
-/**
- * Assegna il ruolo del rank. L'accesso alle IPL non si tocca qui: ci pensa
- * iplAccess, che guarda anche i ruoli di gioco e viene richiamato alla fine.
- */
+/** Assegna il ruolo del rank. I ruoli IPL li gestisce il sito. */
 async function assignRoles(guild, member, rank) {
   const wanted = [rank.roleId].filter(Boolean);
   if (!wanted.length) return { assigned: [], missing: true };
@@ -244,14 +238,8 @@ async function clearOtherRanks(member, keepRoleId) {
  * Parte sempre: sia quando il rank è basso e il bot assegna da solo, sia quando
  * lo approva lo staff — nel secondo caso il ticket sparisce subito dopo, quindi
  * senza questo messaggio la persona non saprebbe mai com'è finita.
- *
- * Dentro c'è la lista dei due requisiti: il rank da solo non apre le IPL, e chi
- * si ferma lì deve vederselo scritto anche fuori dal pannello.
  */
 async function notifyRank(member, rank, { approved }) {
-  // Questo è già l'avviso completo: l'evento sui ruoli non deve raddoppiarlo.
-  notify.silence(member.id);
-
   const league = leagues.find(rankProvider.leagueOf(rank));
 
   const apertura = approved
@@ -260,15 +248,8 @@ async function notifyRank(member, rank, { approved }) {
     : `${rank.emoji} **Rank verificato: ${rank.name}**\n` +
       `Ti ho assegnato il ruolo da solo. Sei nella **${league.name}**.`;
 
-  const coda = iplAccess.entitlement(member).league
-    ? ''
-    : `\n\n⚠️ **Non hai ancora finito.** Il rank è solo uno dei due passi: ` +
-      `torna in ${iplAccess.panelLink()} e prendi almeno **un ruolo di gioco** ` +
-      `(${ruoliConfig.roles.map((role) => role.label).join(', ')}). ` +
-      'Appena ce l\'hai, l\'accesso alle IPL arriva da solo.';
-
   return member
-    .send({ content: `${apertura}\n\n${iplAccess.checklist(member)}${coda}` })
+    .send({ content: apertura })
     .then(() => true)
     .catch(() => false);
 }
@@ -290,10 +271,6 @@ async function handleApprove(interaction, ownerId, rankName) {
     return interaction.editReply({ content: `⚠️ <@${ownerId}> non è più nel server.` });
   }
 
-  // Il DM lo mandiamo noi qui sotto, con tutto il contesto della pratica:
-  // l'avviso automatico sull'evento dei ruoli va zittito prima di assegnare.
-  notify.silence(member.id);
-
   const result = await assignRoles(interaction.guild, member, rank);
 
   if (result.missing) {
@@ -305,7 +282,6 @@ async function handleApprove(interaction, ownerId, rankName) {
   }
 
   await clearOtherRanks(member, rank.roleId);
-  const accesso = await iplAccess.sync(member);
 
   const league = leagues.find(rankProvider.leagueOf(rank));
   const embed = EmbedBuilder.from(interaction.message.embeds[0])
@@ -322,10 +298,6 @@ async function handleApprove(interaction, ownerId, rankName) {
   const avvisato = await notifyRank(member, rank, { approved: true });
   const chiuso = ticketManager.closeTicketChannel(interaction.channel, 'Richiesta rank approvata', 8000);
 
-  const accessoNota = accesso.league
-    ? `\n🎟️ Accesso **IPL ${accesso.league.toUpperCase()}** assegnato.`
-    : `\n-# Accesso IPL in attesa: gli manca ${iplAccess.missing(member).join(' e ')}.`;
-
   const chiusura = chiuso
     ? '\n🔒 Pratica chiusa: il canale sparisce fra pochi secondi.'
     : '';
@@ -335,7 +307,6 @@ async function handleApprove(interaction, ownerId, rankName) {
     content:
       `✅ ${member} approvato da ${interaction.user}: ${rank.emoji} **${rank.name}**, lega **${league.name}**.` +
       `\nRuoli assegnati: ${result.assigned.map((role) => `<@&${role.id}>`).join(' ') || 'nessuno'}` +
-      accessoNota +
       chiusura +
       dm +
       failed,
@@ -394,9 +365,6 @@ async function handleTrackerSubmit(client, interaction) {
     return escalate(interaction, tracker, outcome, 'Rank alto: serve il via libera dello staff.');
   }
 
-  // Idem per la verifica automatica: l'avviso completo parte da notifyRank.
-  notify.silence(interaction.user.id);
-
   const result = await assignRoles(interaction.guild, interaction.member, outcome.rank);
 
   if (result.missing) {
@@ -408,7 +376,6 @@ async function handleTrackerSubmit(client, interaction) {
   }
 
   await clearOtherRanks(interaction.member, outcome.rank.roleId);
-  await iplAccess.sync(interaction.member);
 
   const league = leagues.find(rankProvider.leagueOf(outcome.rank));
   const failed = result.failed?.length
@@ -418,23 +385,13 @@ async function handleTrackerSubmit(client, interaction) {
   logger.info(`Rank: ${interaction.user.id} verificato in automatico (${outcome.label}).`);
 
   // Anche il rank basso, assegnato dal bot senza passare dallo staff, merita il
-  // DM: è lo stesso avviso che riceve chi viene approvato, con la lista dei due
-  // passi, così nessuno resta convinto di aver finito.
+  // DM: è lo stesso avviso che riceve chi viene approvato.
   const avvisato = await notifyRank(interaction.member, outcome.rank, { approved: false });
   const dm = avvisato ? '' : '\n-# Ti avrei scritto anche in privato, ma hai i DM chiusi.';
 
-  // La spiegazione più importante sta qui, sulla schermata dove ha appena
-  // premuto: in DM molti non la leggono nemmeno.
-  const manca = iplAccess.entitlement(interaction.member).league
-    ? ''
-    : '\n\n⚠️ **Manca ancora il Passo 1.** Premi qui sopra uno dei ruoli di gioco ' +
-      `(**${ruoliConfig.roles.map((role) => role.label).join(' / ')}**): senza quello non entri nelle IPL.`;
-
   return interaction.editReply({
     content:
-      `✅ ${outcome.rank.emoji} **${outcome.label}** verificato: ruolo assegnato, sei nella **${league.name}**.\n\n` +
-      iplAccess.checklist(interaction.member) +
-      manca +
+      `✅ ${outcome.rank.emoji} **${outcome.label}** verificato: ruolo assegnato, sei nella **${league.name}**.` +
       `\n-# Quando sali di rank rifai la verifica dal pannello.${failed}${dm}`,
   });
 }
@@ -457,19 +414,10 @@ async function escalate(interaction, tracker, outcome, why) {
     })
     .catch((err) => logger.error('Rank: scheda di approvazione non pubblicata', err));
 
-  // Mentre aspetta lo staff può già sistemare l'altro requisito: se glielo
-  // diciamo adesso, quando il rank arriva l'accesso è immediato.
-  const intanto = iplAccess.gameRolesOf(interaction.member).length
-    ? ''
-    : '\n\n⚠️ **Intanto fai il Passo 1**: premi qui sopra uno dei ruoli di gioco ' +
-      `(**${ruoliConfig.roles.map((role) => role.label).join(' / ')}**). ` +
-      'Serve comunque, e appena lo staff approva il rank entri subito.';
-
   return interaction.editReply({
     content:
       `📨 ${why}\n` +
-      `${reused ? 'Ho aggiunto la verifica alla tua pratica già aperta' : 'Ho aperto una pratica per te'}: ${channel}` +
-      intanto,
+      `${reused ? 'Ho aggiunto la verifica alla tua pratica già aperta' : 'Ho aperto una pratica per te'}: ${channel}`,
   });
 }
 

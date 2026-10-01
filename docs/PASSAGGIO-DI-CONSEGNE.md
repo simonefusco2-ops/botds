@@ -19,7 +19,7 @@ cose, in ordine di importanza:
    del lato, voto del vincitore, ELO aggiornato, classifica riscritta.
 2. **Smista le persone.** Verifica il rank Valorant dal link tracker.gg, assegna
    il ruolo del rank, raccoglie i ruoli di gioco (Duelist, Initiator, Controller,
-   Sentinel) e dà l'accesso alle IPL quando i requisiti sono entrambi soddisfatti.
+   Sentinel). L'accesso alle IPL (ruoli IPL PRO / OPEN) lo dà il sito, non il bot.
 3. **Tiene vivo il server.** Benvenuto, regolamenti, pannelli, notifiche Twitch e
    social, pratiche (ticket), log ingressi e inviti.
 
@@ -77,9 +77,8 @@ Dal sito **ivpiter.it**: ci si collega con l'account Discord e il sito assegna i
 automatico i ruoli in base al rank, compreso l'accesso **IPL PRO** (da Immortale)
 o **IPL OPEN**. Con il ruolo IPL compare la sezione IPL del server, con le code.
 
-Il bot **non tocca** i ruoli IPL (`iplAccessByBot: false` in `config/rank.config.js`):
-non li dà, non li toglie e non manda DM sui requisiti. Rimettendolo a `true` torna
-il vecchio sistema del bot (rank verificato da tracker.gg + ruolo di gioco).
+Il bot **non tocca** i ruoli IPL: non li dà, non li toglie e non manda DM sui
+requisiti. Il vecchio sistema (rank verificato + ruolo di gioco) è stato tolto.
 
 I pannelli /benvenuto e /pannello-ipl hanno un bottone che apre il sito
 (`config/sito.config.js`); il regolamento HUB lo cita nel testo.

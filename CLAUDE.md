@@ -42,7 +42,7 @@ src/
   events/     un file per evento Discord (ready, interactionCreate, voiceStateUpdate, …)
   modules/
     ihl/      In-House League: code, draft, ban mappe, voto, classifica, leghe, sanzioni
-    rank/     verifica rank, ruoli di gioco, accesso IPL, insegne, stato vocale
+    rank/     verifica rank, ruoli di gioco, insegne, stato vocale (l'accesso IPL lo dà il sito)
     tickets/  pratiche (apertura, chiusura, transcript)
     social/   notifiche RSS          twitch/   notifiche live e pannello del ruolo
     memberLog/ ingressi e inviti     welcome/  benvenuto

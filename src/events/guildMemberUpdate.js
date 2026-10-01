@@ -8,16 +8,11 @@
  * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
  */
 const logger = require('../utils/logger');
-const iplAccess = require('../modules/rank/iplAccess');
-const notify = require('../modules/rank/notify');
 const separators = require('../modules/separators/separators');
-const rankConfig = require('../../config/rank.config');
 
 /**
- * L'accesso alle IPL dipende dai ruoli, quindi va ricontrollato ogni volta che
- * i ruoli cambiano — da qualunque parte arrivi il cambiamento: il pannello, lo
- * staff che assegna a mano, un altro bot. Così il ruolo compare da solo nel
- * momento in cui i requisiti si completano.
+ * Chi entra o esce dallo staff guadagna o perde il separatore staff; e se
+ * qualcuno toglie a mano un separatore, torna. I ruoli IPL li gestisce il sito.
  */
 module.exports = {
   name: 'guildMemberUpdate',
@@ -28,30 +23,8 @@ module.exports = {
       if (uguali) return;
     }
 
-    // Chi entra o esce dallo staff guadagna o perde il separatore staff; e se
-    // qualcuno toglie a mano un separatore, torna.
     await separators.sync(newMember).catch((err) => {
       logger.error(`Errore nei separatori di ${newMember.id}`, err);
     });
-
-    // Con i ruoli IPL gestiti dal sito, i requisiti del bot (rank + ruolo di
-    // gioco) non contano più: niente sync e niente DM che li ricordano.
-    if (rankConfig.iplAccessByBot === false) return;
-
-    // Come stava prima, per capire dopo cosa è cambiato davvero.
-    const prima = notify.snapshot(oldMember);
-
-    await iplAccess.sync(newMember).catch((err) => {
-      logger.error(`Errore nel controllo dell'accesso IPL per ${newMember.id}`, err);
-    });
-
-    // E glielo diciamo: chi riceve un rank a mano dallo staff non vede nessuna
-    // risposta del bot, e senza avviso non sa che gli manca ancora un passo.
-    const avviso = await notify.announce(newMember, prima).catch((err) => {
-      logger.error(`Errore nell'avviso sui ruoli per ${newMember.id}`, err);
-      return null;
-    });
-
-    if (avviso) logger.info(`Ruoli: avviso "${avviso}" mandato a ${newMember.id}.`);
   },
 };
