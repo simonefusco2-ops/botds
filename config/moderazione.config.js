@@ -45,17 +45,16 @@ module.exports = {
   contextSize: 10,
 
   gemini: {
-    // Si provano in ordine: se uno è sovraccarico (503), al limite (429) o non
-    // risponde in tempo, si passa subito al successivo. I "lite" con il
-    // ragionamento al minimo rispondono in 1-3 secondi; 3.5 Flash ne metteva
-    // 8-15 e sul piano gratuito era spesso sovraccarico. GEMINI_MODEL nel .env
-    // mette un modello in cima alla lista.
-    models: [process.env.GEMINI_MODEL, 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite'].filter(Boolean),
+    // Un solo modello: 3.5 Flash Lite, con il ragionamento al minimo. Si può
+    // cambiare dal .env con GEMINI_MODEL. Se ne metti più d'uno, su 503/429 o
+    // tempo scaduto si passa al successivo.
+    models: [process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'],
     // Il piano gratuito ha un limite di richieste al minuto: oltre questo
     // numero il messaggio va allo staff come dubbio invece di aspettare.
     maxPerMinute: 15,
-    // Per ogni modello: oltre, si passa al successivo.
-    timeoutMs: 8000,
+    // Di solito risponde in 1-4 secondi, ma sotto carico arriva a 15: oltre
+    // questo tempo il messaggio va allo staff come dubbio.
+    timeoutMs: 20000,
   },
 
   warns: {

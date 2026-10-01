@@ -118,7 +118,7 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 ogni messaggio con un elenco locale di parole (`config/moderazione.config.js`). Gli
 insulti inequivocabili (`prefilter.immediate`: "negro di merda", "sporco negro",
 "heil hitler"…) si cancellano all'istante senza Gemini; gli altri sospetti vanno a
-Gemini (3.1 Flash Lite, poi gli altri della lista se è sovraccarico; 1-4 s) con gli ultimi 10 messaggi del canale, che decide ok /
+Gemini (3.5 Flash Lite, ragionamento minimo) con gli ultimi 10 messaggi del canale, che decide ok /
 dubbio / elimina. Elimina = messaggio cancellato e warn; dubbio = log con bottoni
 per lo staff. Al 3° warn in 30 giorni: timeout 24 h e ticket con i bottoni della
 decisione (archivia, azzera, timeout 7 giorni, ban); la persona lo legge ma non ci scrive. Ogni warn è annunciato nella
