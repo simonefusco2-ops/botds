@@ -47,18 +47,19 @@ module.exports = {
   ],
 
   /**
-   * La sezione del sito, al posto dei vecchi bottoni dei ruoli: i ruoli IPL e
-   * l'accesso alle stanze delle partite ora arrivano dal sito, in base al rank.
-   * Sotto il pannello c'è un bottone che apre il sito (config/sito.config.js).
+   * La sezione del sito: registrandosi su ivpiter.it si entra nelle code OPEN.
+   * La PRO si chiede con un ticket. Sotto il pannello c'è un bottone che apre
+   * il sito (config/sito.config.js).
    */
   site: {
-    title: '🌐  PRENDI I TUOI RUOLI SU IVPITER.IT',
+    title: '🌐  REGISTRATI SU IVPITER.IT',
     text:
-      'Per avere il ruolo **IPL** e vedere le stanze delle partite passa dal nostro sito:\n' +
+      'Per giocare le **IPL** passa dal nostro sito:\n' +
       '> **1.** vai su **[ivpiter.it](https://ivpiter.it)**\n' +
-      '> **2.** accedi con il tuo **account Discord**\n' +
-      '> **3.** il sito ti assegna **in automatico** i ruoli in base al tuo **rank**\n' +
-      '-# Niente ticket e niente attese: appena accedi, i ruoli compaiono da soli.',
+      '> **2.** registrati con il tuo **account Discord**\n' +
+      '> **3.** ricevi subito l\'accesso alle code **IPL OPEN**\n' +
+      '-# Sei un player forte, conosciuto o con un buon storico competitivo? ' +
+      'Chiedi la **IPL PRO** aprendo un ticket **Richiesta IPL PRO**.',
   },
 
   /**
@@ -71,7 +72,7 @@ module.exports = {
   // Chiusura in grande, subito sopra il piè di pagina.
   closing:
     '## ⚡  VIENI SUBITO A GIOCARE\n' +
-    'Collegati al sito, prendi i ruoli e scendi in campo nelle nostre code.',
+    'Registrati sul sito e scendi in campo nelle code OPEN.',
 
   footer: 'Per qualsiasi problema apri un ticket: lo staff risponde a ogni convocazione.',
 };

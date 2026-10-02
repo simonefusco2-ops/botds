@@ -8,9 +8,9 @@
  * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
  */
 /**
- * Il sito della community. È lì che ci si collega con Discord e si ricevono in
- * automatico i ruoli in base al rank (compreso l'accesso IPL). I pannelli
- * /benvenuto e /pannello-ipl mettono un bottone che apre questo indirizzo.
+ * Il sito della community. Registrandosi con Discord si riceve l'accesso alle
+ * code IPL OPEN. I pannelli /benvenuto e /pannello-ipl mettono un bottone che
+ * apre questo indirizzo.
  */
 module.exports = {
   url: 'https://ivpiter.it',

@@ -73,9 +73,11 @@ delle squadre solo quella squadra. Nascono in fondo alla categoria
 
 ## 3. Come si entra nelle IPL
 
-Dal sito **ivpiter.it**: ci si collega con l'account Discord e il sito assegna in
-automatico i ruoli in base al rank, compreso l'accesso **IPL PRO** (da Immortale)
-o **IPL OPEN**. Con il ruolo IPL compare la sezione IPL del server, con le code.
+Dal sito **ivpiter.it**: chi si registra con l'account Discord riceve l'accesso
+alle code **IPL OPEN**. La **IPL PRO** è su richiesta: player forti, conosciuti o
+con un buon storico aprono un ticket **Richiesta IPL PRO** (tipo `pro` in
+`config/tickets.config.js`, bottone sotto /pannello-ipl e nel pannello ticket) e
+lo staff decide e dà il ruolo a mano.
 
 Il bot **non tocca** i ruoli IPL: non li dà, non li toglie e non manda DM sui
 requisiti. Il vecchio sistema (rank verificato + ruolo di gioco) è stato tolto.

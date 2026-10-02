@@ -18,7 +18,7 @@ module.exports = {
 
   intro:
     'Dalla coda al risultato fa tutto il bot. Ecco cosa succede, passo per passo.\n' +
-    '-# Per entrare nelle IPL prima prendi i ruoli su **[ivpiter.it](https://ivpiter.it)**.',
+    '-# Per entrare nelle code registrati prima su **[ivpiter.it](https://ivpiter.it)**: ti dà l\'accesso alle **OPEN**.',
 
   steps: [
     {

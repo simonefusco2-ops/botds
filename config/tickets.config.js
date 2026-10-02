@@ -49,6 +49,24 @@ module.exports = [
     hidden: true,
   },
   {
+    // Per la PRO: l'OPEN arriva registrandosi sul sito, la PRO la decide lo staff.
+    // Si apre dal pannello /pannello-ipl e dal pannello generale dei ticket.
+    id: 'pro',
+    label: 'Richiesta IPL PRO',
+    emoji: '🏆',
+    style: 'success',
+    description: 'Accesso alla IPL PRO per player forti o con un buon storico',
+    intro:
+      'Raccontaci chi sei, così lo staff può valutare:\n' +
+      '> • il tuo **Riot ID** e il link del profilo **tracker.gg**\n' +
+      '> • **rank attuale** e **picco** raggiunto\n' +
+      '> • il tuo **storico competitivo**: team, tornei, Premier, scrim\n' +
+      '> • chi ti conosce in community, se qualcuno può garantire per te\n\n' +
+      'Lo staff risponde qui: se la richiesta è approvata ricevi il ruolo **IPL PRO**.',
+    categoryId: null,
+    staffRoleId: null,
+  },
+  {
     id: 'tryout',
     label: 'Tryout',
     emoji: '🎯',
