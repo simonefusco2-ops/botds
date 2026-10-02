@@ -115,7 +115,9 @@ accettano `canale` e `immagine` (banner) e al rilancio **aggiornano** la scheda.
 `/setup-channels`
 
 **Moderazione** (permesso Modera membri)
-`/warn utente motivo` · `/warns utente` · `/unwarn utente [numero]`. Il bot filtra
+`/warn utente motivo` · `/warns utente` · `/unwarn utente [numero]`. `/convoca utente motivo` apre un
+ticket (tipo `convocazione`) con la persona dentro, il motivo e un DM col link; se ne ha già
+uno aperto lo riusa. Il bot filtra
 ogni messaggio con un elenco locale di parole (`config/moderazione.config.js`). Gli
 insulti inequivocabili (`prefilter.immediate`: "negro di merda", "sporco negro",
 "heil hitler"…) si cancellano all'istante senza Gemini; gli altri sospetti vanno a

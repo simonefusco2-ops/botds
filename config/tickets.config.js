@@ -67,6 +67,23 @@ module.exports = [
     staffRoleId: null,
   },
   {
+    // Aperto dallo staff con /convoca, non dalla persona: la si porta dentro
+    // un ticket per parlarle. Se ne ha già uno aperto di questo tipo, si riusa.
+    id: 'convocazione',
+    label: 'Convocazione',
+    emoji: '📣',
+    style: 'primary',
+    description: 'Lo staff ti ha convocato',
+    greeting: '{user}, sei stato **convocato dallo staff**.',
+    intro: 'Qui sotto trovi il motivo. Rispondi in questa stanza: lo staff ti sta aspettando.',
+    // Il riquadro con il motivo e il DM che avvisa la persona ({canale} = il ticket).
+    summonTitle: '📣  CONVOCAZIONE',
+    summonDm: '📣 Sei stato **convocato dallo staff** di IVPITER: ti aspettiamo in {canale}.',
+    categoryId: null,
+    staffRoleId: null,
+    hidden: true,
+  },
+  {
     id: 'tryout',
     label: 'Tryout',
     emoji: '🎯',
