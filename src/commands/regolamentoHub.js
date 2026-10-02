@@ -8,6 +8,7 @@
  * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
  */
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
+const { buildAccessRow } = require('../utils/siteButton');
 const hub = require('../../config/hub.config');
 const { COLORS } = require('../utils/embeds');
 const { buildCard } = require('../utils/cards');
@@ -73,6 +74,7 @@ module.exports = {
       separateSections: true,
       // Leghe, sanzioni e istruzioni per l'accesso chiudono la scheda.
       footnote: fill(`${hub.leagues}\n\n${hub.warning}\n\n${hub.request}\n\n-# ${hub.footer}`),
+      rows: [buildAccessRow()],
     });
 
     const payload = { ...card, files: banner ? [banner.file] : [] };

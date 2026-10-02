@@ -59,8 +59,11 @@ module.exports = {
       '> **2.** registrati con il tuo **account Discord**\n' +
       '> **3.** ricevi subito l\'accesso alle code **IPL OPEN**\n' +
       '-# Sei un player forte, conosciuto o con un buon storico competitivo? ' +
-      'Chiedi la **IPL PRO** aprendo un ticket **Richiesta IPL PRO**.',
+      'Chiedi la **IPL PRO** aprendo un ticket **Richiesta IPL PRO** in {ticket}.',
   },
+
+  // Il canale dei ticket: dove il testo scrive {ticket} compare il link cliccabile.
+  ticketChannelId: '1547745234316697650',
 
   /**
    * I vecchi bottoni dei ruoli. Vuoto: il ruolo Valorant lo danno a tutti i
@@ -74,5 +77,5 @@ module.exports = {
     '## ⚡  VIENI SUBITO A GIOCARE\n' +
     'Registrati sul sito e scendi in campo nelle code OPEN.',
 
-  footer: 'Per qualsiasi problema apri un ticket: lo staff risponde a ogni convocazione.',
+  footer: 'Per qualsiasi problema apri un ticket in {ticket}: lo staff risponde a ogni convocazione.',
 };

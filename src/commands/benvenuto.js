@@ -26,6 +26,11 @@ function buildSections() {
   }));
 }
 
+/** {ticket} diventa il link al canale dei ticket; senza ID resta la parola. */
+function withTicket(text) {
+  return text.replaceAll('{ticket}', benvenuto.ticketChannelId ? `<#${benvenuto.ticketChannelId}>` : 'un ticket');
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('benvenuto')
@@ -67,9 +72,9 @@ module.exports = {
       bannerRef: banner?.ref,
       title: benvenuto.title,
       body: benvenuto.intro,
-      sections: [...buildSections(), { name: benvenuto.site.title, value: benvenuto.site.text }],
+      sections: [...buildSections(), { name: benvenuto.site.title, value: withTicket(benvenuto.site.text) }],
       separateSections: true,
-      footnote: benvenuto.closing ? `${benvenuto.closing}\n\n-# ${benvenuto.footer}` : benvenuto.footer,
+      footnote: withTicket(benvenuto.closing ? `${benvenuto.closing}\n\n-# ${benvenuto.footer}` : benvenuto.footer),
       // Il bottone del sito; quelli dei ruoli solo se ne restano in config
       // (una riga senza bottoni farebbe rifiutare tutto il messaggio).
       rows: [buildSiteRow(), ...(benvenuto.roles.length ? [buildRoleRow()] : [])],

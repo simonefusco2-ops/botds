@@ -7,15 +7,14 @@
  * Copyright (c) 2026 Fusco. Tutti i diritti riservati.
  * Codice proprietario: vietata la ridistribuzione e la rimozione di questa firma.
  */
-const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
 const iplConfig = require('../../config/ipl.config');
 const ruoliConfig = require('../../config/ruoli.config');
 const rankConfig = require('../../config/rank.config');
 const { COLORS } = require('../utils/embeds');
 const { buildCard } = require('../utils/cards');
 const { toReuploadable } = require('../utils/attachments');
-const { buildSiteRow } = require('../utils/siteButton');
-const { applyEmoji } = require('../utils/emoji');
+const { buildAccessRow } = require('../utils/siteButton');
 const settingsRepository = require('../database/repositories/settingsRepository');
 
 const SETTINGS_KEY = 'ipl_panel_message';
@@ -36,17 +35,6 @@ function fill(text, channelId) {
     .replaceAll('{ruoli}', rolesList())
     .replaceAll('{canale}', `<#${channelId}>`)
     .replaceAll('{soglia}', threshold());
-}
-
-/** Sito e richiesta PRO sulla stessa riga: il bottone PRO apre il ticket come il pannello dei ticket. */
-function proRow() {
-  const row = buildSiteRow();
-  const { label, emoji, ticketTypeId } = iplConfig.proButton || {};
-  if (!ticketTypeId) return row;
-
-  return row.addComponents(
-    applyEmoji(new ButtonBuilder().setCustomId(`ticket_open:${ticketTypeId}`).setLabel(label).setStyle(ButtonStyle.Success), emoji),
-  );
 }
 
 module.exports = {
@@ -101,7 +89,7 @@ module.exports = {
       separateSections: true,
       footnote:
         `${iplConfig.leagues}\n\n${iplConfig.automatic}\n\n${iplConfig.closing}\n\n-# ${iplConfig.footer}`,
-      rows: [proRow()],
+      rows: [buildAccessRow()],
     });
 
     const payload = { ...card, files: banner ? [banner.file] : [] };
